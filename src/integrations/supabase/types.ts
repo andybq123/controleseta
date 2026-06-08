@@ -14,7 +14,170 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      protocolos: {
+        Row: {
+          assunto: string
+          created_at: string
+          created_by: string | null
+          data_abertura: string
+          data_conclusao: string | null
+          data_prorrogacao: string | null
+          descricao: string | null
+          id: string
+          numero: string
+          prorrogado: boolean
+          responsavel_id: string | null
+          secretaria_id: string | null
+          solicitante: string | null
+          status: Database["public"]["Enums"]["protocolo_status"]
+          tipo: Database["public"]["Enums"]["protocolo_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          assunto: string
+          created_at?: string
+          created_by?: string | null
+          data_abertura?: string
+          data_conclusao?: string | null
+          data_prorrogacao?: string | null
+          descricao?: string | null
+          id?: string
+          numero: string
+          prorrogado?: boolean
+          responsavel_id?: string | null
+          secretaria_id?: string | null
+          solicitante?: string | null
+          status?: Database["public"]["Enums"]["protocolo_status"]
+          tipo: Database["public"]["Enums"]["protocolo_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          assunto?: string
+          created_at?: string
+          created_by?: string | null
+          data_abertura?: string
+          data_conclusao?: string | null
+          data_prorrogacao?: string | null
+          descricao?: string | null
+          id?: string
+          numero?: string
+          prorrogado?: boolean
+          responsavel_id?: string | null
+          secretaria_id?: string | null
+          solicitante?: string | null
+          status?: Database["public"]["Enums"]["protocolo_status"]
+          tipo?: Database["public"]["Enums"]["protocolo_tipo"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "responsaveis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolos_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      responsaveis: {
+        Row: {
+          cargo: string | null
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          secretaria_id: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          secretaria_id: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          secretaria_id?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responsaveis_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secretarias: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          nome: string
+          sigla: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome: string
+          sigla?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome?: string
+          sigla?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +186,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      protocolo_status: "aberto" | "em_andamento" | "concluido"
+      protocolo_tipo: "ouvidoria" | "lai"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +314,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      protocolo_status: ["aberto", "em_andamento", "concluido"],
+      protocolo_tipo: ["ouvidoria", "lai"],
+    },
   },
 } as const
