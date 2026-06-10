@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORIAS, type CategoriaProtocolo, situacaoProtocolo, formatDate, categoriaLabel, PRAZOS, type TipoProtocolo } from "@/lib/prazo";
-import { Download, BarChart3, ChevronRight } from "lucide-react";
+import { Download, BarChart3, ChevronRight, FileText } from "lucide-react";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   component: RelatoriosPage,
@@ -139,6 +141,83 @@ function RelatoriosPage() {
     XLSX.writeFile(wb, `protocolos-atrasadas-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
+  // Exportações PDF
+  function pdfHeader(doc: jsPDF, titulo: string) {
+    doc.setFontSize(14); doc.setFont("helvetica", "bold");
+    doc.text(titulo, 40, 40);
+    doc.setFontSize(9); doc.setFont("helvetica", "normal");
+    doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}`, 40, 56);
+  }
+
+  function exportComparativoPDF() {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    pdfHeader(doc, `Comparativo mensal — ${ano}`);
+    autoTable(doc, {
+      startY: 70,
+      head: [["Categoria", ...MESES, "Total"]],
+      body: CATEGORIAS.map(c => {
+        const row = comparativoMensal[c.value];
+        return [c.label, ...row.map(String), String(row.reduce((a, b) => a + b, 0))];
+      }),
+      foot: [["Total", ...totalMes.map(String), String(totalMes.reduce((a, b) => a + b, 0))]],
+      headStyles: { fillColor: [59, 130, 246] },
+      footStyles: { fillColor: [226, 232, 240], textColor: 20, fontStyle: "bold" },
+      styles: { fontSize: 9 },
+    });
+    doc.save(`comparativo-mensal-${ano}.pdf`);
+  }
+
+  function exportSecretariasPDF() {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    pdfHeader(doc, `Resumo por secretaria — ${ano}`);
+    autoTable(doc, {
+      startY: 70,
+      head: [["Secretaria", "C. Custo", ...CATEGORIAS.map(c => c.label), "Total", "Abertos", "Concluídos"]],
+      body: resumoSecretaria.map(s => [
+        s.nome,
+        s.centro_custo ?? "—",
+        ...CATEGORIAS.map(c => String(s.porCat[c.value] ?? 0)),
+        String(s.total),
+        String(s.abertos),
+        String(s.concluidos),
+      ]),
+      headStyles: { fillColor: [16, 185, 129] },
+      styles: { fontSize: 8 },
+    });
+    doc.save(`resumo-secretarias-${ano}.pdf`);
+  }
+
+  function exportAtrasadasPDF() {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    pdfHeader(doc, `Protocolos atrasados (${atrasadas.length})`);
+    autoTable(doc, {
+      startY: 70,
+      head: [["Nº", "Tipo", "Categoria", "Secretaria", "Assunto", "Aberto", "Prazo", "Atraso"]],
+      body: atrasadas.map(p => [
+        p.numero,
+        PRAZOS[p.tipo as TipoProtocolo].label,
+        categoriaLabel(p.categoria as CategoriaProtocolo),
+        (p as any).secretarias?.nome ?? "—",
+        (p.assunto ?? "").slice(0, 50),
+        formatDate(p.data_abertura),
+        formatDate(p._s.prazoFinal),
+        `+${Math.abs(p._s.dias)}d`,
+      ]),
+      headStyles: { fillColor: [239, 68, 68] },
+      styles: { fontSize: 8 },
+    });
+    doc.save(`atrasados-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
+  // Resumo do ano
+  const totalAno = doAno.length;
+  const concluidosAno = doAno.filter(p => p.status === "concluido").length;
+  const abertosAno = totalAno - concluidosAno;
+  const vencidosAno = doAno.filter(p => {
+    if (p.status === "concluido") return false;
+    return situacaoProtocolo(p as any).situacao === "vencido";
+  }).length;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -157,6 +236,13 @@ function RelatoriosPage() {
       </div>
 
       <Tabs defaultValue="mensal" className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Total {ano}</div><div className="text-2xl font-bold">{totalAno}</div></CardContent></Card>
+          <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Concluídos</div><div className="text-2xl font-bold text-green-600">{concluidosAno}</div></CardContent></Card>
+          <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Em aberto</div><div className="text-2xl font-bold text-blue-600">{abertosAno}</div></CardContent></Card>
+          <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Vencidos</div><div className="text-2xl font-bold text-destructive">{vencidosAno}</div></CardContent></Card>
+        </div>
+
         <TabsList>
           <TabsTrigger value="mensal">Comparativo mensal</TabsTrigger>
           <TabsTrigger value="secretaria">Por secretaria</TabsTrigger>
@@ -164,9 +250,12 @@ function RelatoriosPage() {
         </TabsList>
 
         <TabsContent value="mensal" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button onClick={exportComparativoPDF} variant="outline" size="sm">
+              <FileText className="h-4 w-4 mr-1" /> PDF
+            </Button>
             <Button onClick={exportComparativoMensal} variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-1" /> Exportar Excel
+              <Download className="h-4 w-4 mr-1" /> Excel
             </Button>
           </div>
 
@@ -221,9 +310,12 @@ function RelatoriosPage() {
         </TabsContent>
 
         <TabsContent value="secretaria" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button onClick={exportSecretariasPDF} variant="outline" size="sm">
+              <FileText className="h-4 w-4 mr-1" /> PDF
+            </Button>
             <Button onClick={exportResumoSecretaria} variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-1" /> Exportar Excel
+              <Download className="h-4 w-4 mr-1" /> Excel
             </Button>
           </div>
           <Card>
@@ -265,9 +357,12 @@ function RelatoriosPage() {
         </TabsContent>
 
         <TabsContent value="atrasadas" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button onClick={exportAtrasadasPDF} variant="outline" size="sm" disabled={atrasadas.length === 0}>
+              <FileText className="h-4 w-4 mr-1" /> PDF
+            </Button>
             <Button onClick={exportAtrasadas} variant="outline" size="sm" disabled={atrasadas.length === 0}>
-              <Download className="h-4 w-4 mr-1" /> Exportar Excel
+              <Download className="h-4 w-4 mr-1" /> Excel
             </Button>
           </div>
           <Card>
