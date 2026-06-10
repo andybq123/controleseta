@@ -38,6 +38,10 @@ function AuthPage() {
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
+    const senhaRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
+    if (!senhaRegex.test(password)) {
+      return toast.error("A senha deve conter letra maiúscula, minúscula, número e caractere especial.");
+    }
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -104,7 +108,7 @@ function AuthPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="password2">Senha</Label>
-                  <Input id="password2" type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} />
+                  <Input id="password2" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>Cadastrar</Button>
               </form>
