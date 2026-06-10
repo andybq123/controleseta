@@ -49,6 +49,7 @@ function EmailInboxPage() {
   const qc = useQueryClient();
   const sincronizar = useServerFn(sincronizarGmail);
   const [sincronizando, setSincronizando] = useState(false);
+  useTick(1000);
 
   async function rodarSync() {
     setSincronizando(true);
@@ -74,6 +75,7 @@ function EmailInboxPage() {
       if (error) throw error;
       return data ?? [];
     },
+    refetchInterval: 15_000,
   });
 
   const { data: logs = [] } = useQuery({
@@ -123,6 +125,16 @@ function EmailInboxPage() {
     return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
   };
 
+  const gmailAccounts = accounts.filter((a: any) => a.provider === "gmail" && a.ativo);
+  const ultimaSync = gmailAccounts
+    .map((a: any) => a.ultima_sincronizacao ? new Date(a.ultima_sincronizacao).getTime() : 0)
+    .reduce((max, t) => Math.max(max, t), 0);
+  const proximaSync = ultimaSync ? ultimaSync + SYNC_INTERVAL_MIN * 60_000 : 0;
+  const agora = Date.now();
+  const totalNovos = gmailAccounts.reduce((s: number, a: any) => s + (a.ultima_sync_novos ?? 0), 0);
+  const totalErros = gmailAccounts.reduce((s: number, a: any) => s + (a.ultima_sync_erros ?? 0), 0);
+  const totalProc = gmailAccounts.reduce((s: number, a: any) => s + (a.ultima_sync_processados ?? 0), 0);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -138,6 +150,41 @@ function EmailInboxPage() {
           <NovaContaDialog secretarias={secretarias} />
         </div>
       </div>
+
+      {gmailAccounts.length > 0 && (
+        <Card className="border-blue-500/30 bg-blue-500/5">
+          <CardContent className="p-4">
+            <div className="grid gap-3 md:grid-cols-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Próxima sincronização</p>
+                <p className="text-sm font-semibold flex items-center gap-1.5 mt-0.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  {proximaSync
+                    ? `${formatDelta(proximaSync - agora)} (${format(new Date(proximaSync), "HH:mm:ss")})`
+                    : "aguardando 1ª execução"}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Intervalo automático: a cada {SYNC_INTERVAL_MIN} min</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Última execução</p>
+                <p className="text-sm font-semibold mt-0.5">
+                  {ultimaSync ? format(new Date(ultimaSync), "dd/MM HH:mm:ss") : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">E-mails processados (última)</p>
+                <p className="text-sm font-semibold mt-0.5">
+                  {totalProc} <span className="text-xs text-muted-foreground">(novos: {totalNovos}, erros: {totalErros})</span>
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Contas Gmail ativas</p>
+                <p className="text-sm font-semibold mt-0.5">{gmailAccounts.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="contas">
         <TabsList>
