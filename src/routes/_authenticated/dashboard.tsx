@@ -4,8 +4,9 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { situacaoProtocolo, situacaoLabel, situacaoClasses, formatDate, PRAZOS } from "@/lib/prazo";
-import { AlertTriangle, CheckCircle2, Clock, FileText, Building2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, FileText, Building2, AlarmClock } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 
@@ -41,6 +42,10 @@ function Dashboard() {
   const vencidos = ativos.filter(p => p._s.situacao === "vencido");
   const criticos = ativos.filter(p => p._s.situacao === "critico");
   const atencao = ativos.filter(p => p._s.situacao === "atencao");
+  // Vencendo em até 3 dias (críticos + vencidos)
+  const vencendoBreve = ativos
+    .filter(p => p._s.dias <= 3)
+    .sort((a, b) => a._s.dias - b._s.dias);
   const concluidos = enriched.filter(p => p.status === "concluido");
   const prorrogados = enriched.filter(p => p.prorrogado);
 
@@ -80,40 +85,34 @@ function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-destructive" /> Alertas de prazo
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {alertas.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhum protocolo em alerta. 🎉</p>
-            )}
-            {alertas.map(p => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setDetail(p)}
-                className="w-full text-left block rounded-md border p-3 hover:bg-secondary transition-colors"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-muted-foreground">{p.numero}</span>
-                      <Badge variant="outline" className="text-[10px] uppercase">{p.tipo}</Badge>
-                    </div>
-                    <p className="text-sm font-medium truncate mt-0.5">{p.assunto}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {(p as any).secretarias?.nome ?? "Sem secretaria"} · Vence {formatDate(p._s.prazoFinal)}
-                    </p>
-                  </div>
-                  <Badge className={`shrink-0 border ${situacaoClasses[p._s.situacao]}`} variant="outline">
-                    {p._s.dias < 0 ? `${Math.abs(p._s.dias)}d atrasado` : `${p._s.dias}d`}
-                  </Badge>
+          <CardHeader className="pb-3">
+            <Tabs defaultValue="alertas">
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="alertas" className="gap-1 text-xs">
+                  <AlertTriangle className="h-3.5 w-3.5 text-destructive" /> Alertas ({alertas.length})
+                </TabsTrigger>
+                <TabsTrigger value="breve" className="gap-1 text-xs">
+                  <AlarmClock className="h-3.5 w-3.5 text-amber-600" /> Vencendo em breve ({vencendoBreve.length})
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="alertas" className="mt-3">
+                <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+                  {alertas.length === 0 && (
+                    <p className="text-sm text-muted-foreground p-2">Nenhum protocolo em alerta. 🎉</p>
+                  )}
+                  {alertas.map(p => <AlertRow key={p.id} p={p} onClick={() => setDetail(p)} />)}
                 </div>
-              </button>
-            ))}
-          </CardContent>
+              </TabsContent>
+              <TabsContent value="breve" className="mt-3">
+                <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+                  {vencendoBreve.length === 0 && (
+                    <p className="text-sm text-muted-foreground p-2">Nenhum protocolo vence em até 3 dias.</p>
+                  )}
+                  {vencendoBreve.map(p => <AlertRow key={p.id} p={p} onClick={() => setDetail(p)} />)}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardHeader>
         </Card>
 
         <Card>
@@ -122,14 +121,15 @@ function Dashboard() {
               <Building2 className="h-4 w-4" /> Por secretaria
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
             {porSecretaria.length === 0 && (
               <p className="text-sm text-muted-foreground">Cadastre uma secretaria para começar.</p>
             )}
             {porSecretaria.map(s => (
               <Link
                 key={s.id}
-                to="/protocolos"
+                to="/relatorios/secretaria/$id"
+                params={{ id: s.id }}
                 className="flex items-center justify-between rounded-md border p-3 hover:bg-secondary transition-colors"
               >
                 <div className="min-w-0">
@@ -162,7 +162,7 @@ function Dashboard() {
         <CardHeader>
           <CardTitle className="text-base">Todos os protocolos ativos ({ativos.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
+        <CardContent className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
           {ativos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum protocolo ativo.</p>}
           {ativos.map(p => (
             <button key={p.id} type="button" onClick={() => setDetail(p)}
@@ -189,6 +189,29 @@ function Dashboard() {
 
       <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
     </div>
+  );
+}
+
+function AlertRow({ p, onClick }: { p: any; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="w-full text-left block rounded-md border p-3 hover:bg-secondary transition-colors">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs text-muted-foreground">{p.numero}</span>
+            <Badge variant="outline" className="text-[10px] uppercase">{p.tipo}</Badge>
+          </div>
+          <p className="text-sm font-medium truncate mt-0.5">{p.assunto}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {(p as any).secretarias?.nome ?? "Sem secretaria"} · Vence {formatDate(p._s.prazoFinal)}
+          </p>
+        </div>
+        <Badge className={`shrink-0 border ${situacaoClasses[p._s.situacao]}`} variant="outline">
+          {p._s.dias < 0 ? `${Math.abs(p._s.dias)}d atrasado` : `${p._s.dias}d`}
+        </Badge>
+      </div>
+    </button>
   );
 }
 
