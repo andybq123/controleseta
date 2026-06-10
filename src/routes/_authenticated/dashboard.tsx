@@ -44,7 +44,7 @@ function Dashboard() {
   const atencao = ativos.filter(p => p._s.situacao === "atencao");
   // Vencendo em até 3 dias (críticos + vencidos)
   const vencendoBreve = ativos
-    .filter(p => p._s.dias <= 3)
+    .filter(p => p._s.dias >= 0 && p._s.dias <= 3)
     .sort((a, b) => a._s.dias - b._s.dias);
   const concluidos = enriched.filter(p => p.status === "concluido");
   const prorrogados = enriched.filter(p => p.prorrogado);
