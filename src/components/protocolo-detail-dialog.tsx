@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X } from "lucide-react";
+import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
   PRAZOS, CATEGORIAS, categoriaLabel,
@@ -39,6 +40,18 @@ export function ProtocoloDetailDialog({ protocolo, open, onOpenChange }: {
     queryKey: ["locais"],
     queryFn: async () => (await supabase.from("locais").select("*").order("nome")).data ?? [],
     enabled: open,
+  });
+  const { data: historico = [] } = useQuery({
+    queryKey: ["historico", protocolo?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("protocolo_historico" as any)
+        .select("*")
+        .eq("protocolo_id", protocolo.id)
+        .order("created_at", { ascending: false });
+      return (data as any[]) ?? [];
+    },
+    enabled: open && !!protocolo?.id,
   });
 
   useEffect(() => {
@@ -70,6 +83,7 @@ export function ProtocoloDetailDialog({ protocolo, open, onOpenChange }: {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["protocolos"] });
+      qc.invalidateQueries({ queryKey: ["historico", protocolo.id] });
       toast.success("Protocolo atualizado");
     },
     onError: (e: any) => toast.error(e.message ?? "Erro ao salvar"),
