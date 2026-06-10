@@ -22,8 +22,10 @@ export type Database = {
           descricao: string | null
           email: string
           id: string
+          provider: string
           secretaria_id: string | null
           token: string
+          ultima_sincronizacao: string | null
           updated_at: string
         }
         Insert: {
@@ -33,8 +35,10 @@ export type Database = {
           descricao?: string | null
           email: string
           id?: string
+          provider?: string
           secretaria_id?: string | null
           token?: string
+          ultima_sincronizacao?: string | null
           updated_at?: string
         }
         Update: {
@@ -44,8 +48,10 @@ export type Database = {
           descricao?: string | null
           email?: string
           id?: string
+          provider?: string
           secretaria_id?: string | null
           token?: string
+          ultima_sincronizacao?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -65,6 +71,7 @@ export type Database = {
           corpo: string | null
           destinatario: string | null
           erro: string | null
+          external_id: string | null
           id: string
           processado_em: string | null
           protocolo_id: string | null
@@ -78,6 +85,7 @@ export type Database = {
           corpo?: string | null
           destinatario?: string | null
           erro?: string | null
+          external_id?: string | null
           id?: string
           processado_em?: string | null
           protocolo_id?: string | null
@@ -91,6 +99,7 @@ export type Database = {
           corpo?: string | null
           destinatario?: string | null
           erro?: string | null
+          external_id?: string | null
           id?: string
           processado_em?: string | null
           protocolo_id?: string | null
