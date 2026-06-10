@@ -178,7 +178,7 @@ function Dashboard() {
                     {(p as any).secretarias?.nome ?? "Sem secretaria"} · Aberto {formatDate(p.data_abertura)}
                   </p>
                 </div>
-                <Badge className={`shrink-0 border ${situacaoClasses[p._s.situacao]}`} variant="outline">
+                <Badge className={`shrink-0 border ${situacaoClasses[p._s.situacao as keyof typeof situacaoClasses]}`} variant="outline">
                   {p._s.dias < 0 ? `${Math.abs(p._s.dias)}d` : `${p._s.dias}d`}
                 </Badge>
               </div>
@@ -207,7 +207,7 @@ function AlertRow({ p, onClick }: { p: any; onClick: () => void }) {
             {(p as any).secretarias?.nome ?? "Sem secretaria"} · Vence {formatDate(p._s.prazoFinal)}
           </p>
         </div>
-        <Badge className={`shrink-0 border ${situacaoClasses[p._s.situacao]}`} variant="outline">
+        <Badge className={`shrink-0 border ${situacaoClasses[p._s.situacao as keyof typeof situacaoClasses]}`} variant="outline">
           {p._s.dias < 0 ? `${Math.abs(p._s.dias)}d atrasado` : `${p._s.dias}d`}
         </Badge>
       </div>
