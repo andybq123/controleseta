@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORIAS, type CategoriaProtocolo, situacaoProtocolo, formatDate, categoriaLabel, PRAZOS, type TipoProtocolo } from "@/lib/prazo";
-import { Download, BarChart3 } from "lucide-react";
+import { Download, BarChart3, ChevronRight } from "lucide-react";
 import * as XLSX from "xlsx";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
@@ -241,10 +241,15 @@ function RelatoriosPage() {
                 </thead>
                 <tbody>
                   {resumoSecretaria.map(s => (
-                    <tr key={s.id} className="border-b hover:bg-secondary/30">
+                    <tr key={s.id} className="border-b hover:bg-secondary/30 cursor-pointer group">
                       <td className="py-2 px-3">
-                        <div className="font-medium">{s.nome}</div>
-                        {s.centro_custo && <div className="text-[10px] text-muted-foreground font-mono">{s.centro_custo}</div>}
+                        <Link to="/relatorios/secretaria/$id" params={{ id: s.id }} className="flex items-center gap-2 hover:text-primary">
+                          <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition" />
+                          <div>
+                            <div className="font-medium underline-offset-2 group-hover:underline">{s.nome}</div>
+                            {s.centro_custo && <div className="text-[10px] text-muted-foreground font-mono">{s.centro_custo}</div>}
+                          </div>
+                        </Link>
                       </td>
                       {CATEGORIAS.map(c => (
                         <td key={c.value} className="py-2 px-2 text-center tabular-nums text-xs">{s.porCat[c.value as CategoriaProtocolo] || "—"}</td>

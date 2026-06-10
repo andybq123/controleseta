@@ -19,6 +19,7 @@ import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authenticated/protocolos'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
+import { Route as AuthenticatedRelatoriosSecretariaIdRouteImport } from './routes/_authenticated/relatorios.secretaria.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -70,6 +71,12 @@ const AuthenticatedAtrasadosRoute = AuthenticatedAtrasadosRouteImport.update({
   path: '/atrasados',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRelatoriosSecretariaIdRoute =
+  AuthenticatedRelatoriosSecretariaIdRouteImport.update({
+    id: '/secretaria/$id',
+    path: '/secretaria/$id',
+    getParentRoute: () => AuthenticatedRelatoriosRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -79,8 +86,9 @@ export interface FileRoutesByFullPath {
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
-  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -90,8 +98,9 @@ export interface FileRoutesByTo {
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
-  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -103,8 +112,9 @@ export interface FileRoutesById {
   '/_authenticated/atrasados': typeof AuthenticatedAtrasadosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/protocolos': typeof AuthenticatedProtocolosRoute
-  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
+  '/_authenticated/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/protocolos'
     | '/relatorios'
     | '/secretarias'
+    | '/relatorios/secretaria/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/protocolos'
     | '/relatorios'
     | '/secretarias'
+    | '/relatorios/secretaria/$id'
   id:
     | '__root__'
     | '/'
@@ -141,6 +153,7 @@ export interface FileRouteTypes {
     | '/_authenticated/protocolos'
     | '/_authenticated/relatorios'
     | '/_authenticated/secretarias'
+    | '/_authenticated/relatorios/secretaria/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -223,14 +236,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAtrasadosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios/secretaria/$id': {
+      id: '/_authenticated/relatorios/secretaria/$id'
+      path: '/secretaria/$id'
+      fullPath: '/relatorios/secretaria/$id'
+      preLoaderRoute: typeof AuthenticatedRelatoriosSecretariaIdRouteImport
+      parentRoute: typeof AuthenticatedRelatoriosRoute
+    }
   }
 }
+
+interface AuthenticatedRelatoriosRouteChildren {
+  AuthenticatedRelatoriosSecretariaIdRoute: typeof AuthenticatedRelatoriosSecretariaIdRoute
+}
+
+const AuthenticatedRelatoriosRouteChildren: AuthenticatedRelatoriosRouteChildren =
+  {
+    AuthenticatedRelatoriosSecretariaIdRoute:
+      AuthenticatedRelatoriosSecretariaIdRoute,
+  }
+
+const AuthenticatedRelatoriosRouteWithChildren =
+  AuthenticatedRelatoriosRoute._addFileChildren(
+    AuthenticatedRelatoriosRouteChildren,
+  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAtrasadosRoute: typeof AuthenticatedAtrasadosRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProtocolosRoute: typeof AuthenticatedProtocolosRoute
-  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedSecretariasRoute: typeof AuthenticatedSecretariasRoute
 }
 
@@ -238,7 +273,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAtrasadosRoute: AuthenticatedAtrasadosRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProtocolosRoute: AuthenticatedProtocolosRoute,
-  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedSecretariasRoute: AuthenticatedSecretariasRoute,
 }
 
