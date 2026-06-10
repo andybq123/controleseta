@@ -179,6 +179,7 @@ export async function sincronizarGmailContas(): Promise<{ contas: number; novos:
   const detalhes: any[] = [];
 
   for (const conta of contas ?? []) {
+    let contaNovos = 0, contaErros = 0, contaProc = 0;
     try {
       // Lista as últimas 20 mensagens da INBOX (não-lidas têm prioridade)
       const listRes = await fetch(`${GMAIL_GATEWAY}/users/me/messages?maxResults=20&q=in:inbox newer_than:2d`, {
@@ -195,7 +196,7 @@ export async function sincronizarGmailContas(): Promise<{ contas: number; novos:
         if (existe) continue;
 
         const mr = await fetch(`${GMAIL_GATEWAY}/users/me/messages/${m.id}?format=full`, { headers: gmailHeaders() });
-        if (!mr.ok) { erros++; continue; }
+        if (!mr.ok) { erros++; contaErros++; continue; }
         const mj = await mr.json();
         const hdrs = mj.payload?.headers ?? [];
         const from = header(hdrs, "From");
@@ -207,13 +208,19 @@ export async function sincronizarGmailContas(): Promise<{ contas: number; novos:
           account: conta, remetente: from, destinatario: to,
           assunto: subject, corpo: body, externalId: m.id,
         });
-        if (res.ok && res.protocoloId) novos++;
-        else if (!res.ok) erros++;
+        contaProc++;
+        if (res.ok && res.protocoloId) { novos++; contaNovos++; }
+        else if (!res.ok) { erros++; contaErros++; }
         detalhes.push({ id: m.id, subject, ok: res.ok, numero: res.numero, error: res.error });
       }
 
       await supabaseAdmin.from("email_inbox_accounts")
-        .update({ ultima_sincronizacao: new Date().toISOString() })
+        .update({
+          ultima_sincronizacao: new Date().toISOString(),
+          ultima_sync_novos: contaNovos,
+          ultima_sync_erros: contaErros,
+          ultima_sync_processados: contaProc,
+        })
         .eq("id", conta.id);
     } catch (e: any) {
       erros++;
