@@ -1,0 +1,225 @@
+import { PROTOCOLO_EXTRACT_SYSTEM, normalizarExtracao } from "@/lib/protocolo-extract.shared";
+import { gerarNumeroProtocolo } from "@/lib/prazo";
+
+function norm(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+async function extrairComIA(texto: string) {
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: PROTOCOLO_EXTRACT_SYSTEM },
+        { role: "user", content: texto.slice(0, 18000) },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!res.ok) throw new Error(`IA ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const json = await res.json();
+  const content = json.choices?.[0]?.message?.content ?? "{}";
+  let parsed: any = {};
+  try { parsed = JSON.parse(content); } catch {}
+  return normalizarExtracao(parsed);
+}
+
+export type IngestInput = {
+  account: any;
+  remetente: string;
+  destinatario: string;
+  assunto: string;
+  corpo: string;
+  externalId?: string;
+};
+
+export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; protocoloId?: string; numero?: string; logId?: string; error?: string }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { account, remetente, destinatario, assunto, corpo, externalId } = input;
+
+  if (externalId) {
+    const { data: existente } = await supabaseAdmin
+      .from("email_inbox_log").select("id")
+      .eq("account_id", account.id).eq("external_id", externalId).maybeSingle();
+    if (existente) return { ok: true, logId: existente.id };
+  }
+
+  const textoCompleto = [`De: ${remetente}`, `Para: ${destinatario}`, `Assunto: ${assunto}`, "", corpo].join("\n");
+
+  const { data: logRow, error: logErr } = await supabaseAdmin
+    .from("email_inbox_log")
+    .insert({
+      account_id: account.id, remetente, destinatario, assunto,
+      corpo: textoCompleto.slice(0, 20000), status: "pendente",
+      external_id: externalId ?? null,
+    })
+    .select("id").single();
+  if (logErr) throw logErr;
+
+  try {
+    if (textoCompleto.trim().length < 10) throw new Error("Conteúdo vazio");
+    const extr = await extrairComIA(textoCompleto);
+
+    let secretariaId: string | null = account.secretaria_id;
+    if (!secretariaId && extr.secretaria_sugerida) {
+      const { data: secs } = await supabaseAdmin.from("secretarias").select("id, nome, sigla");
+      const alvo = norm(extr.secretaria_sugerida);
+      const hit = (secs ?? []).find(s =>
+        norm(s.nome).includes(alvo) || alvo.includes(norm(s.nome)) ||
+        (s.sigla && norm(s.sigla) === alvo)
+      );
+      if (hit) secretariaId = hit.id;
+    }
+
+    let localId: string | null = null;
+    if (secretariaId && extr.local_sugerido) {
+      const { data: locs } = await supabaseAdmin
+        .from("locais").select("id, nome").eq("secretaria_id", secretariaId);
+      const alvo = norm(extr.local_sugerido);
+      const hit = (locs ?? []).find(l => norm(l.nome).includes(alvo) || alvo.includes(norm(l.nome)));
+      if (hit) localId = hit.id;
+    }
+
+    const numero = extr.numero || gerarNumeroProtocolo(extr.tipo);
+    const dataAbertura = extr.data_abertura || new Date().toISOString().slice(0, 10);
+
+    const { data: novo, error: errIns } = await supabaseAdmin
+      .from("protocolos")
+      .insert({
+        numero, tipo: extr.tipo, categoria: extr.categoria,
+        assunto: extr.assunto || assunto || "Sem assunto",
+        descricao: extr.descricao || corpo.slice(0, 4000) || null,
+        solicitante: extr.solicitante || remetente || null,
+        secretaria_id: secretariaId, local_id: localId,
+        data_abertura: dataAbertura, created_by: account.created_by,
+      })
+      .select("id, numero").single();
+    if (errIns) throw errIns;
+
+    await supabaseAdmin.from("email_inbox_log").update({
+      status: "processado", protocolo_id: novo!.id, processado_em: new Date().toISOString(),
+    }).eq("id", logRow!.id);
+
+    return { ok: true, protocoloId: novo!.id, numero: novo!.numero, logId: logRow!.id };
+  } catch (e: any) {
+    await supabaseAdmin.from("email_inbox_log").update({
+      status: "erro", erro: String(e?.message ?? e).slice(0, 1000),
+      processado_em: new Date().toISOString(),
+    }).eq("id", logRow!.id);
+    return { ok: false, error: String(e?.message ?? e), logId: logRow!.id };
+  }
+}
+
+// ============ GMAIL ============
+
+const GMAIL_GATEWAY = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
+
+function gmailHeaders(): HeadersInit {
+  const lov = process.env.LOVABLE_API_KEY;
+  const gm = process.env.GOOGLE_MAIL_API_KEY;
+  if (!lov || !gm) throw new Error("Conexão Gmail não configurada");
+  return { Authorization: `Bearer ${lov}`, "X-Connection-Api-Key": gm };
+}
+
+function decodeB64Url(data: string): string {
+  try {
+    const b64 = data.replace(/-/g, "+").replace(/_/g, "/");
+    if (typeof Buffer !== "undefined") return Buffer.from(b64, "base64").toString("utf-8");
+    return atob(b64);
+  } catch { return ""; }
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<\/(p|div|br|tr|li|h[1-6])>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function extractBody(payload: any): string {
+  if (!payload) return "";
+  const parts: any[] = [];
+  const walk = (p: any) => {
+    if (!p) return;
+    if (p.body?.data) parts.push({ mime: p.mimeType, data: p.body.data });
+    if (Array.isArray(p.parts)) p.parts.forEach(walk);
+  };
+  walk(payload);
+  const plain = parts.find(p => p.mime === "text/plain");
+  if (plain) return decodeB64Url(plain.data);
+  const html = parts.find(p => p.mime === "text/html");
+  if (html) return stripHtml(decodeB64Url(html.data));
+  if (parts[0]) return decodeB64Url(parts[0].data);
+  return "";
+}
+
+function header(headers: any[], name: string): string {
+  const h = headers?.find((x: any) => x.name?.toLowerCase() === name.toLowerCase());
+  return h?.value ?? "";
+}
+
+export async function sincronizarGmailContas(): Promise<{ contas: number; novos: number; erros: number; detalhes: any[] }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: contas } = await supabaseAdmin
+    .from("email_inbox_accounts")
+    .select("*")
+    .eq("ativo", true)
+    .eq("provider", "gmail");
+
+  let novos = 0, erros = 0;
+  const detalhes: any[] = [];
+
+  for (const conta of contas ?? []) {
+    try {
+      // Lista as últimas 20 mensagens da INBOX (não-lidas têm prioridade)
+      const listRes = await fetch(`${GMAIL_GATEWAY}/users/me/messages?maxResults=20&q=in:inbox newer_than:2d`, {
+        headers: gmailHeaders(),
+      });
+      if (!listRes.ok) throw new Error(`Gmail list ${listRes.status}: ${(await listRes.text()).slice(0, 200)}`);
+      const listJson = await listRes.json();
+      const msgs: { id: string }[] = listJson.messages ?? [];
+
+      for (const m of msgs) {
+        // Dedup rápido
+        const { data: existe } = await supabaseAdmin.from("email_inbox_log")
+          .select("id").eq("account_id", conta.id).eq("external_id", m.id).maybeSingle();
+        if (existe) continue;
+
+        const mr = await fetch(`${GMAIL_GATEWAY}/users/me/messages/${m.id}?format=full`, { headers: gmailHeaders() });
+        if (!mr.ok) { erros++; continue; }
+        const mj = await mr.json();
+        const hdrs = mj.payload?.headers ?? [];
+        const from = header(hdrs, "From");
+        const to = header(hdrs, "To");
+        const subject = header(hdrs, "Subject");
+        const body = extractBody(mj.payload) || mj.snippet || "";
+
+        const res = await ingerirEmail({
+          account: conta, remetente: from, destinatario: to,
+          assunto: subject, corpo: body, externalId: m.id,
+        });
+        if (res.ok && res.protocoloId) novos++;
+        else if (!res.ok) erros++;
+        detalhes.push({ id: m.id, subject, ok: res.ok, numero: res.numero, error: res.error });
+      }
+
+      await supabaseAdmin.from("email_inbox_accounts")
+        .update({ ultima_sincronizacao: new Date().toISOString() })
+        .eq("id", conta.id);
+    } catch (e: any) {
+      erros++;
+      detalhes.push({ conta: conta.email, error: String(e?.message ?? e) });
+    }
+  }
+
+  return { contas: contas?.length ?? 0, novos, erros, detalhes };
+}
