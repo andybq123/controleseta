@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      locais: {
+        Row: {
+          centro_custo: string | null
+          created_at: string
+          id: string
+          nome: string
+          secretaria_id: string
+          updated_at: string
+        }
+        Insert: {
+          centro_custo?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          secretaria_id: string
+          updated_at?: string
+        }
+        Update: {
+          centro_custo?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          secretaria_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locais_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -41,6 +76,7 @@ export type Database = {
       protocolos: {
         Row: {
           assunto: string
+          categoria: Database["public"]["Enums"]["protocolo_categoria"]
           created_at: string
           created_by: string | null
           data_abertura: string
@@ -48,6 +84,7 @@ export type Database = {
           data_prorrogacao: string | null
           descricao: string | null
           id: string
+          local_id: string | null
           numero: string
           prorrogado: boolean
           responsavel_id: string | null
@@ -59,6 +96,7 @@ export type Database = {
         }
         Insert: {
           assunto: string
+          categoria?: Database["public"]["Enums"]["protocolo_categoria"]
           created_at?: string
           created_by?: string | null
           data_abertura?: string
@@ -66,6 +104,7 @@ export type Database = {
           data_prorrogacao?: string | null
           descricao?: string | null
           id?: string
+          local_id?: string | null
           numero: string
           prorrogado?: boolean
           responsavel_id?: string | null
@@ -77,6 +116,7 @@ export type Database = {
         }
         Update: {
           assunto?: string
+          categoria?: Database["public"]["Enums"]["protocolo_categoria"]
           created_at?: string
           created_by?: string | null
           data_abertura?: string
@@ -84,6 +124,7 @@ export type Database = {
           data_prorrogacao?: string | null
           descricao?: string | null
           id?: string
+          local_id?: string | null
           numero?: string
           prorrogado?: boolean
           responsavel_id?: string | null
@@ -94,6 +135,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "protocolos_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "locais"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "protocolos_responsavel_id_fkey"
             columns: ["responsavel_id"]
@@ -153,6 +201,7 @@ export type Database = {
       }
       secretarias: {
         Row: {
+          centro_custo: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -161,6 +210,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          centro_custo?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -169,6 +219,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          centro_custo?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -186,6 +237,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      protocolo_categoria:
+        | "elogio"
+        | "reclamacao"
+        | "pedido_informacao"
+        | "denuncia"
+        | "solicitacao"
+        | "outros"
       protocolo_status: "aberto" | "em_andamento" | "concluido"
       protocolo_tipo: "ouvidoria" | "lai"
     }
@@ -315,6 +373,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      protocolo_categoria: [
+        "elogio",
+        "reclamacao",
+        "pedido_informacao",
+        "denuncia",
+        "solicitacao",
+        "outros",
+      ],
       protocolo_status: ["aberto", "em_andamento", "concluido"],
       protocolo_tipo: ["ouvidoria", "lai"],
     },
