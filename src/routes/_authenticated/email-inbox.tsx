@@ -17,6 +17,21 @@ import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
 import { sincronizarGmail } from "@/lib/gmail-sync.functions";
 
+const SYNC_INTERVAL_MIN = 5;
+
+function useTick(ms = 1000) {
+  const [, setN] = useState(0);
+  if (typeof window !== "undefined") {
+    // simple interval via effect-less pattern using useState + setInterval in a hook
+  }
+  // proper effect:
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  React.useEffect(() => {
+    const id = setInterval(() => setN(n => n + 1), ms);
+    return () => clearInterval(id);
+  }, [ms]);
+}
+
 export const Route = createFileRoute("/_authenticated/email-inbox")({
   component: EmailInboxPage,
 });
