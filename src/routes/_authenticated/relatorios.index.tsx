@@ -308,6 +308,53 @@ function RelatoriosPage() {
       </div>
 
       <Tabs defaultValue="mensal" className="space-y-4">
+        <Card>
+          <CardContent className="p-3 space-y-2">
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="h-4 w-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input placeholder="Buscar por número, assunto, solicitante…" className="pl-8" value={q} onChange={e => setQ(e.target.value)} />
+              </div>
+              <Select value={fTipo} onValueChange={setFTipo}>
+                <SelectTrigger className="w-[140px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  <SelectItem value="ouvidoria">Ouvidoria</SelectItem>
+                  <SelectItem value="lai">LAI</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={fCategoria} onValueChange={setFCategoria}>
+                <SelectTrigger className="w-[170px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas categorias</SelectItem>
+                  {CATEGORIAS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={fStatus} onValueChange={setFStatus}>
+                <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos status</SelectItem>
+                  <SelectItem value="aberto">Aberto</SelectItem>
+                  <SelectItem value="em_andamento">Em andamento</SelectItem>
+                  <SelectItem value="concluido">Concluído</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={fSecretaria} onValueChange={setFSecretaria}>
+                <SelectTrigger className="w-[200px]"><SelectValue placeholder="Secretaria" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas secretarias</SelectItem>
+                  {secretarias.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {filtrosAtivos && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="h-4 w-4 mr-1" /> Limpar
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Total {ano}</div><div className="text-2xl font-bold">{totalAno}</div></CardContent></Card>
           <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Concluídos</div><div className="text-2xl font-bold text-green-600">{concluidosAno}</div></CardContent></Card>
