@@ -73,6 +73,50 @@ export type Database = {
         }
         Relationships: []
       }
+      protocolo_historico: {
+        Row: {
+          acao: string
+          autor_id: string | null
+          autor_nome: string | null
+          campo: string
+          created_at: string
+          id: string
+          protocolo_id: string
+          valor_anterior: string | null
+          valor_novo: string | null
+        }
+        Insert: {
+          acao?: string
+          autor_id?: string | null
+          autor_nome?: string | null
+          campo: string
+          created_at?: string
+          id?: string
+          protocolo_id: string
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Update: {
+          acao?: string
+          autor_id?: string | null
+          autor_nome?: string | null
+          campo?: string
+          created_at?: string
+          id?: string
+          protocolo_id?: string
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolo_historico_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       protocolos: {
         Row: {
           assunto: string

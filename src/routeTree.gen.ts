@@ -19,6 +19,7 @@ import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authenticated/protocolos'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
+import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
 import { Route as AuthenticatedRelatoriosSecretariaIdRouteImport } from './routes/_authenticated/relatorios.secretaria.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -71,6 +72,12 @@ const AuthenticatedAtrasadosRoute = AuthenticatedAtrasadosRouteImport.update({
   path: '/atrasados',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRelatoriosIndexRoute =
+  AuthenticatedRelatoriosIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedRelatoriosRoute,
+  } as any)
 const AuthenticatedRelatoriosSecretariaIdRoute =
   AuthenticatedRelatoriosSecretariaIdRouteImport.update({
     id: '/secretaria/$id',
@@ -88,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/protocolos': typeof AuthenticatedProtocolosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 export interface FileRoutesByTo {
@@ -98,8 +106,8 @@ export interface FileRoutesByTo {
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
-  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 export interface FileRoutesById {
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/_authenticated/protocolos': typeof AuthenticatedProtocolosRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
+  '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 export interface FileRouteTypes {
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/protocolos'
     | '/relatorios'
     | '/secretarias'
+    | '/relatorios/'
     | '/relatorios/secretaria/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -138,8 +148,8 @@ export interface FileRouteTypes {
     | '/atrasados'
     | '/dashboard'
     | '/protocolos'
-    | '/relatorios'
     | '/secretarias'
+    | '/relatorios'
     | '/relatorios/secretaria/$id'
   id:
     | '__root__'
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/_authenticated/protocolos'
     | '/_authenticated/relatorios'
     | '/_authenticated/secretarias'
+    | '/_authenticated/relatorios/'
     | '/_authenticated/relatorios/secretaria/$id'
   fileRoutesById: FileRoutesById
 }
@@ -236,6 +247,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAtrasadosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios/': {
+      id: '/_authenticated/relatorios/'
+      path: '/'
+      fullPath: '/relatorios/'
+      preLoaderRoute: typeof AuthenticatedRelatoriosIndexRouteImport
+      parentRoute: typeof AuthenticatedRelatoriosRoute
+    }
     '/_authenticated/relatorios/secretaria/$id': {
       id: '/_authenticated/relatorios/secretaria/$id'
       path: '/secretaria/$id'
@@ -247,11 +265,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRelatoriosRouteChildren {
+  AuthenticatedRelatoriosIndexRoute: typeof AuthenticatedRelatoriosIndexRoute
   AuthenticatedRelatoriosSecretariaIdRoute: typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 
 const AuthenticatedRelatoriosRouteChildren: AuthenticatedRelatoriosRouteChildren =
   {
+    AuthenticatedRelatoriosIndexRoute: AuthenticatedRelatoriosIndexRoute,
     AuthenticatedRelatoriosSecretariaIdRoute:
       AuthenticatedRelatoriosSecretariaIdRoute,
   }
@@ -290,13 +310,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
