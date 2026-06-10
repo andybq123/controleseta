@@ -192,27 +192,31 @@ function ProtocolosPage() {
   );
 }
 
-function NovoProtocoloDialog({ secretarias, responsaveis }: { secretarias: any[]; responsaveis: any[] }) {
+function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretarias: any[]; responsaveis: any[]; locais: any[] }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState<TipoProtocolo>("ouvidoria");
+  const [categoria, setCategoria] = useState<CategoriaProtocolo>("reclamacao");
   const [numero, setNumero] = useState("");
   const [assunto, setAssunto] = useState("");
   const [descricao, setDescricao] = useState("");
   const [secretariaId, setSecretariaId] = useState<string>("");
+  const [localId, setLocalId] = useState<string>("");
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [solicitante, setSolicitante] = useState("");
   const [dataAbertura, setDataAbertura] = useState(new Date().toISOString().slice(0, 10));
 
   const respFiltrados = responsaveis.filter(r => !secretariaId || r.secretaria_id === secretariaId);
+  const locaisFiltrados = locais.filter(l => !secretariaId || l.secretaria_id === secretariaId);
 
   const create = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from("protocolos").insert({
         numero: numero || gerarNumeroProtocolo(tipo),
-        tipo, assunto, descricao: descricao || null,
+        tipo, categoria, assunto, descricao: descricao || null,
         secretaria_id: secretariaId || null,
+        local_id: localId || null,
         responsavel_id: responsavelId || null,
         solicitante: solicitante || null,
         data_abertura: dataAbertura,
@@ -224,7 +228,7 @@ function NovoProtocoloDialog({ secretarias, responsaveis }: { secretarias: any[]
       qc.invalidateQueries({ queryKey: ["protocolos"] });
       toast.success("Protocolo cadastrado");
       setOpen(false);
-      setNumero(""); setAssunto(""); setDescricao(""); setSecretariaId(""); setResponsavelId(""); setSolicitante("");
+      setNumero(""); setAssunto(""); setDescricao(""); setSecretariaId(""); setLocalId(""); setResponsavelId(""); setSolicitante("");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -242,7 +246,7 @@ function NovoProtocoloDialog({ secretarias, responsaveis }: { secretarias: any[]
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Tipo *</Label>
-              <Select value={tipo} onValueChange={v => setTipo(v as TipoProtocolo)}>
+              <Select value={tipo} onValueChange={v => { setTipo(v as TipoProtocolo); if (v === "lai") setCategoria("pedido_informacao"); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ouvidoria">Ouvidoria (30+30d)</SelectItem>
@@ -254,6 +258,15 @@ function NovoProtocoloDialog({ secretarias, responsaveis }: { secretarias: any[]
               <Label>Data de abertura *</Label>
               <Input type="date" value={dataAbertura} onChange={e => setDataAbertura(e.target.value)} />
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Categoria *</Label>
+            <Select value={categoria} onValueChange={v => setCategoria(v as CategoriaProtocolo)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CATEGORIAS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Número (auto se vazio)</Label>
@@ -273,10 +286,19 @@ function NovoProtocoloDialog({ secretarias, responsaveis }: { secretarias: any[]
           </div>
           <div className="space-y-1.5">
             <Label>Secretaria</Label>
-            <Select value={secretariaId} onValueChange={v => { setSecretariaId(v); setResponsavelId(""); }}>
+            <Select value={secretariaId} onValueChange={v => { setSecretariaId(v); setResponsavelId(""); setLocalId(""); }}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
                 {secretarias.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Local / Centro de Custo</Label>
+            <Select value={localId} onValueChange={setLocalId} disabled={!secretariaId}>
+              <SelectTrigger><SelectValue placeholder={secretariaId ? "Selecione" : "Escolha uma secretaria"} /></SelectTrigger>
+              <SelectContent>
+                {locaisFiltrados.map(l => <SelectItem key={l.id} value={l.id}>{l.nome}{l.centro_custo ? ` · ${l.centro_custo}` : ""}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
