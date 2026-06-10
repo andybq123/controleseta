@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, type TipoProtocolo, type StatusProtocolo } from "@/lib/prazo";
+import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, CATEGORIAS, categoriaLabel, type TipoProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { Plus, Calendar, RotateCw, CheckCircle2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,6 +22,9 @@ function ProtocolosPage() {
   const qc = useQueryClient();
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("todos");
+  const [filtroSec, setFiltroSec] = useState<string>("todos");
+  const [busca, setBusca] = useState("");
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
@@ -45,6 +48,11 @@ function ProtocolosPage() {
     queryFn: async () => (await supabase.from("responsaveis").select("*").order("nome")).data ?? [],
   });
 
+  const { data: locais = [] } = useQuery({
+    queryKey: ["locais"],
+    queryFn: async () => (await supabase.from("locais").select("*").order("nome")).data ?? [],
+  });
+
   const updateMutation = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: any }) => {
       const { error } = await supabase.from("protocolos").update(patch).eq("id", id);
@@ -65,6 +73,13 @@ function ProtocolosPage() {
   const filtrados = protocolos.filter(p => {
     if (filtroStatus !== "todos" && p.status !== filtroStatus) return false;
     if (filtroTipo !== "todos" && p.tipo !== filtroTipo) return false;
+    if (filtroCategoria !== "todos" && p.categoria !== filtroCategoria) return false;
+    if (filtroSec !== "todos" && p.secretaria_id !== filtroSec) return false;
+    if (busca) {
+      const s = busca.toLowerCase();
+      const txt = `${p.numero} ${p.assunto} ${p.solicitante ?? ""}`.toLowerCase();
+      if (!txt.includes(s)) return false;
+    }
     return true;
   });
 
@@ -75,16 +90,24 @@ function ProtocolosPage() {
           <h1 className="text-2xl font-bold tracking-tight">Protocolos</h1>
           <p className="text-sm text-muted-foreground">{filtrados.length} de {protocolos.length}</p>
         </div>
-        <NovoProtocoloDialog secretarias={secretarias} responsaveis={responsaveis} />
+        <NovoProtocoloDialog secretarias={secretarias} responsaveis={responsaveis} locais={locais} />
       </div>
 
       <div className="flex flex-wrap gap-2">
+        <Input placeholder="Buscar nº, assunto, solicitante…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[240px]" />
         <Select value={filtroTipo} onValueChange={setFiltroTipo}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos os tipos</SelectItem>
             <SelectItem value="ouvidoria">Ouvidoria</SelectItem>
             <SelectItem value="lai">LAI</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+          <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todas as categorias</SelectItem>
+            {CATEGORIAS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filtroStatus} onValueChange={setFiltroStatus}>
@@ -94,6 +117,13 @@ function ProtocolosPage() {
             <SelectItem value="aberto">Aberto</SelectItem>
             <SelectItem value="em_andamento">Em andamento</SelectItem>
             <SelectItem value="concluido">Concluído</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filtroSec} onValueChange={setFiltroSec}>
+          <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todas as secretarias</SelectItem>
+            {secretarias.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -112,6 +142,7 @@ function ProtocolosPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-xs text-muted-foreground">{p.numero}</span>
                       <Badge variant="outline" className="text-[10px] uppercase">{PRAZOS[p.tipo as TipoProtocolo].label}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{categoriaLabel(p.categoria as CategoriaProtocolo)}</Badge>
                       <Badge variant="secondary" className="text-[10px]">{p.status.replace("_", " ")}</Badge>
                       {p.prorrogado && <Badge variant="outline" className="text-[10px]">prorrogado</Badge>}
                       <Badge variant="outline" className={`text-[10px] border ${situacaoClasses[s.situacao]}`}>
