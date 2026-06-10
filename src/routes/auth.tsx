@@ -84,6 +84,11 @@ function AuthPage() {
                   <Label htmlFor="password">Senha</Label>
                   <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
+                <div className="flex items-center justify-between">
+                  <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                    Esqueci minha senha
+                  </Link>
+                </div>
                 <Button type="submit" className="w-full" disabled={loading}>Entrar</Button>
               </form>
             </TabsContent>
