@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CATEGORIAS, type CategoriaProtocolo } from "@/lib/prazo";
+import { CATEGORIAS, type CategoriaProtocolo, situacaoProtocolo, formatDate, categoriaLabel, PRAZOS, type TipoProtocolo } from "@/lib/prazo";
 import { Download, BarChart3 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -25,7 +25,7 @@ function RelatoriosPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("protocolos")
-        .select("*, secretarias(nome)")
+        .select("*, secretarias(nome), responsaveis(nome), locais(nome,centro_custo)")
         .order("data_abertura", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -108,6 +108,37 @@ function RelatoriosPage() {
   );
   const maxMes = Math.max(1, ...totalMes);
 
+  // Atrasadas com dias de atraso (todos os anos, não filtra por ano)
+  const atrasadas = useMemo(() => {
+    return protocolos
+      .filter(p => p.status !== "concluido")
+      .map(p => ({ ...p, _s: situacaoProtocolo(p as any) }))
+      .filter(p => p._s.situacao === "vencido")
+      .sort((a, b) => a._s.dias - b._s.dias);
+  }, [protocolos]);
+
+  function exportAtrasadas() {
+    const rows = atrasadas.map(p => ({
+      "Número": p.numero,
+      "Tipo": PRAZOS[p.tipo as TipoProtocolo].label,
+      "Categoria": categoriaLabel(p.categoria as CategoriaProtocolo),
+      "Assunto": p.assunto,
+      "Secretaria": (p as any).secretarias?.nome ?? "",
+      "Local": (p as any).locais?.nome ?? "",
+      "Responsável": (p as any).responsaveis?.nome ?? "",
+      "Solicitante": p.solicitante ?? "",
+      "Data Abertura": formatDate(p.data_abertura),
+      "Prazo Final": formatDate(p._s.prazoFinal),
+      "Dias em atraso": Math.abs(p._s.dias),
+      "Prorrogado": p.prorrogado ? "Sim" : "Não",
+      "Status": p.status,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Atrasadas");
+    XLSX.writeFile(wb, `protocolos-atrasadas-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -129,6 +160,7 @@ function RelatoriosPage() {
         <TabsList>
           <TabsTrigger value="mensal">Comparativo mensal</TabsTrigger>
           <TabsTrigger value="secretaria">Por secretaria</TabsTrigger>
+          <TabsTrigger value="atrasadas">Atrasadas ({atrasadas.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="mensal" className="space-y-4">
@@ -219,6 +251,48 @@ function RelatoriosPage() {
                       ))}
                       <td className="py-2 px-2 text-center font-semibold">{s.total || "—"}</td>
                       <td className="py-2 px-2 text-center font-semibold text-destructive">{s.abertos || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="atrasadas" className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={exportAtrasadas} variant="outline" size="sm" disabled={atrasadas.length === 0}>
+              <Download className="h-4 w-4 mr-1" /> Exportar Excel
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-0 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left bg-secondary/40">
+                    <th className="py-2 px-3 font-medium">Nº / Assunto</th>
+                    <th className="py-2 px-2 font-medium text-xs">Tipo</th>
+                    <th className="py-2 px-2 font-medium text-xs">Secretaria</th>
+                    <th className="py-2 px-2 font-medium text-xs">Aberto</th>
+                    <th className="py-2 px-2 font-medium text-xs">Venceu</th>
+                    <th className="py-2 px-2 font-medium text-xs text-right text-destructive">Atraso</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {atrasadas.length === 0 && (
+                    <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">Nenhuma atrasada 🎉</td></tr>
+                  )}
+                  {atrasadas.map(p => (
+                    <tr key={p.id} className="border-b hover:bg-secondary/30">
+                      <td className="py-2 px-3">
+                        <div className="font-mono text-[10px] text-muted-foreground">{p.numero}</div>
+                        <div className="text-sm">{p.assunto}</div>
+                      </td>
+                      <td className="py-2 px-2 text-xs">{p.tipo}</td>
+                      <td className="py-2 px-2 text-xs">{(p as any).secretarias?.nome ?? "—"}</td>
+                      <td className="py-2 px-2 text-xs">{formatDate(p.data_abertura)}</td>
+                      <td className="py-2 px-2 text-xs">{formatDate(p._s.prazoFinal)}</td>
+                      <td className="py-2 px-2 text-right font-bold text-destructive">+{Math.abs(p._s.dias)}d</td>
                     </tr>
                   ))}
                 </tbody>
