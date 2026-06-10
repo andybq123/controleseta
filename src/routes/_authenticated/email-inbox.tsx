@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Plus, Copy, Trash2, ExternalLink, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { Mail, Plus, Copy, Trash2, ExternalLink, AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useServerFn } from "@tanstack/react-start";
+import { sincronizarGmail } from "@/lib/gmail-sync.functions";
 
 export const Route = createFileRoute("/_authenticated/email-inbox")({
   component: EmailInboxPage,
@@ -26,6 +28,22 @@ function baseUrl() {
 
 function EmailInboxPage() {
   const qc = useQueryClient();
+  const sincronizar = useServerFn(sincronizarGmail);
+  const [sincronizando, setSincronizando] = useState(false);
+
+  async function rodarSync() {
+    setSincronizando(true);
+    try {
+      const r: any = await sincronizar({});
+      toast.success(`Gmail: ${r.novos} novo(s), ${r.erros} erro(s) em ${r.contas} conta(s)`);
+      qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] });
+      qc.invalidateQueries({ queryKey: ["email-inbox-log"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao sincronizar");
+    } finally {
+      setSincronizando(false);
+    }
+  }
 
   const { data: accounts = [] } = useQuery({
     queryKey: ["email-inbox-accounts"],
@@ -93,7 +111,13 @@ function EmailInboxPage() {
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2"><Mail className="h-6 w-6" /> Recepção por E-mail</h1>
           <p className="text-sm text-muted-foreground">Encaminhe e-mails para um endereço único e o sistema cria a ouvidoria automaticamente.</p>
         </div>
-        <NovaContaDialog secretarias={secretarias} />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={rodarSync} disabled={sincronizando}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${sincronizando ? "animate-spin" : ""}`} />
+            Sincronizar Gmail
+          </Button>
+          <NovaContaDialog secretarias={secretarias} />
+        </div>
       </div>
 
       <Tabs defaultValue="contas">
@@ -109,6 +133,7 @@ function EmailInboxPage() {
           )}
           {accounts.map(a => {
             const url = `${baseUrl()}/api/public/inbound-email/${a.token}`;
+            const isGmail = (a as any).provider === "gmail";
             return (
               <Card key={a.id}>
                 <CardContent className="p-4 space-y-3">
@@ -117,10 +142,14 @@ function EmailInboxPage() {
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{a.email}</span>
+                        {isGmail && <Badge className="bg-blue-500/15 text-blue-700 border-blue-500/30" variant="outline">Gmail</Badge>}
                         {!a.ativo && <Badge variant="secondary">Inativa</Badge>}
                       </div>
                       {a.descricao && <p className="text-xs text-muted-foreground mt-0.5">{a.descricao}</p>}
                       {(a as any).secretarias && <p className="text-xs text-muted-foreground mt-0.5">Vinculada à secretaria: <strong>{(a as any).secretarias.nome}</strong></p>}
+                      {isGmail && (a as any).ultima_sincronizacao && (
+                        <p className="text-xs text-muted-foreground mt-0.5">Última sincronização: {format(new Date((a as any).ultima_sincronizacao), "dd/MM/yyyy HH:mm")}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1.5 text-xs">
@@ -132,10 +161,16 @@ function EmailInboxPage() {
                       </Button>
                     </div>
                   </div>
-                  <div className="rounded-md border bg-muted/40 p-2 flex items-center gap-2">
-                    <code className="text-[11px] flex-1 truncate font-mono">{url}</code>
-                    <Button size="sm" variant="outline" onClick={() => copiar(url)}><Copy className="h-3 w-3 mr-1" /> Copiar URL do webhook</Button>
-                  </div>
+                  {isGmail ? (
+                    <div className="rounded-md border border-blue-500/30 bg-blue-500/5 p-2 text-xs text-muted-foreground">
+                      ✓ Conectado ao Google. O sistema verifica a caixa periodicamente e cria protocolos automaticamente.
+                    </div>
+                  ) : (
+                    <div className="rounded-md border bg-muted/40 p-2 flex items-center gap-2">
+                      <code className="text-[11px] flex-1 truncate font-mono">{url}</code>
+                      <Button size="sm" variant="outline" onClick={() => copiar(url)}><Copy className="h-3 w-3 mr-1" /> Copiar URL do webhook</Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -229,6 +264,7 @@ function NovaContaDialog({ secretarias }: { secretarias: any[] }) {
   const [email, setEmail] = useState("");
   const [descricao, setDescricao] = useState("");
   const [secId, setSecId] = useState<string>("");
+  const [provider, setProvider] = useState<"gmail" | "webhook">("gmail");
 
   const criar = useMutation({
     mutationFn: async () => {
@@ -238,6 +274,7 @@ function NovaContaDialog({ secretarias }: { secretarias: any[] }) {
         descricao: descricao || null,
         secretaria_id: secId || null,
         created_by: user?.id,
+        provider,
       });
       if (error) throw error;
     },
@@ -256,6 +293,17 @@ function NovaContaDialog({ secretarias }: { secretarias: any[] }) {
       <DialogContent>
         <DialogHeader><DialogTitle>Cadastrar e-mail de recepção</DialogTitle></DialogHeader>
         <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Forma de captura</Label>
+            <Select value={provider} onValueChange={(v) => setProvider(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gmail">Gmail conectado (automático)</SelectItem>
+                <SelectItem value="webhook">Webhook (Zapier / Make / n8n)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{provider === "gmail" ? "O sistema consulta diretamente a caixa do Gmail conectado." : "Você configura um encaminhamento que faz POST na URL gerada."}</p>
+          </div>
           <div className="space-y-1.5">
             <Label>E-mail *</Label>
             <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ouvidoria@exemplo.gov.br" />
