@@ -5,17 +5,18 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const SYSTEM = `Você extrai dados estruturados de protocolos de Ouvidoria/LAI de prefeituras a partir de texto colado pelo usuário (e-mails, mensagens, formulários).
 Responda APENAS com JSON válido (sem markdown, sem texto extra) com os campos:
 {
-  "numero": string (número do protocolo se aparecer, senão ""),
+  "numero": string (número do protocolo se aparecer, ex: "1.940/2026", "Nº: 1940/2026", "Ouvidoria 1.940/2026", "Protocolo 12345"; preserve a formatação original incluindo pontos e barras; senão ""),
   "tipo": "ouvidoria" | "lai" (LAI se for pedido de informação/Lei de Acesso à Informação, senão ouvidoria),
   "categoria": "elogio" | "reclamacao" | "pedido_informacao" | "denuncia" | "solicitacao" | "outros",
-  "assunto": string (resumo curto, até 120 caracteres),
+  "assunto": string (procure o campo "Assunto:" do e-mail/notificação; senão um resumo curto, até 120 caracteres),
   "descricao": string (descrição mais detalhada do que foi pedido/relatado),
-  "solicitante": string (nome do solicitante se aparecer, senão ""),
-  "data_abertura": string (YYYY-MM-DD se aparecer, senão ""),
-  "secretaria_sugerida": string (nome da secretaria/órgão sugerido se inferível, senão ""),
+  "solicitante": string (nome do solicitante — geralmente após "De:" no e-mail; ignore o nome da prefeitura/remetente automático; senão ""),
+  "data_abertura": string (YYYY-MM-DD se aparecer — converta datas em português como "10 de junho de 2026" para "2026-06-10"; senão ""),
+  "secretaria_sugerida": string (nome da secretaria/órgão sugerido — geralmente após "Para:" no e-mail, ex: "SETA - OUV - Ouvidoria Geral", "Secretaria de Saúde"; senão ""),
   "local_sugerido": string (bairro, escola, unidade, rua se aparecer, senão "")
 }
-Use string vazia "" quando não houver informação. Não invente dados.`;
+Use string vazia "" quando não houver informação. Não invente dados.
+Categorize "Demora em marcar consulta", "Falta de atendimento", etc. como "reclamacao". "Pedido de informação" / "LAI" => tipo "lai" e categoria "pedido_informacao".`;
 
 export const extrairProtocolo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
