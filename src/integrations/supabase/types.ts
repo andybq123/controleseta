@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      email_inbox_accounts: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          email: string
+          id: string
+          secretaria_id: string | null
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          email: string
+          id?: string
+          secretaria_id?: string | null
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          email?: string
+          id?: string
+          secretaria_id?: string | null
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_inbox_accounts_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_inbox_log: {
+        Row: {
+          account_id: string | null
+          assunto: string | null
+          corpo: string | null
+          destinatario: string | null
+          erro: string | null
+          id: string
+          processado_em: string | null
+          protocolo_id: string | null
+          recebido_em: string
+          remetente: string | null
+          status: string
+        }
+        Insert: {
+          account_id?: string | null
+          assunto?: string | null
+          corpo?: string | null
+          destinatario?: string | null
+          erro?: string | null
+          id?: string
+          processado_em?: string | null
+          protocolo_id?: string | null
+          recebido_em?: string
+          remetente?: string | null
+          status?: string
+        }
+        Update: {
+          account_id?: string | null
+          assunto?: string | null
+          corpo?: string | null
+          destinatario?: string | null
+          erro?: string | null
+          id?: string
+          processado_em?: string | null
+          protocolo_id?: string | null
+          recebido_em?: string
+          remetente?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_inbox_log_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "email_inbox_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_log_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locais: {
         Row: {
           centro_custo: string | null
