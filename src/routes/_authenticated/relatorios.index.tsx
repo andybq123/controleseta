@@ -4,10 +4,11 @@ import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORIAS, type CategoriaProtocolo, situacaoProtocolo, formatDate, categoriaLabel, PRAZOS, type TipoProtocolo } from "@/lib/prazo";
-import { Download, BarChart3, ChevronRight, FileText } from "lucide-react";
+import { Download, BarChart3, ChevronRight, FileText, Search, X } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -21,6 +22,21 @@ const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "O
 function RelatoriosPage() {
   const currentYear = new Date().getFullYear();
   const [ano, setAno] = useState(String(currentYear));
+  const [q, setQ] = useState("");
+  const [fCategoria, setFCategoria] = useState<string>("all");
+  const [fTipo, setFTipo] = useState<string>("all");
+  const [fStatus, setFStatus] = useState<string>("all");
+  const [fSecretaria, setFSecretaria] = useState<string>("all");
+
+  const { data: userInfo } = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return null;
+      const { data: p } = await supabase.from("profiles").select("nome,email").eq("id", data.user.id).maybeSingle();
+      return { id: data.user.id, email: data.user.email, nome: p?.nome ?? data.user.email };
+    },
+  });
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
@@ -46,7 +62,24 @@ function RelatoriosPage() {
     return Array.from(set).sort().reverse();
   }, [protocolos, currentYear]);
 
-  const doAno = protocolos.filter(p => p.data_abertura.startsWith(ano));
+  const matchesFilter = (p: any) => {
+    if (fCategoria !== "all" && p.categoria !== fCategoria) return false;
+    if (fTipo !== "all" && p.tipo !== fTipo) return false;
+    if (fStatus !== "all" && p.status !== fStatus) return false;
+    if (fSecretaria !== "all" && p.secretaria_id !== fSecretaria) return false;
+    if (q.trim()) {
+      const needle = q.toLowerCase();
+      const hay = [p.numero, p.assunto, p.descricao, p.solicitante, (p as any).secretarias?.nome, (p as any).responsaveis?.nome]
+        .filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(needle)) return false;
+    }
+    return true;
+  };
+
+  const filtrados = protocolos.filter(matchesFilter);
+  const doAno = filtrados.filter(p => p.data_abertura.startsWith(ano));
+  const filtrosAtivos = q || fCategoria !== "all" || fTipo !== "all" || fStatus !== "all" || fSecretaria !== "all";
+  const clearFilters = () => { setQ(""); setFCategoria("all"); setFTipo("all"); setFStatus("all"); setFSecretaria("all"); };
 
   // Comparativo mês a mês por categoria
   const comparativoMensal = useMemo(() => {
@@ -112,12 +145,12 @@ function RelatoriosPage() {
 
   // Atrasadas com dias de atraso (todos os anos, não filtra por ano)
   const atrasadas = useMemo(() => {
-    return protocolos
+    return filtrados
       .filter(p => p.status !== "concluido")
       .map(p => ({ ...p, _s: situacaoProtocolo(p as any) }))
       .filter(p => p._s.situacao === "vencido")
       .sort((a, b) => a._s.dias - b._s.dias);
-  }, [protocolos]);
+  }, [filtrados]);
 
   function exportAtrasadas() {
     const rows = atrasadas.map(p => ({
@@ -147,13 +180,49 @@ function RelatoriosPage() {
     doc.text(titulo, 40, 40);
     doc.setFontSize(9); doc.setFont("helvetica", "normal");
     doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}`, 40, 56);
+    if (filtrosAtivos) {
+      const partes: string[] = [];
+      if (q) partes.push(`busca:"${q}"`);
+      if (fCategoria !== "all") partes.push(`categoria:${categoriaLabel(fCategoria as CategoriaProtocolo)}`);
+      if (fTipo !== "all") partes.push(`tipo:${PRAZOS[fTipo as TipoProtocolo]?.label}`);
+      if (fStatus !== "all") partes.push(`status:${fStatus}`);
+      if (fSecretaria !== "all") {
+        const s = secretarias.find((x: any) => x.id === fSecretaria);
+        if (s) partes.push(`secretaria:${(s as any).nome}`);
+      }
+      doc.text(`Filtros: ${partes.join(" · ")}`, 40, 68);
+    }
+  }
+
+  function pdfSignature(doc: jsPDF) {
+    const pageCount = doc.getNumberOfPages();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    // hash simples do conteúdo+timestamp para identificar o documento
+    const seed = `${userInfo?.id ?? "anon"}|${Date.now()}|${Math.random()}`;
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) h = ((h << 5) - h + seed.charCodeAt(i)) | 0;
+    const hash = Math.abs(h).toString(36).toUpperCase().padStart(8, "0");
+    const docId = `DOC-${new Date().getFullYear()}-${hash}`;
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(200);
+      doc.line(40, pageHeight - 60, pageWidth - 40, pageHeight - 60);
+      doc.setFontSize(8); doc.setFont("helvetica", "normal");
+      doc.text(
+        `Assinado eletronicamente por: ${userInfo?.nome ?? "—"}${userInfo?.email ? ` <${userInfo.email}>` : ""}`,
+        40, pageHeight - 46
+      );
+      doc.text(`Documento: ${docId}  ·  Emitido em ${new Date().toLocaleString("pt-BR")}`, 40, pageHeight - 34);
+      doc.text(`Página ${i} de ${pageCount}`, pageWidth - 40, pageHeight - 34, { align: "right" });
+    }
   }
 
   function exportComparativoPDF() {
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     pdfHeader(doc, `Comparativo mensal — ${ano}`);
     autoTable(doc, {
-      startY: 70,
+      startY: filtrosAtivos ? 84 : 70,
       head: [["Categoria", ...MESES, "Total"]],
       body: CATEGORIAS.map(c => {
         const row = comparativoMensal[c.value];
@@ -164,6 +233,7 @@ function RelatoriosPage() {
       footStyles: { fillColor: [226, 232, 240], textColor: 20, fontStyle: "bold" },
       styles: { fontSize: 9 },
     });
+    pdfSignature(doc);
     doc.save(`comparativo-mensal-${ano}.pdf`);
   }
 
@@ -171,7 +241,7 @@ function RelatoriosPage() {
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     pdfHeader(doc, `Resumo por secretaria — ${ano}`);
     autoTable(doc, {
-      startY: 70,
+      startY: filtrosAtivos ? 84 : 70,
       head: [["Secretaria", "C. Custo", ...CATEGORIAS.map(c => c.label), "Total", "Abertos", "Concluídos"]],
       body: resumoSecretaria.map(s => [
         s.nome,
@@ -184,6 +254,7 @@ function RelatoriosPage() {
       headStyles: { fillColor: [16, 185, 129] },
       styles: { fontSize: 8 },
     });
+    pdfSignature(doc);
     doc.save(`resumo-secretarias-${ano}.pdf`);
   }
 
@@ -191,7 +262,7 @@ function RelatoriosPage() {
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     pdfHeader(doc, `Protocolos atrasados (${atrasadas.length})`);
     autoTable(doc, {
-      startY: 70,
+      startY: filtrosAtivos ? 84 : 70,
       head: [["Nº", "Tipo", "Categoria", "Secretaria", "Assunto", "Aberto", "Prazo", "Atraso"]],
       body: atrasadas.map(p => [
         p.numero,
@@ -206,6 +277,7 @@ function RelatoriosPage() {
       headStyles: { fillColor: [239, 68, 68] },
       styles: { fontSize: 8 },
     });
+    pdfSignature(doc);
     doc.save(`atrasados-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
