@@ -214,7 +214,12 @@ function EmailInboxPage() {
                       {a.descricao && <p className="text-xs text-muted-foreground mt-0.5">{a.descricao}</p>}
                       {(a as any).secretarias && <p className="text-xs text-muted-foreground mt-0.5">Vinculada à secretaria: <strong>{(a as any).secretarias.nome}</strong></p>}
                       {isGmail && (a as any).ultima_sincronizacao && (
-                        <p className="text-xs text-muted-foreground mt-0.5">Última sincronização: {format(new Date((a as any).ultima_sincronizacao), "dd/MM/yyyy HH:mm")}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Última sincronização: {format(new Date((a as any).ultima_sincronizacao), "dd/MM/yyyy HH:mm:ss")}
+                          {" · "}processados: {(a as any).ultima_sync_processados ?? 0}
+                          {" · "}novos: {(a as any).ultima_sync_novos ?? 0}
+                          {" · "}erros: {(a as any).ultima_sync_erros ?? 0}
+                        </p>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
