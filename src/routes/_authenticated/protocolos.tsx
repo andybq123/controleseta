@@ -11,8 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, CATEGORIAS, categoriaLabel, type TipoProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
-import { Plus, Calendar, RotateCw, CheckCircle2, Trash2 } from "lucide-react";
+import { Plus, Calendar, RotateCw, CheckCircle2, Trash2, Sparkles, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { extrairProtocolo } from "@/lib/protocolo-extract.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 
 export const Route = createFileRoute("/_authenticated/protocolos")({
   component: ProtocolosPage,
@@ -20,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/protocolos")({
 
 function ProtocolosPage() {
   const qc = useQueryClient();
+  const [detail, setDetail] = useState<any | null>(null);
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todos");
@@ -31,7 +35,7 @@ function ProtocolosPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("protocolos")
-        .select("*, secretarias(nome, sigla), responsaveis(nome)")
+        .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
         .order("data_abertura", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -160,6 +164,9 @@ function ProtocolosPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5 shrink-0">
+                    <Button size="sm" variant="outline" onClick={() => setDetail(p)}>
+                      <Eye className="h-3 w-3 mr-1" /> Detalhes
+                    </Button>
                     {p.status !== "concluido" && !p.prorrogado && (
                       <Button size="sm" variant="outline"
                         onClick={() => updateMutation.mutate({ id: p.id, patch: { prorrogado: true, data_prorrogacao: new Date().toISOString().slice(0, 10) } })}>
@@ -188,6 +195,8 @@ function ProtocolosPage() {
           );
         })}
       </div>
+
+      <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
     </div>
   );
 }
@@ -205,9 +214,49 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [solicitante, setSolicitante] = useState("");
   const [dataAbertura, setDataAbertura] = useState(new Date().toISOString().slice(0, 10));
+  const [textoColar, setTextoColar] = useState("");
+  const [extraindo, setExtraindo] = useState(false);
+  const [sugestao, setSugestao] = useState<{ secretaria?: string; local?: string } | null>(null);
+  const extrair = useServerFn(extrairProtocolo);
 
   const respFiltrados = responsaveis.filter(r => !secretariaId || r.secretaria_id === secretariaId);
   const locaisFiltrados = locais.filter(l => !secretariaId || l.secretaria_id === secretariaId);
+
+  async function handleExtrair() {
+    if (!textoColar.trim()) return;
+    setExtraindo(true);
+    try {
+      const r = await extrair({ data: { texto: textoColar } });
+      if (r.numero) setNumero(r.numero);
+      setTipo(r.tipo as TipoProtocolo);
+      setCategoria(r.categoria as CategoriaProtocolo);
+      if (r.assunto) setAssunto(r.assunto);
+      if (r.descricao) setDescricao(r.descricao);
+      if (r.solicitante) setSolicitante(r.solicitante);
+      if (r.data_abertura) setDataAbertura(r.data_abertura);
+
+      // tenta casar secretaria sugerida
+      let secMatched = "";
+      if (r.secretaria_sugerida) {
+        const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const alvo = norm(r.secretaria_sugerida);
+        const hit = secretarias.find(s => norm(s.nome).includes(alvo) || alvo.includes(norm(s.nome)) || (s.sigla && norm(s.sigla) === alvo));
+        if (hit) { setSecretariaId(hit.id); secMatched = hit.id; }
+      }
+      if (r.local_sugerido && secMatched) {
+        const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const alvo = norm(r.local_sugerido);
+        const hit = locais.find(l => l.secretaria_id === secMatched && (norm(l.nome).includes(alvo) || alvo.includes(norm(l.nome))));
+        if (hit) setLocalId(hit.id);
+      }
+      setSugestao({ secretaria: r.secretaria_sugerida, local: r.local_sugerido });
+      toast.success("Dados extraídos. Revise antes de salvar.");
+    } catch (e: any) {
+      toast.error(e.message ?? "Falha na extração");
+    } finally {
+      setExtraindo(false);
+    }
+  }
 
   const create = useMutation({
     mutationFn: async () => {
@@ -243,6 +292,39 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Novo protocolo</DialogTitle></DialogHeader>
         <div className="space-y-3">
+          <div className="rounded-md border-2 border-dashed border-primary/30 bg-primary/5 p-3 space-y-2">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Extração automática com IA
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Cole o e-mail / texto do protocolo abaixo. A IA preenche os campos automaticamente. Revise antes de salvar.
+            </p>
+            <Textarea
+              placeholder="Cole aqui o texto do protocolo, e-mail ou mensagem…"
+              value={textoColar}
+              onChange={e => setTextoColar(e.target.value)}
+              rows={4}
+            />
+            <div className="flex items-center justify-between gap-2">
+              <Button type="button" size="sm" onClick={handleExtrair} disabled={!textoColar.trim() || extraindo}>
+                <Sparkles className="h-3 w-3 mr-1" />
+                {extraindo ? "Extraindo…" : "Extrair dados"}
+              </Button>
+              {textoColar && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => { setTextoColar(""); setSugestao(null); }}>
+                  Limpar
+                </Button>
+              )}
+            </div>
+            {sugestao && (sugestao.secretaria || sugestao.local) && (
+              <div className="text-xs text-muted-foreground space-y-0.5">
+                {sugestao.secretaria && <p>💡 Secretaria sugerida: <strong>{sugestao.secretaria}</strong></p>}
+                {sugestao.local && <p>💡 Local sugerido: <strong>{sugestao.local}</strong></p>}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Tipo *</Label>
