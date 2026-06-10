@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,15 +21,19 @@ const SYNC_INTERVAL_MIN = 5;
 
 function useTick(ms = 1000) {
   const [, setN] = useState(0);
-  if (typeof window !== "undefined") {
-    // simple interval via effect-less pattern using useState + setInterval in a hook
-  }
-  // proper effect:
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  React.useEffect(() => {
+  useEffect(() => {
     const id = setInterval(() => setN(n => n + 1), ms);
     return () => clearInterval(id);
   }, [ms]);
+}
+
+function formatDelta(ms: number): string {
+  if (ms <= 0) return "a qualquer momento";
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const ss = s % 60;
+  if (m <= 0) return `em ${ss}s`;
+  return `em ${m}m ${ss.toString().padStart(2, "0")}s`;
 }
 
 export const Route = createFileRoute("/_authenticated/email-inbox")({
