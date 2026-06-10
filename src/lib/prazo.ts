@@ -2,6 +2,25 @@ import { addDays, differenceInCalendarDays, format } from "date-fns";
 
 export type TipoProtocolo = "ouvidoria" | "lai";
 export type StatusProtocolo = "aberto" | "em_andamento" | "concluido";
+export type CategoriaProtocolo =
+  | "elogio"
+  | "reclamacao"
+  | "pedido_informacao"
+  | "denuncia"
+  | "solicitacao"
+  | "outros";
+
+export const CATEGORIAS: { value: CategoriaProtocolo; label: string }[] = [
+  { value: "elogio", label: "Elogio" },
+  { value: "reclamacao", label: "Reclamação" },
+  { value: "pedido_informacao", label: "Pedido de informação" },
+  { value: "denuncia", label: "Denúncia" },
+  { value: "solicitacao", label: "Solicitação" },
+  { value: "outros", label: "Outros" },
+];
+
+export const categoriaLabel = (c: CategoriaProtocolo) =>
+  CATEGORIAS.find(x => x.value === c)?.label ?? c;
 
 export const PRAZOS = {
   ouvidoria: { inicial: 30, prorrogacao: 30, label: "Ouvidoria" },
