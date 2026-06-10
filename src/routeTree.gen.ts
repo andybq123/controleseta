@@ -15,10 +15,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSecretariasRouteImport } from './routes/_authenticated/secretarias'
-import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authenticated/protocolos'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
+import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
 import { Route as AuthenticatedRelatoriosSecretariaIdRouteImport } from './routes/_authenticated/relatorios.secretaria.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -51,11 +51,6 @@ const AuthenticatedSecretariasRoute =
     path: '/secretarias',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
-  id: '/relatorios',
-  path: '/relatorios',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedProtocolosRoute = AuthenticatedProtocolosRouteImport.update({
   id: '/protocolos',
   path: '/protocolos',
@@ -71,11 +66,17 @@ const AuthenticatedAtrasadosRoute = AuthenticatedAtrasadosRouteImport.update({
   path: '/atrasados',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRelatoriosIndexRoute =
+  AuthenticatedRelatoriosIndexRouteImport.update({
+    id: '/relatorios/',
+    path: '/relatorios/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRelatoriosSecretariaIdRoute =
   AuthenticatedRelatoriosSecretariaIdRouteImport.update({
-    id: '/secretaria/$id',
-    path: '/secretaria/$id',
-    getParentRoute: () => AuthenticatedRelatoriosRoute,
+    id: '/relatorios/secretaria/$id',
+    path: '/relatorios/secretaria/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -86,8 +87,8 @@ export interface FileRoutesByFullPath {
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
-  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 export interface FileRoutesByTo {
@@ -98,8 +99,8 @@ export interface FileRoutesByTo {
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
-  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 export interface FileRoutesById {
@@ -112,8 +113,8 @@ export interface FileRoutesById {
   '/_authenticated/atrasados': typeof AuthenticatedAtrasadosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/protocolos': typeof AuthenticatedProtocolosRoute
-  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
+  '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 export interface FileRouteTypes {
@@ -126,8 +127,8 @@ export interface FileRouteTypes {
     | '/atrasados'
     | '/dashboard'
     | '/protocolos'
-    | '/relatorios'
     | '/secretarias'
+    | '/relatorios/'
     | '/relatorios/secretaria/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -138,8 +139,8 @@ export interface FileRouteTypes {
     | '/atrasados'
     | '/dashboard'
     | '/protocolos'
-    | '/relatorios'
     | '/secretarias'
+    | '/relatorios'
     | '/relatorios/secretaria/$id'
   id:
     | '__root__'
@@ -151,8 +152,8 @@ export interface FileRouteTypes {
     | '/_authenticated/atrasados'
     | '/_authenticated/dashboard'
     | '/_authenticated/protocolos'
-    | '/_authenticated/relatorios'
     | '/_authenticated/secretarias'
+    | '/_authenticated/relatorios/'
     | '/_authenticated/relatorios/secretaria/$id'
   fileRoutesById: FileRoutesById
 }
@@ -208,13 +209,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSecretariasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/relatorios': {
-      id: '/_authenticated/relatorios'
-      path: '/relatorios'
-      fullPath: '/relatorios'
-      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/protocolos': {
       id: '/_authenticated/protocolos'
       path: '/protocolos'
@@ -236,45 +230,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAtrasadosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios/': {
+      id: '/_authenticated/relatorios/'
+      path: '/relatorios'
+      fullPath: '/relatorios/'
+      preLoaderRoute: typeof AuthenticatedRelatoriosIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios/secretaria/$id': {
       id: '/_authenticated/relatorios/secretaria/$id'
-      path: '/secretaria/$id'
+      path: '/relatorios/secretaria/$id'
       fullPath: '/relatorios/secretaria/$id'
       preLoaderRoute: typeof AuthenticatedRelatoriosSecretariaIdRouteImport
-      parentRoute: typeof AuthenticatedRelatoriosRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
-
-interface AuthenticatedRelatoriosRouteChildren {
-  AuthenticatedRelatoriosSecretariaIdRoute: typeof AuthenticatedRelatoriosSecretariaIdRoute
-}
-
-const AuthenticatedRelatoriosRouteChildren: AuthenticatedRelatoriosRouteChildren =
-  {
-    AuthenticatedRelatoriosSecretariaIdRoute:
-      AuthenticatedRelatoriosSecretariaIdRoute,
-  }
-
-const AuthenticatedRelatoriosRouteWithChildren =
-  AuthenticatedRelatoriosRoute._addFileChildren(
-    AuthenticatedRelatoriosRouteChildren,
-  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAtrasadosRoute: typeof AuthenticatedAtrasadosRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProtocolosRoute: typeof AuthenticatedProtocolosRoute
-  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedSecretariasRoute: typeof AuthenticatedSecretariasRoute
+  AuthenticatedRelatoriosIndexRoute: typeof AuthenticatedRelatoriosIndexRoute
+  AuthenticatedRelatoriosSecretariaIdRoute: typeof AuthenticatedRelatoriosSecretariaIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAtrasadosRoute: AuthenticatedAtrasadosRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProtocolosRoute: AuthenticatedProtocolosRoute,
-  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedSecretariasRoute: AuthenticatedSecretariasRoute,
+  AuthenticatedRelatoriosIndexRoute: AuthenticatedRelatoriosIndexRoute,
+  AuthenticatedRelatoriosSecretariaIdRoute:
+    AuthenticatedRelatoriosSecretariaIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -290,3 +279,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

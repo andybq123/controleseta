@@ -12,7 +12,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export const Route = createFileRoute("/_authenticated/relatorios")({
+export const Route = createFileRoute("/_authenticated/relatorios/")({
   component: RelatoriosPage,
 });
 
