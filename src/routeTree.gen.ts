@@ -20,6 +20,7 @@ import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
+import { Route as ApiPublicInboundEmailTokenRouteImport } from './routes/api/public/inbound-email.$token'
 import { Route as AuthenticatedRelatoriosSecretariaIdRouteImport } from './routes/_authenticated/relatorios.secretaria.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -78,6 +79,12 @@ const AuthenticatedRelatoriosIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedRelatoriosRoute,
   } as any)
+const ApiPublicInboundEmailTokenRoute =
+  ApiPublicInboundEmailTokenRouteImport.update({
+    id: '/api/public/inbound-email/$token',
+    path: '/api/public/inbound-email/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedRelatoriosSecretariaIdRoute =
   AuthenticatedRelatoriosSecretariaIdRouteImport.update({
     id: '/secretaria/$id',
@@ -97,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/secretarias': typeof AuthenticatedSecretariasRoute
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
+  '/api/public/inbound-email/$token': typeof ApiPublicInboundEmailTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -109,6 +117,7 @@ export interface FileRoutesByTo {
   '/secretarias': typeof AuthenticatedSecretariasRoute
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
+  '/api/public/inbound-email/$token': typeof ApiPublicInboundEmailTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,6 +133,7 @@ export interface FileRoutesById {
   '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
+  '/api/public/inbound-email/$token': typeof ApiPublicInboundEmailTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/secretarias'
     | '/relatorios/'
     | '/relatorios/secretaria/$id'
+    | '/api/public/inbound-email/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/secretarias'
     | '/relatorios'
     | '/relatorios/secretaria/$id'
+    | '/api/public/inbound-email/$token'
   id:
     | '__root__'
     | '/'
@@ -165,6 +177,7 @@ export interface FileRouteTypes {
     | '/_authenticated/secretarias'
     | '/_authenticated/relatorios/'
     | '/_authenticated/relatorios/secretaria/$id'
+    | '/api/public/inbound-email/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -173,6 +186,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicInboundEmailTokenRoute: typeof ApiPublicInboundEmailTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -254,6 +268,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosIndexRouteImport
       parentRoute: typeof AuthenticatedRelatoriosRoute
     }
+    '/api/public/inbound-email/$token': {
+      id: '/api/public/inbound-email/$token'
+      path: '/api/public/inbound-email/$token'
+      fullPath: '/api/public/inbound-email/$token'
+      preLoaderRoute: typeof ApiPublicInboundEmailTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/relatorios/secretaria/$id': {
       id: '/_authenticated/relatorios/secretaria/$id'
       path: '/secretaria/$id'
@@ -306,7 +327,18 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicInboundEmailTokenRoute: ApiPublicInboundEmailTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
