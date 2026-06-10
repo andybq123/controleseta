@@ -17,9 +17,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSecretariasRouteImport } from './routes/_authenticated/secretarias'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authenticated/protocolos'
+import { Route as AuthenticatedEmailInboxRouteImport } from './routes/_authenticated/email-inbox'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
+import { Route as ApiPublicInboundEmailTokenRouteImport } from './routes/api/public/inbound-email.$token'
 import { Route as AuthenticatedRelatoriosSecretariaIdRouteImport } from './routes/_authenticated/relatorios.secretaria.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -62,6 +64,11 @@ const AuthenticatedProtocolosRoute = AuthenticatedProtocolosRouteImport.update({
   path: '/protocolos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEmailInboxRoute = AuthenticatedEmailInboxRouteImport.update({
+  id: '/email-inbox',
+  path: '/email-inbox',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -78,6 +85,12 @@ const AuthenticatedRelatoriosIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedRelatoriosRoute,
   } as any)
+const ApiPublicInboundEmailTokenRoute =
+  ApiPublicInboundEmailTokenRouteImport.update({
+    id: '/api/public/inbound-email/$token',
+    path: '/api/public/inbound-email/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedRelatoriosSecretariaIdRoute =
   AuthenticatedRelatoriosSecretariaIdRouteImport.update({
     id: '/secretaria/$id',
@@ -92,11 +105,13 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/email-inbox': typeof AuthenticatedEmailInboxRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/secretarias': typeof AuthenticatedSecretariasRoute
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
+  '/api/public/inbound-email/$token': typeof ApiPublicInboundEmailTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -105,10 +120,12 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/email-inbox': typeof AuthenticatedEmailInboxRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
   '/secretarias': typeof AuthenticatedSecretariasRoute
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
+  '/api/public/inbound-email/$token': typeof ApiPublicInboundEmailTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -119,11 +136,13 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/atrasados': typeof AuthenticatedAtrasadosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/email-inbox': typeof AuthenticatedEmailInboxRoute
   '/_authenticated/protocolos': typeof AuthenticatedProtocolosRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
+  '/api/public/inbound-email/$token': typeof ApiPublicInboundEmailTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -134,11 +153,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/atrasados'
     | '/dashboard'
+    | '/email-inbox'
     | '/protocolos'
     | '/relatorios'
     | '/secretarias'
     | '/relatorios/'
     | '/relatorios/secretaria/$id'
+    | '/api/public/inbound-email/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -147,10 +168,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/atrasados'
     | '/dashboard'
+    | '/email-inbox'
     | '/protocolos'
     | '/secretarias'
     | '/relatorios'
     | '/relatorios/secretaria/$id'
+    | '/api/public/inbound-email/$token'
   id:
     | '__root__'
     | '/'
@@ -160,11 +183,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/atrasados'
     | '/_authenticated/dashboard'
+    | '/_authenticated/email-inbox'
     | '/_authenticated/protocolos'
     | '/_authenticated/relatorios'
     | '/_authenticated/secretarias'
     | '/_authenticated/relatorios/'
     | '/_authenticated/relatorios/secretaria/$id'
+    | '/api/public/inbound-email/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -173,6 +198,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicInboundEmailTokenRoute: typeof ApiPublicInboundEmailTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -233,6 +259,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProtocolosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/email-inbox': {
+      id: '/_authenticated/email-inbox'
+      path: '/email-inbox'
+      fullPath: '/email-inbox'
+      preLoaderRoute: typeof AuthenticatedEmailInboxRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -253,6 +286,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/relatorios/'
       preLoaderRoute: typeof AuthenticatedRelatoriosIndexRouteImport
       parentRoute: typeof AuthenticatedRelatoriosRoute
+    }
+    '/api/public/inbound-email/$token': {
+      id: '/api/public/inbound-email/$token'
+      path: '/api/public/inbound-email/$token'
+      fullPath: '/api/public/inbound-email/$token'
+      preLoaderRoute: typeof ApiPublicInboundEmailTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/relatorios/secretaria/$id': {
       id: '/_authenticated/relatorios/secretaria/$id'
@@ -284,6 +324,7 @@ const AuthenticatedRelatoriosRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAtrasadosRoute: typeof AuthenticatedAtrasadosRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEmailInboxRoute: typeof AuthenticatedEmailInboxRoute
   AuthenticatedProtocolosRoute: typeof AuthenticatedProtocolosRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedSecretariasRoute: typeof AuthenticatedSecretariasRoute
@@ -292,6 +333,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAtrasadosRoute: AuthenticatedAtrasadosRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEmailInboxRoute: AuthenticatedEmailInboxRoute,
   AuthenticatedProtocolosRoute: AuthenticatedProtocolosRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedSecretariasRoute: AuthenticatedSecretariasRoute,
@@ -306,6 +348,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicInboundEmailTokenRoute: ApiPublicInboundEmailTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
