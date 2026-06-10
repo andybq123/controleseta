@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, FileText, Building2, LogOut, Shield } from "lucide-react";
+import { LayoutDashboard, FileText, Building2, LogOut, Shield, AlertTriangle, BarChart3 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -29,6 +29,8 @@ function AuthLayout() {
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/protocolos", label: "Protocolos", icon: FileText },
+    { to: "/atrasados", label: "Atrasados", icon: AlertTriangle },
+    { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
     { to: "/secretarias", label: "Secretarias", icon: Building2 },
   ] as const;
 

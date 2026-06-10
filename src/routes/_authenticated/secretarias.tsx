@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Building2, User, Trash2, Mail, Phone } from "lucide-react";
+import { Plus, Building2, User, Trash2, Mail, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/secretarias")({
@@ -28,6 +28,11 @@ function SecretariasPage() {
     queryFn: async () => (await supabase.from("responsaveis").select("*").order("nome")).data ?? [],
   });
 
+  const { data: locais = [] } = useQuery({
+    queryKey: ["locais"],
+    queryFn: async () => (await supabase.from("locais").select("*").order("nome")).data ?? [],
+  });
+
   const delSec = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("secretarias").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["secretarias"] }); qc.invalidateQueries({ queryKey: ["responsaveis"] }); toast.success("Removida"); },
@@ -39,12 +44,26 @@ function SecretariasPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["responsaveis"] }); toast.success("Removido"); },
   });
 
+  const delLocal = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from("locais").delete().eq("id", id); if (error) throw error; },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["locais"] }); toast.success("Local removido"); },
+  });
+
+  const addLocal = useMutation({
+    mutationFn: async (payload: { secretaria_id: string; nome: string; centro_custo: string }) => {
+      const { error } = await supabase.from("locais").insert({ secretaria_id: payload.secretaria_id, nome: payload.nome, centro_custo: payload.centro_custo || null });
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["locais"] }); toast.success("Local adicionado"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Secretarias e Responsáveis</h1>
-          <p className="text-sm text-muted-foreground">{secretarias.length} secretaria(s) · {responsaveis.length} responsável(is)</p>
+          <p className="text-sm text-muted-foreground">{secretarias.length} secretaria(s) · {locais.length} local(is) · {responsaveis.length} responsável(is)</p>
         </div>
         <div className="flex gap-2">
           <NovaSecretariaDialog />
@@ -59,13 +78,16 @@ function SecretariasPage() {
       <div className="grid gap-3">
         {secretarias.map(s => {
           const resps = responsaveis.filter(r => r.secretaria_id === s.id);
+          const locs = locais.filter(l => l.secretaria_id === s.id);
           return (
             <Card key={s.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-primary" />
-                    {s.nome} {s.sigla && <span className="text-xs text-muted-foreground font-normal">({s.sigla})</span>}
+                    {s.nome}
+                    {s.sigla && <span className="text-xs text-muted-foreground font-normal">({s.sigla})</span>}
+                    {s.centro_custo && <span className="text-xs text-muted-foreground font-normal font-mono">CC {s.centro_custo}</span>}
                   </CardTitle>
                   <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir secretaria e seus responsáveis?")) delSec.mutate(s.id); }}>
                     <Trash2 className="h-3 w-3" />
@@ -73,6 +95,18 @@ function SecretariasPage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-0 space-y-2">
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />Locais</div>
+                  {locs.length === 0 && <p className="text-xs text-muted-foreground">Sem locais cadastrados.</p>}
+                  {locs.map(l => (
+                    <div key={l.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
+                      <span>{l.nome}{l.centro_custo && <span className="text-xs text-muted-foreground font-mono ml-2">{l.centro_custo}</span>}</span>
+                      <Button size="sm" variant="ghost" onClick={() => delLocal.mutate(l.id)}><Trash2 className="h-3 w-3" /></Button>
+                    </div>
+                  ))}
+                  <AddLocalInline secretariaId={s.id} onAdd={(nome, cc) => addLocal.mutate({ secretaria_id: s.id, nome, centro_custo: cc })} />
+                </div>
+                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1 pt-2"><User className="h-3 w-3" />Responsáveis</div>
                 {resps.length === 0 && <p className="text-xs text-muted-foreground">Sem responsáveis cadastrados.</p>}
                 {resps.map(r => (
                   <div key={r.id} className="flex items-center justify-between rounded-md border p-2.5">
@@ -100,14 +134,19 @@ function NovaSecretariaDialog() {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState("");
   const [sigla, setSigla] = useState("");
+  const [centroCusto, setCentroCusto] = useState("");
 
   const create = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from("secretarias").insert({ nome, sigla: sigla || null, created_by: user?.id });
+      const { data, error } = await supabase.from("secretarias").insert({ nome, sigla: sigla || null, centro_custo: centroCusto || null, created_by: user?.id }).select("id").single();
       if (error) throw error;
+      // cria um local default com mesmo nome/cc
+      if (data) {
+        await supabase.from("locais").insert({ secretaria_id: data.id, nome, centro_custo: centroCusto || null });
+      }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["secretarias"] }); toast.success("Secretaria criada"); setOpen(false); setNome(""); setSigla(""); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["secretarias"] }); qc.invalidateQueries({ queryKey: ["locais"] }); toast.success("Secretaria criada"); setOpen(false); setNome(""); setSigla(""); setCentroCusto(""); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -119,6 +158,7 @@ function NovaSecretariaDialog() {
         <div className="space-y-3">
           <div className="space-y-1.5"><Label>Nome *</Label><Input value={nome} onChange={e => setNome(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Sigla</Label><Input value={sigla} onChange={e => setSigla(e.target.value)} placeholder="Ex: SEMSA" /></div>
+          <div className="space-y-1.5"><Label>Centro de Custo</Label><Input value={centroCusto} onChange={e => setCentroCusto(e.target.value)} placeholder="Ex: 25001006004" /></div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -126,6 +166,20 @@ function NovaSecretariaDialog() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function AddLocalInline({ secretariaId, onAdd }: { secretariaId: string; onAdd: (nome: string, cc: string) => void }) {
+  const [nome, setNome] = useState("");
+  const [cc, setCc] = useState("");
+  return (
+    <div className="flex gap-1.5 pt-1">
+      <Input placeholder="Nome do local" value={nome} onChange={e => setNome(e.target.value)} className="h-8 text-xs" />
+      <Input placeholder="Centro de Custo" value={cc} onChange={e => setCc(e.target.value)} className="h-8 text-xs w-32 font-mono" />
+      <Button size="sm" variant="outline" className="h-8" disabled={!nome} onClick={() => { onAdd(nome, cc); setNome(""); setCc(""); }}>
+        <Plus className="h-3 w-3" />
+      </Button>
+    </div>
   );
 }
 

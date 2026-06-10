@@ -13,8 +13,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSecretariasRouteImport } from './routes/_authenticated/secretarias'
+import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authenticated/protocolos'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -36,6 +38,11 @@ const AuthenticatedSecretariasRoute =
     path: '/secretarias',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProtocolosRoute = AuthenticatedProtocolosRouteImport.update({
   id: '/protocolos',
   path: '/protocolos',
@@ -46,19 +53,28 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAtrasadosRoute = AuthenticatedAtrasadosRouteImport.update({
+  id: '/atrasados',
+  path: '/atrasados',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/secretarias': typeof AuthenticatedSecretariasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/secretarias': typeof AuthenticatedSecretariasRoute
 }
 export interface FileRoutesById {
@@ -66,22 +82,40 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/atrasados': typeof AuthenticatedAtrasadosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/protocolos': typeof AuthenticatedProtocolosRoute
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/protocolos' | '/secretarias'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/atrasados'
+    | '/dashboard'
+    | '/protocolos'
+    | '/relatorios'
+    | '/secretarias'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/protocolos' | '/secretarias'
+  to:
+    | '/'
+    | '/auth'
+    | '/atrasados'
+    | '/dashboard'
+    | '/protocolos'
+    | '/relatorios'
+    | '/secretarias'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/atrasados'
     | '/_authenticated/dashboard'
     | '/_authenticated/protocolos'
+    | '/_authenticated/relatorios'
     | '/_authenticated/secretarias'
   fileRoutesById: FileRoutesById
 }
@@ -121,6 +155,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSecretariasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios': {
+      id: '/_authenticated/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/protocolos': {
       id: '/_authenticated/protocolos'
       path: '/protocolos'
@@ -135,18 +176,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/atrasados': {
+      id: '/_authenticated/atrasados'
+      path: '/atrasados'
+      fullPath: '/atrasados'
+      preLoaderRoute: typeof AuthenticatedAtrasadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAtrasadosRoute: typeof AuthenticatedAtrasadosRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProtocolosRoute: typeof AuthenticatedProtocolosRoute
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedSecretariasRoute: typeof AuthenticatedSecretariasRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAtrasadosRoute: AuthenticatedAtrasadosRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProtocolosRoute: AuthenticatedProtocolosRoute,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedSecretariasRoute: AuthenticatedSecretariasRoute,
 }
 
@@ -161,13 +213,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
