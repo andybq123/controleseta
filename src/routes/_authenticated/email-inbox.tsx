@@ -1,0 +1,285 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mail, Plus, Copy, Trash2, ExternalLink, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+
+export const Route = createFileRoute("/_authenticated/email-inbox")({
+  component: EmailInboxPage,
+});
+
+function baseUrl() {
+  if (typeof window !== "undefined") return window.location.origin;
+  return "";
+}
+
+function EmailInboxPage() {
+  const qc = useQueryClient();
+
+  const { data: accounts = [] } = useQuery({
+    queryKey: ["email-inbox-accounts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("email_inbox_accounts")
+        .select("*, secretarias(nome)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: logs = [] } = useQuery({
+    queryKey: ["email-inbox-log"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("email_inbox_log")
+        .select("*, email_inbox_accounts(email), protocolos(id, numero, assunto)")
+        .order("recebido_em", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 10_000,
+  });
+
+  const { data: secretarias = [] } = useQuery({
+    queryKey: ["secretarias"],
+    queryFn: async () => (await supabase.from("secretarias").select("*").order("nome")).data ?? [],
+  });
+
+  const toggleAtivo = useMutation({
+    mutationFn: async ({ id, ativo }: { id: string; ativo: boolean }) => {
+      const { error } = await supabase.from("email_inbox_accounts").update({ ativo }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] }),
+  });
+
+  const remover = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("email_inbox_accounts").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] }); toast.success("Conta removida"); },
+  });
+
+  function copiar(t: string) {
+    navigator.clipboard.writeText(t);
+    toast.success("Copiado");
+  }
+
+  const statusBadge = (s: string) => {
+    if (s === "processado") return <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30" variant="outline"><CheckCircle2 className="h-3 w-3 mr-1" />Processado</Badge>;
+    if (s === "erro") return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Erro</Badge>;
+    if (s === "ignorado") return <Badge variant="secondary">Ignorado</Badge>;
+    return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2"><Mail className="h-6 w-6" /> Recepção por E-mail</h1>
+          <p className="text-sm text-muted-foreground">Encaminhe e-mails para um endereço único e o sistema cria a ouvidoria automaticamente.</p>
+        </div>
+        <NovaContaDialog secretarias={secretarias} />
+      </div>
+
+      <Tabs defaultValue="contas">
+        <TabsList>
+          <TabsTrigger value="contas">Contas ({accounts.length})</TabsTrigger>
+          <TabsTrigger value="log">Histórico ({logs.length})</TabsTrigger>
+          <TabsTrigger value="como">Como funciona</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="contas" className="space-y-3">
+          {accounts.length === 0 && (
+            <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Nenhuma conta cadastrada ainda.</CardContent></Card>
+          )}
+          {accounts.map(a => {
+            const url = `${baseUrl()}/api/public/inbound-email/${a.token}`;
+            return (
+              <Card key={a.id}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{a.email}</span>
+                        {!a.ativo && <Badge variant="secondary">Inativa</Badge>}
+                      </div>
+                      {a.descricao && <p className="text-xs text-muted-foreground mt-0.5">{a.descricao}</p>}
+                      {(a as any).secretarias && <p className="text-xs text-muted-foreground mt-0.5">Vinculada à secretaria: <strong>{(a as any).secretarias.nome}</strong></p>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span>Ativa</span>
+                        <Switch checked={a.ativo} onCheckedChange={(v) => toggleAtivo.mutate({ id: a.id, ativo: v })} />
+                      </div>
+                      <Button size="sm" variant="ghost" onClick={() => { if (confirm("Remover conta?")) remover.mutate(a.id); }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="rounded-md border bg-muted/40 p-2 flex items-center gap-2">
+                    <code className="text-[11px] flex-1 truncate font-mono">{url}</code>
+                    <Button size="sm" variant="outline" onClick={() => copiar(url)}><Copy className="h-3 w-3 mr-1" /> Copiar URL do webhook</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </TabsContent>
+
+        <TabsContent value="log" className="space-y-2">
+          {logs.length === 0 && (
+            <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Nenhum e-mail recebido ainda.</CardContent></Card>
+          )}
+          {logs.map((l: any) => (
+            <Card key={l.id}>
+              <CardContent className="p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {statusBadge(l.status)}
+                      <span className="text-xs text-muted-foreground">{format(new Date(l.recebido_em), "dd/MM/yyyy HH:mm")}</span>
+                      {l.email_inbox_accounts?.email && <span className="text-xs text-muted-foreground">→ {l.email_inbox_accounts.email}</span>}
+                    </div>
+                    <p className="text-sm font-medium mt-1 truncate">{l.assunto || "(sem assunto)"}</p>
+                    <p className="text-xs text-muted-foreground truncate">De: {l.remetente || "—"}</p>
+                    {l.erro && <p className="text-xs text-destructive mt-1">⚠ {l.erro}</p>}
+                    {l.protocolos && (
+                      <p className="text-xs mt-1">
+                        Protocolo criado: <strong>{l.protocolos.numero}</strong> — {l.protocolos.assunto}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        <TabsContent value="como">
+          <Card>
+            <CardHeader>
+              <CardTitle>Como configurar o encaminhamento</CardTitle>
+              <CardDescription>O sistema não recebe e-mail diretamente — você precisa de um "ponte" que converta e-mails em uma chamada HTTP para a URL do webhook.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <div>
+                <h3 className="font-semibold mb-1">1. Cadastre a conta</h3>
+                <p className="text-muted-foreground">Na aba "Contas", clique em <strong>Nova conta</strong> e informe o e-mail que recebe as ouvidorias (ex.: <code>anderdonenator@gmail.com</code>). O sistema gera uma URL única (webhook).</p>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">2. Configure o encaminhamento via Zapier / Make / n8n</h3>
+                <p className="text-muted-foreground">A forma mais simples é usar uma das ferramentas abaixo (todas têm plano gratuito):</p>
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                  <li><a className="text-primary underline" href="https://zapier.com/apps/gmail/integrations/webhook" target="_blank" rel="noreferrer">Zapier — Gmail → Webhooks <ExternalLink className="inline h-3 w-3" /></a></li>
+                  <li><a className="text-primary underline" href="https://www.make.com/en/integrations/gmail" target="_blank" rel="noreferrer">Make.com — Gmail → HTTP <ExternalLink className="inline h-3 w-3" /></a></li>
+                  <li><a className="text-primary underline" href="https://n8n.io/integrations/gmail/" target="_blank" rel="noreferrer">n8n — Gmail Trigger → HTTP Request <ExternalLink className="inline h-3 w-3" /></a></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">3. Configuração da chamada HTTP</h3>
+                <p className="text-muted-foreground">No passo "Webhook" / "HTTP Request" da ferramenta, configure:</p>
+                <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
+                  <li><strong>Método:</strong> POST</li>
+                  <li><strong>URL:</strong> a URL gerada na aba Contas</li>
+                  <li><strong>Content-Type:</strong> application/json</li>
+                  <li><strong>Body (JSON):</strong></li>
+                </ul>
+                <pre className="mt-2 bg-muted p-3 rounded-md text-xs overflow-x-auto">{`{
+  "from": "{{remetente do e-mail}}",
+  "to": "{{destinatário}}",
+  "subject": "{{assunto}}",
+  "text": "{{corpo em texto plano}}",
+  "html": "{{corpo em HTML, opcional}}"
+}`}</pre>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">4. Teste</h3>
+                <p className="text-muted-foreground">Envie um e-mail de teste para a conta cadastrada. Em poucos segundos ele aparece na aba <strong>Histórico</strong> e o protocolo é criado em <strong>Protocolos</strong>.</p>
+              </div>
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
+                <p className="text-xs"><strong>Dica:</strong> a URL do webhook é secreta — só compartilhe com a ferramenta de encaminhamento. Se vazar, remova e recadastre a conta para gerar uma nova.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function NovaContaDialog({ secretarias }: { secretarias: any[] }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [secId, setSecId] = useState<string>("");
+
+  const criar = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase.from("email_inbox_accounts").insert({
+        email: email.trim().toLowerCase(),
+        descricao: descricao || null,
+        secretaria_id: secId || null,
+        created_by: user?.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] });
+      toast.success("Conta cadastrada — copie a URL do webhook");
+      setOpen(false);
+      setEmail(""); setDescricao(""); setSecId("");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Nova conta</Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Cadastrar e-mail de recepção</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>E-mail *</Label>
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ouvidoria@exemplo.gov.br" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Descrição</Label>
+            <Input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex.: Caixa principal da Ouvidoria" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Vincular à secretaria (opcional)</Label>
+            <Select value={secId} onValueChange={setSecId}>
+              <SelectTrigger><SelectValue placeholder="Detectar automaticamente" /></SelectTrigger>
+              <SelectContent>
+                {secretarias.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Se vincular, todos os e-mails dessa conta serão direcionados a essa secretaria.</p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button onClick={() => criar.mutate()} disabled={!email || criar.isPending}>Cadastrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
