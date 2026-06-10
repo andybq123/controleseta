@@ -26,6 +26,9 @@ export type Database = {
           secretaria_id: string | null
           token: string
           ultima_sincronizacao: string | null
+          ultima_sync_erros: number
+          ultima_sync_novos: number
+          ultima_sync_processados: number
           updated_at: string
         }
         Insert: {
@@ -39,6 +42,9 @@ export type Database = {
           secretaria_id?: string | null
           token?: string
           ultima_sincronizacao?: string | null
+          ultima_sync_erros?: number
+          ultima_sync_novos?: number
+          ultima_sync_processados?: number
           updated_at?: string
         }
         Update: {
@@ -52,6 +58,9 @@ export type Database = {
           secretaria_id?: string | null
           token?: string
           ultima_sincronizacao?: string | null
+          ultima_sync_erros?: number
+          ultima_sync_novos?: number
+          ultima_sync_processados?: number
           updated_at?: string
         }
         Relationships: [
