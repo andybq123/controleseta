@@ -192,6 +192,14 @@ export function ProtocoloDetailDialog({ protocolo, open, onOpenChange }: {
           </Button>
         </div>
 
+        <Tabs defaultValue="detalhes" className="w-full">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+            <TabsTrigger value="historico" className="gap-1">
+              <History className="h-3.5 w-3.5" /> Histórico ({historico.length})
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="detalhes" className="space-y-4">
         {!editing ? (
           <div className="space-y-4">
             <div>
@@ -298,6 +306,42 @@ export function ProtocoloDetailDialog({ protocolo, open, onOpenChange }: {
             </DialogFooter>
           </div>
         )}
+          </TabsContent>
+          <TabsContent value="historico">
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+              {historico.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhuma alteração registrada ainda.</p>
+              )}
+              {historico.map((h: any) => (
+                <div key={h.id} className="border rounded-md p-3 text-sm">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px]">
+                        {h.acao === "create" ? "Criação" : h.campo.replace("_", " ")}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{h.autor_nome ?? "Sistema"}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(h.created_at).toLocaleString("pt-BR")}
+                    </span>
+                  </div>
+                  {h.acao !== "create" && (
+                    <div className="text-xs grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-muted-foreground">De: </span>
+                        <span className="line-through">{h.valor_anterior ?? "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Para: </span>
+                        <span className="font-medium">{h.valor_novo ?? "—"}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
