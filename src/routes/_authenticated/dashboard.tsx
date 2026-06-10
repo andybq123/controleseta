@@ -1,23 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { situacaoProtocolo, situacaoLabel, situacaoClasses, formatDate, PRAZOS } from "@/lib/prazo";
 import { AlertTriangle, CheckCircle2, Clock, FileText, Building2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
 function Dashboard() {
+  const [detail, setDetail] = useState<any | null>(null);
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("protocolos")
-        .select("*, secretarias(nome, sigla), responsaveis(nome)")
+        .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
         .order("data_abertura", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -87,7 +90,12 @@ function Dashboard() {
               <p className="text-sm text-muted-foreground">Nenhum protocolo em alerta. 🎉</p>
             )}
             {alertas.map(p => (
-              <Link key={p.id} to="/protocolos" className="block rounded-md border p-3 hover:bg-secondary transition-colors">
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setDetail(p)}
+                className="w-full text-left block rounded-md border p-3 hover:bg-secondary transition-colors"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -103,7 +111,7 @@ function Dashboard() {
                     {p._s.dias < 0 ? `${Math.abs(p._s.dias)}d atrasado` : `${p._s.dias}d`}
                   </Badge>
                 </div>
-              </Link>
+              </button>
             ))}
           </CardContent>
         </Card>
@@ -119,7 +127,11 @@ function Dashboard() {
               <p className="text-sm text-muted-foreground">Cadastre uma secretaria para começar.</p>
             )}
             {porSecretaria.map(s => (
-              <div key={s.id} className="flex items-center justify-between rounded-md border p-3">
+              <Link
+                key={s.id}
+                to="/protocolos"
+                className="flex items-center justify-between rounded-md border p-3 hover:bg-secondary transition-colors"
+              >
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{s.nome}</p>
                   {s.sigla && <p className="text-xs text-muted-foreground">{s.sigla}</p>}
@@ -129,7 +141,7 @@ function Dashboard() {
                   {s.vencidos > 0 && <Badge variant="destructive">{s.vencidos} venc.</Badge>}
                   <span className="text-muted-foreground">{s.total} total</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </CardContent>
         </Card>
@@ -145,6 +157,37 @@ function Dashboard() {
           ))}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Todos os protocolos ativos ({ativos.length})</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
+          {ativos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum protocolo ativo.</p>}
+          {ativos.map(p => (
+            <button key={p.id} type="button" onClick={() => setDetail(p)}
+              className="w-full text-left block rounded-md border p-3 hover:bg-secondary transition-colors">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-muted-foreground">{p.numero}</span>
+                    <Badge variant="outline" className="text-[10px] uppercase">{p.tipo}</Badge>
+                  </div>
+                  <p className="text-sm font-medium truncate mt-0.5">{p.assunto}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {(p as any).secretarias?.nome ?? "Sem secretaria"} · Aberto {formatDate(p.data_abertura)}
+                  </p>
+                </div>
+                <Badge className={`shrink-0 border ${situacaoClasses[p._s.situacao]}`} variant="outline">
+                  {p._s.dias < 0 ? `${Math.abs(p._s.dias)}d` : `${p._s.dias}d`}
+                </Badge>
+              </div>
+            </button>
+          ))}
+        </CardContent>
+      </Card>
+
+      <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
     </div>
   );
 }
