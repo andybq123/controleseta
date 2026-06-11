@@ -1,14 +1,11 @@
-import type { PostgrestError } from "@supabase/supabase-js";
-
-type Page<T> = { data: T[] | null; error: PostgrestError | null };
-
 /**
  * Paginates a Supabase query in pages of `pageSize` rows to bypass the
  * default 1000-row PostgREST limit. The callback receives the inclusive
- * `from`/`to` range and must return the awaited result of `.range(from, to)`.
+ * `from`/`to` range and must return a Supabase query builder (or any
+ * thenable) that resolves to `{ data, error }`.
  */
-export async function fetchAllPaginated<T>(
-  build: (from: number, to: number) => Promise<Page<T>>,
+export async function fetchAllPaginated<T = any>(
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>,
   pageSize = 1000,
 ): Promise<T[]> {
   const all: T[] = [];
