@@ -13,6 +13,13 @@ export type ExtracaoProtocolo = {
   assunto: string;
   solicitante: string;
   destinatario: string;
+  // Campos derivados/padrão mantidos para compatibilidade com o restante do fluxo
+  tipo: "ouvidoria" | "lai";
+  categoria: "elogio" | "reclamacao" | "pedido_informacao" | "denuncia" | "solicitacao" | "outros";
+  descricao: string;
+  data_abertura: string;
+  secretaria_sugerida: string;
+  local_sugerido: string;
 };
 
 export function normalizarExtracao(parsed: any): ExtracaoProtocolo {
@@ -21,5 +28,12 @@ export function normalizarExtracao(parsed: any): ExtracaoProtocolo {
     assunto: String(parsed?.assunto ?? "").slice(0, 200),
     solicitante: String(parsed?.solicitante ?? ""),
     destinatario: String(parsed?.destinatario ?? ""),
+    // Defaults: a IA não extrai mais estes campos
+    tipo: "ouvidoria",
+    categoria: "solicitacao",
+    descricao: "",
+    data_abertura: "",
+    secretaria_sugerida: String(parsed?.destinatario ?? ""),
+    local_sugerido: "",
   };
 }
