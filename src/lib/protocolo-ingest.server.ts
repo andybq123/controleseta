@@ -87,12 +87,21 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     const numero = extr.numero || gerarNumeroProtocolo(extr.tipo);
     const dataAbertura = extr.data_abertura || new Date().toISOString().slice(0, 10);
 
+    const resumo = [
+      "Nova Ouvidoria recebida.",
+      "",
+      `Nº: ${extr.numero || numero}`,
+      `Assunto: ${extr.assunto || assunto || ""}`,
+      `De: ${extr.solicitante || "-"}`,
+      `Para: ${extr.destinatario || ""}`,
+    ].join("\n");
+
     const { data: novo, error: errIns } = await supabaseAdmin
       .from("protocolos")
       .insert({
         numero, tipo: extr.tipo, categoria: extr.categoria,
         assunto: extr.assunto || assunto || "Sem assunto",
-        descricao: null,
+        descricao: resumo,
         solicitante: extr.solicitante || remetente || null,
         secretaria_id: secretariaId, local_id: localId,
         data_abertura: dataAbertura, created_by: account.created_by,

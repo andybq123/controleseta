@@ -139,6 +139,15 @@ async function processInbound(token: string, request: Request) {
     const numero = extr.numero || gerarNumeroProtocolo(extr.tipo);
     const dataAbertura = extr.data_abertura || new Date().toISOString().slice(0, 10);
 
+    const resumo = [
+      "Nova Ouvidoria recebida.",
+      "",
+      `Nº: ${extr.numero || numero}`,
+      `Assunto: ${extr.assunto || assunto || ""}`,
+      `De: ${extr.solicitante || "-"}`,
+      `Para: ${extr.destinatario || ""}`,
+    ].join("\n");
+
     const { data: novo, error: errIns } = await supabaseAdmin
       .from("protocolos")
       .insert({
@@ -146,7 +155,7 @@ async function processInbound(token: string, request: Request) {
         tipo: extr.tipo,
         categoria: extr.categoria,
         assunto: extr.assunto || assunto || "Sem assunto",
-        descricao: null,
+        descricao: resumo,
         solicitante: extr.solicitante || remetente || null,
         secretaria_id: secretariaId,
         local_id: localId,
