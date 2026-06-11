@@ -65,9 +65,6 @@ function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Ouvidoria: {PRAZOS.ouvidoria.inicial}+{PRAZOS.ouvidoria.prorrogacao} dias · LAI: {PRAZOS.lai.inicial}+{PRAZOS.lai.prorrogacao} dias
-        </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
