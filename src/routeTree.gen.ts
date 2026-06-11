@@ -22,6 +22,7 @@ import { Route as AuthenticatedEmailInboxRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
+import { Route as ApiPublicImportFixRouteImport } from './routes/api/public/import-fix'
 import { Route as ApiPublicGmailSyncRouteImport } from './routes/api/public/gmail-sync'
 import { Route as ApiPublicEmailSyncRouteImport } from './routes/api/public/email-sync'
 import { Route as ApiPublicInboundEmailTokenRouteImport } from './routes/api/public/inbound-email.$token'
@@ -93,6 +94,11 @@ const AuthenticatedRelatoriosIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedRelatoriosRoute,
   } as any)
+const ApiPublicImportFixRoute = ApiPublicImportFixRouteImport.update({
+  id: '/api/public/import-fix',
+  path: '/api/public/import-fix',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicGmailSyncRoute = ApiPublicGmailSyncRouteImport.update({
   id: '/api/public/gmail-sync',
   path: '/api/public/gmail-sync',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof AuthenticatedUsersRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
+  '/api/public/import-fix': typeof ApiPublicImportFixRoute
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
   '/api/public/inbound-email/$token': typeof ApiPublicInboundEmailTokenRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/users': typeof AuthenticatedUsersRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
+  '/api/public/import-fix': typeof ApiPublicImportFixRoute
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
   '/api/public/inbound-email/$token': typeof ApiPublicInboundEmailTokenRoute
@@ -167,6 +175,7 @@ export interface FileRoutesById {
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
+  '/api/public/import-fix': typeof ApiPublicImportFixRoute
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
   '/api/public/inbound-email/$token': typeof ApiPublicInboundEmailTokenRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
+    | '/api/public/import-fix'
     | '/relatorios/'
     | '/relatorios/secretaria/$id'
     | '/api/public/inbound-email/$token'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
+    | '/api/public/import-fix'
     | '/relatorios'
     | '/relatorios/secretaria/$id'
     | '/api/public/inbound-email/$token'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/_authenticated/users'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
+    | '/api/public/import-fix'
     | '/_authenticated/relatorios/'
     | '/_authenticated/relatorios/secretaria/$id'
     | '/api/public/inbound-email/$token'
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiPublicEmailSyncRoute: typeof ApiPublicEmailSyncRoute
   ApiPublicGmailSyncRoute: typeof ApiPublicGmailSyncRoute
+  ApiPublicImportFixRoute: typeof ApiPublicImportFixRoute
   ApiPublicInboundEmailTokenRoute: typeof ApiPublicInboundEmailTokenRoute
 }
 
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosIndexRouteImport
       parentRoute: typeof AuthenticatedRelatoriosRoute
     }
+    '/api/public/import-fix': {
+      id: '/api/public/import-fix'
+      path: '/api/public/import-fix'
+      fullPath: '/api/public/import-fix'
+      preLoaderRoute: typeof ApiPublicImportFixRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/gmail-sync': {
       id: '/api/public/gmail-sync'
       path: '/api/public/gmail-sync'
@@ -411,18 +431,9 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ApiPublicEmailSyncRoute: ApiPublicEmailSyncRoute,
   ApiPublicGmailSyncRoute: ApiPublicGmailSyncRoute,
+  ApiPublicImportFixRoute: ApiPublicImportFixRoute,
   ApiPublicInboundEmailTokenRoute: ApiPublicInboundEmailTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
