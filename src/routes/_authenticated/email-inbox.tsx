@@ -355,33 +355,53 @@ function NovaContaDialog({ secretarias }: { secretarias: any[] }) {
   const [email, setEmail] = useState("");
   const [descricao, setDescricao] = useState("");
   const [secId, setSecId] = useState<string>("");
-  const [provider, setProvider] = useState<"gmail" | "webhook">("gmail");
+  const [provider, setProvider] = useState<"imap" | "gmail" | "webhook">("imap");
+  const [imapHost, setImapHost] = useState("imap.gmail.com");
+  const [imapPort, setImapPort] = useState(993);
+  const [imapUser, setImapUser] = useState("");
+  const [imapPassword, setImapPassword] = useState("");
+  const [imapTls, setImapTls] = useState(true);
 
   const criar = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from("email_inbox_accounts").insert({
+      const payload: any = {
         email: email.trim().toLowerCase(),
         descricao: descricao || null,
         secretaria_id: secId || null,
         created_by: user?.id,
         provider,
-      });
+      };
+      if (provider === "imap") {
+        if (!imapHost || !imapUser || !imapPassword) {
+          throw new Error("Preencha host, usuário e senha IMAP");
+        }
+        payload.imap_host = imapHost.trim();
+        payload.imap_port = Number(imapPort) || 993;
+        payload.imap_user = imapUser.trim();
+        payload.imap_password = imapPassword;
+        payload.imap_tls = imapTls;
+      }
+      const { error } = await supabase.from("email_inbox_accounts").insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] });
-      toast.success("Conta cadastrada — copie a URL do webhook");
+      toast.success("Conta cadastrada");
       setOpen(false);
-      setEmail(""); setDescricao(""); setSecId("");
+      setEmail(""); setDescricao(""); setSecId(""); setImapUser(""); setImapPassword("");
     },
     onError: (e: any) => toast.error(e.message),
   });
 
+  function onEmailBlur() {
+    if (provider === "imap" && !imapUser && email) setImapUser(email.trim().toLowerCase());
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Nova conta</Button></DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Cadastrar e-mail de recepção</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
@@ -389,16 +409,51 @@ function NovaContaDialog({ secretarias }: { secretarias: any[] }) {
             <Select value={provider} onValueChange={(v) => setProvider(v as any)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="imap">IMAP / Senha de App (recomendado)</SelectItem>
                 <SelectItem value="gmail">Gmail conectado (automático)</SelectItem>
                 <SelectItem value="webhook">Webhook (Zapier / Make / n8n)</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">{provider === "gmail" ? "O sistema consulta diretamente a caixa do Gmail conectado." : "Você configura um encaminhamento que faz POST na URL gerada."}</p>
+            <p className="text-xs text-muted-foreground">
+              {provider === "imap" && "Você gera uma Senha de App no Google (16 caracteres) e cola aqui. O sistema lê a caixa via IMAP."}
+              {provider === "gmail" && "O sistema consulta diretamente a caixa do Gmail conectado pela Lovable."}
+              {provider === "webhook" && "Você configura um encaminhamento que faz POST na URL gerada."}
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label>E-mail *</Label>
-            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ouvidoria@exemplo.gov.br" />
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} onBlur={onEmailBlur} placeholder="ouvidoria@exemplo.gov.br" />
           </div>
+          {provider === "imap" && (
+            <div className="space-y-3 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
+              <p className="text-xs text-muted-foreground">
+                <strong>Como obter a Senha de App do Gmail:</strong> ative a Verificação em 2 etapas em <a className="text-primary underline" href="https://myaccount.google.com/security" target="_blank" rel="noreferrer">myaccount.google.com/security</a>, depois acesse <a className="text-primary underline" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">myaccount.google.com/apppasswords</a> e gere uma senha de 16 caracteres.
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2 space-y-1.5">
+                  <Label>Servidor IMAP *</Label>
+                  <Input value={imapHost} onChange={e => setImapHost(e.target.value)} placeholder="imap.gmail.com" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Porta</Label>
+                  <Input type="number" value={imapPort} onChange={e => setImapPort(Number(e.target.value))} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Usuário (e-mail) *</Label>
+                <Input value={imapUser} onChange={e => setImapUser(e.target.value)} placeholder="setamonitoramento75@gmail.com" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Senha de App *</Label>
+                <Input type="password" value={imapPassword} onChange={e => setImapPassword(e.target.value)} placeholder="xxxx xxxx xxxx xxxx" autoComplete="new-password" />
+                <p className="text-[11px] text-muted-foreground">Pode colar com ou sem espaços.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={imapTls} onCheckedChange={setImapTls} />
+                <Label className="text-xs">Usar TLS/SSL (recomendado)</Label>
+              </div>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Descrição</Label>
             <Input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex.: Caixa principal da Ouvidoria" />
