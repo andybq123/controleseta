@@ -12,6 +12,7 @@ import { Download, BarChart3, ChevronRight, FileText, Search, X } from "lucide-r
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { fetchAllPaginated } from "@/lib/fetch-all";
 
 export const Route = createFileRoute("/_authenticated/relatorios/")({
   component: RelatoriosPage,
@@ -40,14 +41,14 @@ function RelatoriosPage() {
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("protocolos")
-        .select("*, secretarias(nome), responsaveis(nome), locais(nome,centro_custo)")
-        .order("data_abertura", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () =>
+      fetchAllPaginated((from, to) =>
+        supabase
+          .from("protocolos")
+          .select("*, secretarias(nome), responsaveis(nome), locais(nome,centro_custo)")
+          .order("data_abertura", { ascending: false })
+          .range(from, to),
+      ),
   });
 
   const { data: secretarias = [] } = useQuery({

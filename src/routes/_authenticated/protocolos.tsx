@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type TipoProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { Plus, Calendar, RotateCw, CheckCircle2, Trash2, Sparkles, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAllPaginated } from "@/lib/fetch-all";
 import { extrairProtocolo } from "@/lib/protocolo-extract.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
@@ -32,14 +33,14 @@ function ProtocolosPage() {
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("protocolos")
-        .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
-        .order("data_abertura", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () =>
+      fetchAllPaginated((from, to) =>
+        supabase
+          .from("protocolos")
+          .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+          .order("data_abertura", { ascending: false })
+          .range(from, to),
+      ),
   });
 
   const { data: secretarias = [] } = useQuery({

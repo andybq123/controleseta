@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type CategoriaProtocolo, type TipoProtocolo } from "@/lib/prazo";
 import { AlertTriangle, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { fetchAllPaginated } from "@/lib/fetch-all";
 
 export const Route = createFileRoute("/_authenticated/atrasados")({
   component: AtrasadosPage,
@@ -22,15 +23,15 @@ function AtrasadosPage() {
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("protocolos")
-        .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
-        .neq("status", "concluido")
-        .order("data_abertura", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () =>
+      fetchAllPaginated((from, to) =>
+        supabase
+          .from("protocolos")
+          .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+          .neq("status", "concluido")
+          .order("data_abertura", { ascending: true })
+          .range(from, to),
+      ),
   });
 
   const { data: secretarias = [] } = useQuery({

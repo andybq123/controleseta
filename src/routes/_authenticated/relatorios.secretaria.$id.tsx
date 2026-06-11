@@ -10,6 +10,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Ba
 import { CATEGORIAS, type CategoriaProtocolo, situacaoProtocolo, formatDate, categoriaLabel, PRAZOS, type TipoProtocolo } from "@/lib/prazo";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { fetchAllPaginated } from "@/lib/fetch-all";
 
 export const Route = createFileRoute("/_authenticated/relatorios/secretaria/$id")({
   component: SecretariaRelatorio,
@@ -29,15 +30,15 @@ function SecretariaRelatorio() {
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos-sec", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("protocolos")
-        .select("*, responsaveis(nome), locais(nome,centro_custo)")
-        .eq("secretaria_id", id)
-        .order("data_abertura", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () =>
+      fetchAllPaginated((from, to) =>
+        supabase
+          .from("protocolos")
+          .select("*, responsaveis(nome), locais(nome,centro_custo)")
+          .eq("secretaria_id", id)
+          .order("data_abertura", { ascending: false })
+          .range(from, to),
+      ),
   });
 
   const { data: responsaveis = [] } = useQuery({

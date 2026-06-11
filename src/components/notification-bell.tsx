@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetch-all";
 import { situacaoProtocolo, formatDate } from "@/lib/prazo";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 
@@ -14,14 +15,14 @@ export function NotificationBell() {
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("protocolos")
-        .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
-        .order("data_abertura", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () =>
+      fetchAllPaginated((from, to) =>
+        supabase
+          .from("protocolos")
+          .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+          .order("data_abertura", { ascending: false })
+          .range(from, to),
+      ),
     refetchInterval: 60_000,
   });
 
