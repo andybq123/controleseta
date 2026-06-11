@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type CategoriaProtocolo, type TipoProtocolo } from "@/lib/prazo";
 import { AlertTriangle, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { fetchAllPaginated } from "@/lib/fetch-all";
 
 export const Route = createFileRoute("/_authenticated/atrasados")({
   component: AtrasadosPage,
