@@ -15,7 +15,7 @@ import { Mail, Plus, Copy, Trash2, ExternalLink, AlertCircle, CheckCircle2, Cloc
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { sincronizarGmail, sincronizarImap } from "@/lib/gmail-sync.functions";
+import { sincronizarGmail } from "@/lib/gmail-sync.functions";
 
 const SYNC_INTERVAL_MIN = 3;
 
@@ -48,22 +48,14 @@ function baseUrl() {
 function EmailInboxPage() {
   const qc = useQueryClient();
   const sincronizar = useServerFn(sincronizarGmail);
-  const sincronizarImapFn = useServerFn(sincronizarImap);
   const [sincronizando, setSincronizando] = useState(false);
   useTick(1000);
 
   async function rodarSync() {
     setSincronizando(true);
     try {
-      const [g, i] = await Promise.allSettled([sincronizar({}), sincronizarImapFn({})]);
-      const gOk = g.status === "fulfilled" ? g.value as any : null;
-      const iOk = i.status === "fulfilled" ? i.value as any : null;
-      const novos = (gOk?.novos ?? 0) + (iOk?.novos ?? 0);
-      const erros = (gOk?.erros ?? 0) + (iOk?.erros ?? 0);
-      const contas = (gOk?.contas ?? 0) + (iOk?.contas ?? 0);
-      toast.success(`Sincronização: ${novos} novo(s), ${erros} erro(s) em ${contas} conta(s)`);
-      if (g.status === "rejected") toast.error(`Gmail: ${String((g.reason as any)?.message ?? g.reason)}`);
-      if (i.status === "rejected") toast.error(`IMAP: ${String((i.reason as any)?.message ?? i.reason)}`);
+      const r = await sincronizar({}) as any;
+      toast.success(`Sincronização: ${r?.novos ?? 0} novo(s), ${r?.erros ?? 0} erro(s) em ${r?.contas ?? 0} conta(s)`);
       qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] });
       qc.invalidateQueries({ queryKey: ["email-inbox-log"] });
     } catch (e: any) {
@@ -133,7 +125,7 @@ function EmailInboxPage() {
     return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
   };
 
-  const syncAccounts = accounts.filter((a: any) => (a.provider === "gmail" || a.provider === "imap") && a.ativo);
+  const syncAccounts = accounts.filter((a: any) => a.provider === "gmail" && a.ativo);
   const ultimaSync = syncAccounts
     .map((a: any) => a.ultima_sincronizacao ? new Date(a.ultima_sincronizacao).getTime() : 0)
     .reduce((max, t) => Math.max(max, t), 0);
@@ -206,9 +198,6 @@ function EmailInboxPage() {
             <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Nenhuma conta cadastrada ainda.</CardContent></Card>
           )}
           {accounts.map(a => {
-            const url = `${baseUrl()}/api/public/inbound-email/${a.token}`;
-            const isGmail = (a as any).provider === "gmail";
-            const isImap = (a as any).provider === "imap";
             return (
               <Card key={a.id}>
                 <CardContent className="p-4 space-y-3">
@@ -217,13 +206,12 @@ function EmailInboxPage() {
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{a.email}</span>
-                        {isGmail && <Badge className="bg-blue-500/15 text-blue-700 border-blue-500/30" variant="outline">Gmail</Badge>}
-                        {isImap && <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30" variant="outline">IMAP</Badge>}
+                        <Badge className="bg-blue-500/15 text-blue-700 border-blue-500/30" variant="outline">Gmail</Badge>
                         {!a.ativo && <Badge variant="secondary">Inativa</Badge>}
                       </div>
                       {a.descricao && <p className="text-xs text-muted-foreground mt-0.5">{a.descricao}</p>}
                       {(a as any).secretarias && <p className="text-xs text-muted-foreground mt-0.5">Vinculada à secretaria: <strong>{(a as any).secretarias.nome}</strong></p>}
-                      {(isGmail || isImap) && (a as any).ultima_sincronizacao && (
+                      {(a as any).ultima_sincronizacao && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Última sincronização: {format(new Date((a as any).ultima_sincronizacao), "dd/MM/yyyy HH:mm:ss")}
                           {" · "}processados: {(a as any).ultima_sync_processados ?? 0}
@@ -242,20 +230,9 @@ function EmailInboxPage() {
                       </Button>
                     </div>
                   </div>
-                  {isGmail ? (
-                    <div className="rounded-md border border-blue-500/30 bg-blue-500/5 p-2 text-xs text-muted-foreground">
-                      ✓ Conectado ao Google. O sistema verifica a caixa periodicamente e cria protocolos automaticamente.
-                    </div>
-                  ) : isImap ? (
-                    <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2 text-xs text-muted-foreground">
-                      ✓ Conectado via IMAP em <code className="font-mono">{(a as any).imap_host}:{(a as any).imap_port}</code>. Clique em <strong>Sincronizar IMAP</strong> para puxar os e-mails agora.
-                    </div>
-                  ) : (
-                    <div className="rounded-md border bg-muted/40 p-2 flex items-center gap-2">
-                      <code className="text-[11px] flex-1 truncate font-mono">{url}</code>
-                      <Button size="sm" variant="outline" onClick={() => copiar(url)}><Copy className="h-3 w-3 mr-1" /> Copiar URL do webhook</Button>
-                    </div>
-                  )}
+                  <div className="rounded-md border border-blue-500/30 bg-blue-500/5 p-2 text-xs text-muted-foreground">
+                    ✓ Conectado ao Google. O sistema verifica a caixa a cada {SYNC_INTERVAL_MIN} min e cria protocolos automaticamente.
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -294,46 +271,21 @@ function EmailInboxPage() {
         <TabsContent value="como">
           <Card>
             <CardHeader>
-              <CardTitle>Como configurar o encaminhamento</CardTitle>
-              <CardDescription>O sistema não recebe e-mail diretamente — você precisa de um "ponte" que converta e-mails em uma chamada HTTP para a URL do webhook.</CardDescription>
+              <CardTitle>Como funciona</CardTitle>
+              <CardDescription>O sistema usa a conta Gmail conectada à Lovable para ler a caixa de entrada automaticamente.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <div>
                 <h3 className="font-semibold mb-1">1. Cadastre a conta</h3>
-                <p className="text-muted-foreground">Na aba "Contas", clique em <strong>Nova conta</strong> e informe o e-mail que recebe as ouvidorias (ex.: <code>anderdonenator@gmail.com</code>). O sistema gera uma URL única (webhook).</p>
+                <p className="text-muted-foreground">Na aba "Contas", clique em <strong>Nova conta</strong> e informe o e-mail conectado ao Gmail.</p>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">2. Configure o encaminhamento via Zapier / Make / n8n</h3>
-                <p className="text-muted-foreground">A forma mais simples é usar uma das ferramentas abaixo (todas têm plano gratuito):</p>
-                <ul className="list-disc pl-5 mt-2 space-y-1">
-                  <li><a className="text-primary underline" href="https://zapier.com/apps/gmail/integrations/webhook" target="_blank" rel="noreferrer">Zapier — Gmail → Webhooks <ExternalLink className="inline h-3 w-3" /></a></li>
-                  <li><a className="text-primary underline" href="https://www.make.com/en/integrations/gmail" target="_blank" rel="noreferrer">Make.com — Gmail → HTTP <ExternalLink className="inline h-3 w-3" /></a></li>
-                  <li><a className="text-primary underline" href="https://n8n.io/integrations/gmail/" target="_blank" rel="noreferrer">n8n — Gmail Trigger → HTTP Request <ExternalLink className="inline h-3 w-3" /></a></li>
-                </ul>
+                <h3 className="font-semibold mb-1">2. Sincronização automática</h3>
+                <p className="text-muted-foreground">A cada {SYNC_INTERVAL_MIN} minutos o sistema lê os novos e-mails da caixa Gmail conectada e cria protocolos automaticamente. Você também pode clicar em <strong>Sincronizar agora</strong> a qualquer momento.</p>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">3. Configuração da chamada HTTP</h3>
-                <p className="text-muted-foreground">No passo "Webhook" / "HTTP Request" da ferramenta, configure:</p>
-                <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
-                  <li><strong>Método:</strong> POST</li>
-                  <li><strong>URL:</strong> a URL gerada na aba Contas</li>
-                  <li><strong>Content-Type:</strong> application/json</li>
-                  <li><strong>Body (JSON):</strong></li>
-                </ul>
-                <pre className="mt-2 bg-muted p-3 rounded-md text-xs overflow-x-auto">{`{
-  "from": "{{remetente do e-mail}}",
-  "to": "{{destinatário}}",
-  "subject": "{{assunto}}",
-  "text": "{{corpo em texto plano}}",
-  "html": "{{corpo em HTML, opcional}}"
-}`}</pre>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">4. Teste</h3>
-                <p className="text-muted-foreground">Envie um e-mail de teste para a conta cadastrada. Em poucos segundos ele aparece na aba <strong>Histórico</strong> e o protocolo é criado em <strong>Protocolos</strong>.</p>
-              </div>
-              <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
-                <p className="text-xs"><strong>Dica:</strong> a URL do webhook é secreta — só compartilhe com a ferramenta de encaminhamento. Se vazar, remova e recadastre a conta para gerar uma nova.</p>
+                <h3 className="font-semibold mb-1">3. Teste</h3>
+                <p className="text-muted-foreground">Envie um e-mail para a conta cadastrada. Em poucos minutos ele aparece na aba <strong>Histórico</strong> e o protocolo é criado em <strong>Protocolos</strong>.</p>
               </div>
             </CardContent>
           </Card>
@@ -349,12 +301,6 @@ function NovaContaDialog({ secretarias }: { secretarias: any[] }) {
   const [email, setEmail] = useState("");
   const [descricao, setDescricao] = useState("");
   const [secId, setSecId] = useState<string>("");
-  const [provider, setProvider] = useState<"imap" | "gmail" | "webhook">("imap");
-  const [imapHost, setImapHost] = useState("imap.gmail.com");
-  const [imapPort, setImapPort] = useState(993);
-  const [imapUser, setImapUser] = useState("");
-  const [imapPassword, setImapPassword] = useState("");
-  const [imapTls, setImapTls] = useState(true);
 
   const criar = useMutation({
     mutationFn: async () => {
@@ -364,18 +310,8 @@ function NovaContaDialog({ secretarias }: { secretarias: any[] }) {
         descricao: descricao || null,
         secretaria_id: secId || null,
         created_by: user?.id,
-        provider,
+        provider: "gmail",
       };
-      if (provider === "imap") {
-        if (!imapHost || !imapUser || !imapPassword) {
-          throw new Error("Preencha host, usuário e senha IMAP");
-        }
-        payload.imap_host = imapHost.trim();
-        payload.imap_port = Number(imapPort) || 993;
-        payload.imap_user = imapUser.trim();
-        payload.imap_password = imapPassword;
-        payload.imap_tls = imapTls;
-      }
       const { error } = await supabase.from("email_inbox_accounts").insert(payload);
       if (error) throw error;
     },
@@ -383,71 +319,24 @@ function NovaContaDialog({ secretarias }: { secretarias: any[] }) {
       qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] });
       toast.success("Conta cadastrada");
       setOpen(false);
-      setEmail(""); setDescricao(""); setSecId(""); setImapUser(""); setImapPassword("");
+      setEmail(""); setDescricao(""); setSecId("");
     },
     onError: (e: any) => toast.error(e.message),
   });
-
-  function onEmailBlur() {
-    if (provider === "imap" && !imapUser && email) setImapUser(email.trim().toLowerCase());
-  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Nova conta</Button></DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Cadastrar e-mail de recepção</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Cadastrar conta Gmail</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Forma de captura</Label>
-            <Select value={provider} onValueChange={(v) => setProvider(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="imap">IMAP / Senha de App (recomendado)</SelectItem>
-                <SelectItem value="gmail">Gmail conectado (automático)</SelectItem>
-                <SelectItem value="webhook">Webhook (Zapier / Make / n8n)</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {provider === "imap" && "Você gera uma Senha de App no Google (16 caracteres) e cola aqui. O sistema lê a caixa via IMAP."}
-              {provider === "gmail" && "O sistema consulta diretamente a caixa do Gmail conectado pela Lovable."}
-              {provider === "webhook" && "Você configura um encaminhamento que faz POST na URL gerada."}
-            </p>
+          <div className="rounded-md border border-blue-500/30 bg-blue-500/5 p-3 text-xs text-muted-foreground">
+            O sistema consulta diretamente a caixa do Gmail conectado pela Lovable. A leitura é automática a cada 3 minutos.
           </div>
           <div className="space-y-1.5">
             <Label>E-mail *</Label>
-            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} onBlur={onEmailBlur} placeholder="ouvidoria@exemplo.gov.br" />
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="setamonitoramento75@gmail.com" />
           </div>
-          {provider === "imap" && (
-            <div className="space-y-3 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
-              <p className="text-xs text-muted-foreground">
-                <strong>Como obter a Senha de App do Gmail:</strong> ative a Verificação em 2 etapas em <a className="text-primary underline" href="https://myaccount.google.com/security" target="_blank" rel="noreferrer">myaccount.google.com/security</a>, depois acesse <a className="text-primary underline" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">myaccount.google.com/apppasswords</a> e gere uma senha de 16 caracteres.
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-2 space-y-1.5">
-                  <Label>Servidor IMAP *</Label>
-                  <Input value={imapHost} onChange={e => setImapHost(e.target.value)} placeholder="imap.gmail.com" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Porta</Label>
-                  <Input type="number" value={imapPort} onChange={e => setImapPort(Number(e.target.value))} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Usuário (e-mail) *</Label>
-                <Input value={imapUser} onChange={e => setImapUser(e.target.value)} placeholder="setamonitoramento75@gmail.com" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Senha de App *</Label>
-                <Input type="password" value={imapPassword} onChange={e => setImapPassword(e.target.value)} placeholder="xxxx xxxx xxxx xxxx" autoComplete="new-password" />
-                <p className="text-[11px] text-muted-foreground">Pode colar com ou sem espaços.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={imapTls} onCheckedChange={setImapTls} />
-                <Label className="text-xs">Usar TLS/SSL (recomendado)</Label>
-              </div>
-            </div>
-          )}
           <div className="space-y-1.5">
             <Label>Descrição</Label>
             <Input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex.: Caixa principal da Ouvidoria" />
