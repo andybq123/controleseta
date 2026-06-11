@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, FileText, Building2, LogOut, Shield, AlertTriangle, BarChart3, Mail, Users } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { NotificationBell } from "@/components/notification-bell";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -77,9 +78,12 @@ function AuthLayout() {
               );
             })}
           </nav>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Sair</span>
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Sair</span>
+            </Button>
+          </div>
         </div>
       </header>
       <main className="flex-1 container mx-auto px-4 py-6">
