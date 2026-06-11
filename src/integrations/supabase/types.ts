@@ -22,6 +22,11 @@ export type Database = {
           descricao: string | null
           email: string
           id: string
+          imap_host: string | null
+          imap_password: string | null
+          imap_port: number | null
+          imap_tls: boolean | null
+          imap_user: string | null
           provider: string
           secretaria_id: string | null
           token: string
@@ -38,6 +43,11 @@ export type Database = {
           descricao?: string | null
           email: string
           id?: string
+          imap_host?: string | null
+          imap_password?: string | null
+          imap_port?: number | null
+          imap_tls?: boolean | null
+          imap_user?: string | null
           provider?: string
           secretaria_id?: string | null
           token?: string
@@ -54,6 +64,11 @@ export type Database = {
           descricao?: string | null
           email?: string
           id?: string
+          imap_host?: string | null
+          imap_password?: string | null
+          imap_port?: number | null
+          imap_tls?: boolean | null
+          imap_user?: string | null
           provider?: string
           secretaria_id?: string | null
           token?: string

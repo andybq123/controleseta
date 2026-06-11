@@ -7,3 +7,10 @@ export const sincronizarGmail = createServerFn({ method: "POST" })
     const { sincronizarGmailContas } = await import("@/lib/protocolo-ingest.server");
     return await sincronizarGmailContas();
   });
+
+export const sincronizarImap = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { sincronizarImapContas } = await import("@/lib/protocolo-ingest.server");
+    return await sincronizarImapContas();
+  });

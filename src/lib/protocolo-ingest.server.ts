@@ -230,3 +230,95 @@ export async function sincronizarGmailContas(): Promise<{ contas: number; novos:
 
   return { contas: contas?.length ?? 0, novos, erros, detalhes };
 }
+
+// ============ IMAP (senha de app) ============
+
+export async function sincronizarImapContas(): Promise<{ contas: number; novos: number; erros: number; detalhes: any[] }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { ImapFlow } = await import("imapflow");
+  const { simpleParser } = await import("mailparser");
+
+  const { data: contas } = await supabaseAdmin
+    .from("email_inbox_accounts")
+    .select("*")
+    .eq("ativo", true)
+    .eq("provider", "imap");
+
+  let novos = 0, erros = 0;
+  const detalhes: any[] = [];
+
+  for (const conta of contas ?? []) {
+    let contaNovos = 0, contaErros = 0, contaProc = 0;
+    let client: any = null;
+    try {
+      if (!conta.imap_host || !conta.imap_user || !conta.imap_password) {
+        throw new Error("Credenciais IMAP incompletas (host/usuário/senha)");
+      }
+      client = new ImapFlow({
+        host: conta.imap_host,
+        port: conta.imap_port ?? 993,
+        secure: conta.imap_tls ?? true,
+        auth: { user: conta.imap_user, pass: conta.imap_password },
+        logger: false,
+      });
+      await client.connect();
+      const lock = await client.getMailboxLock("INBOX");
+      try {
+        // Busca as últimas 20 mensagens (mais recentes primeiro)
+        const status = await client.status("INBOX", { messages: true });
+        const total = status.messages ?? 0;
+        if (total === 0) {
+          await supabaseAdmin.from("email_inbox_accounts").update({
+            ultima_sincronizacao: new Date().toISOString(),
+            ultima_sync_novos: 0, ultima_sync_erros: 0, ultima_sync_processados: 0,
+          }).eq("id", conta.id);
+          continue;
+        }
+        const from = Math.max(1, total - 19);
+        const range = `${from}:${total}`;
+
+        for await (const msg of client.fetch(range, { uid: true, envelope: true, source: true })) {
+          const externalId = `uid:${msg.uid}`;
+          const { data: existe } = await supabaseAdmin.from("email_inbox_log")
+            .select("id").eq("account_id", conta.id).eq("external_id", externalId).maybeSingle();
+          if (existe) continue;
+
+          try {
+            const parsed = await simpleParser(msg.source as Buffer);
+            const remetente = parsed.from?.text ?? msg.envelope?.from?.[0]?.address ?? "";
+            const destinatario = parsed.to && "text" in parsed.to ? (parsed.to as any).text : (conta.email ?? "");
+            const assunto = parsed.subject ?? msg.envelope?.subject ?? "";
+            const corpo = (parsed.text || (parsed.html ? stripHtml(parsed.html) : "") || "").trim();
+
+            const res = await ingerirEmail({
+              account: conta, remetente, destinatario, assunto, corpo, externalId,
+            });
+            contaProc++;
+            if (res.ok && res.protocoloId) { novos++; contaNovos++; }
+            else if (!res.ok) { erros++; contaErros++; }
+            detalhes.push({ uid: msg.uid, subject: assunto, ok: res.ok, numero: res.numero, error: res.error });
+          } catch (e: any) {
+            erros++; contaErros++;
+            detalhes.push({ uid: msg.uid, error: String(e?.message ?? e) });
+          }
+        }
+      } finally {
+        lock.release();
+      }
+
+      await supabaseAdmin.from("email_inbox_accounts").update({
+        ultima_sincronizacao: new Date().toISOString(),
+        ultima_sync_novos: contaNovos,
+        ultima_sync_erros: contaErros,
+        ultima_sync_processados: contaProc,
+      }).eq("id", conta.id);
+    } catch (e: any) {
+      erros++;
+      detalhes.push({ conta: conta.email, error: String(e?.message ?? e) });
+    } finally {
+      try { await client?.logout(); } catch {}
+    }
+  }
+
+  return { contas: contas?.length ?? 0, novos, erros, detalhes };
+}
