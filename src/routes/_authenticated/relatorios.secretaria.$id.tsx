@@ -260,9 +260,10 @@ function SecretariaRelatorio() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={110}
-                      paddingAngle={3}
+                      innerRadius={55}
+                      outerRadius={120}
+                      minAngle={6}
+                      paddingAngle={2}
                       stroke="#ffffff"
                       strokeWidth={2}
                       labelLine={false}
