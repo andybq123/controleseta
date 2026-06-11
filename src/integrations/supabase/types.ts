@@ -463,6 +463,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_protocolo_descricoes: { Args: { payload: Json }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
