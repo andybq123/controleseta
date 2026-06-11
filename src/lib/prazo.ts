@@ -94,7 +94,8 @@ export function formatDate(d: Date | string) {
 export function gerarNumeroProtocolo(tipo: TipoProtocolo): string {
   const now = new Date();
   const y = now.getFullYear();
-  const rand = Math.floor(Math.random() * 900000) + 100000;
-  const prefix = tipo === "lai" ? "LAI" : "OUV";
-  return `${prefix}-${y}-${rand}`;
+  const seq = Math.floor(Math.random() * 9000) + 1000;
+  // Formato: 1.234/AAAA (separador de milhar com ponto)
+  const formatted = seq.toLocaleString("pt-BR");
+  return `${formatted}/${y}`;
 }
