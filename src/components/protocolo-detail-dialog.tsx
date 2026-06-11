@@ -13,7 +13,7 @@ import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
-  PRAZOS, CATEGORIAS, categoriaLabel,
+  PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass,
   type TipoProtocolo, type CategoriaProtocolo,
 } from "@/lib/prazo";
 
@@ -148,7 +148,12 @@ export function ProtocoloDetailDialog({ protocolo, open, onOpenChange }: {
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             <span className="font-mono text-sm text-muted-foreground">{protocolo.numero}</span>
             <Badge variant="outline" className="text-[10px] uppercase">{PRAZOS[protocolo.tipo as TipoProtocolo].label}</Badge>
-            <Badge variant="outline" className="text-[10px]">{categoriaLabel(protocolo.categoria as CategoriaProtocolo)}</Badge>
+            <Badge
+              className={`text-[10px] ${categoriaBadgeClass(protocolo.categoria as CategoriaProtocolo)}`}
+              title={categoriaLabel(protocolo.categoria as CategoriaProtocolo)}
+            >
+              {categoriaSigla(protocolo.categoria as CategoriaProtocolo)}
+            </Badge>
             <Badge variant="outline" className={`text-[10px] border ${situacaoClasses[s.situacao]}`}>
               {situacaoLabel[s.situacao]} · {s.dias < 0 ? `${Math.abs(s.dias)}d atrasado` : `${s.dias}d`}
             </Badge>
@@ -238,7 +243,11 @@ export function ProtocoloDetailDialog({ protocolo, open, onOpenChange }: {
                 <Select value={form.categoria} onValueChange={(v) => setForm({ ...form, categoria: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {CATEGORIAS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                    {CATEGORIAS.map(c => (
+                      <SelectItem key={c.value} value={c.value}>
+                        <span className="font-mono mr-2">{c.sigla}</span>{c.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field2>
