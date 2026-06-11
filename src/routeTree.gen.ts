@@ -14,6 +14,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedSecretariasRouteImport } from './routes/_authenticated/secretarias'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authenticated/protocolos'
@@ -22,6 +23,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
 import { Route as ApiPublicGmailSyncRouteImport } from './routes/api/public/gmail-sync'
+import { Route as ApiPublicEmailSyncRouteImport } from './routes/api/public/email-sync'
 import { Route as ApiPublicInboundEmailTokenRouteImport } from './routes/api/public/inbound-email.$token'
 import { Route as AuthenticatedRelatoriosSecretariaIdRouteImport } from './routes/_authenticated/relatorios.secretaria.$id'
 
@@ -48,6 +50,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSecretariasRoute =
   AuthenticatedSecretariasRouteImport.update({
@@ -91,6 +98,11 @@ const ApiPublicGmailSyncRoute = ApiPublicGmailSyncRouteImport.update({
   path: '/api/public/gmail-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicEmailSyncRoute = ApiPublicEmailSyncRouteImport.update({
+  id: '/api/public/email-sync',
+  path: '/api/public/email-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicInboundEmailTokenRoute =
   ApiPublicInboundEmailTokenRouteImport.update({
     id: '/api/public/inbound-email/$token',
@@ -115,6 +127,8 @@ export interface FileRoutesByFullPath {
   '/protocolos': typeof AuthenticatedProtocolosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
@@ -130,6 +144,8 @@ export interface FileRoutesByTo {
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
   '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
@@ -148,6 +164,8 @@ export interface FileRoutesById {
   '/_authenticated/protocolos': typeof AuthenticatedProtocolosRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
@@ -166,6 +184,8 @@ export interface FileRouteTypes {
     | '/protocolos'
     | '/relatorios'
     | '/secretarias'
+    | '/users'
+    | '/api/public/email-sync'
     | '/api/public/gmail-sync'
     | '/relatorios/'
     | '/relatorios/secretaria/$id'
@@ -181,6 +201,8 @@ export interface FileRouteTypes {
     | '/email-inbox'
     | '/protocolos'
     | '/secretarias'
+    | '/users'
+    | '/api/public/email-sync'
     | '/api/public/gmail-sync'
     | '/relatorios'
     | '/relatorios/secretaria/$id'
@@ -198,6 +220,8 @@ export interface FileRouteTypes {
     | '/_authenticated/protocolos'
     | '/_authenticated/relatorios'
     | '/_authenticated/secretarias'
+    | '/_authenticated/users'
+    | '/api/public/email-sync'
     | '/api/public/gmail-sync'
     | '/_authenticated/relatorios/'
     | '/_authenticated/relatorios/secretaria/$id'
@@ -210,6 +234,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicEmailSyncRoute: typeof ApiPublicEmailSyncRoute
   ApiPublicGmailSyncRoute: typeof ApiPublicGmailSyncRoute
   ApiPublicInboundEmailTokenRoute: typeof ApiPublicInboundEmailTokenRoute
 }
@@ -250,6 +275,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/secretarias': {
       id: '/_authenticated/secretarias'
@@ -307,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGmailSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email-sync': {
+      id: '/api/public/email-sync'
+      path: '/api/public/email-sync'
+      fullPath: '/api/public/email-sync'
+      preLoaderRoute: typeof ApiPublicEmailSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/inbound-email/$token': {
       id: '/api/public/inbound-email/$token'
       path: '/api/public/inbound-email/$token'
@@ -348,6 +387,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProtocolosRoute: typeof AuthenticatedProtocolosRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedSecretariasRoute: typeof AuthenticatedSecretariasRoute
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -357,6 +397,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProtocolosRoute: AuthenticatedProtocolosRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedSecretariasRoute: AuthenticatedSecretariasRoute,
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -368,6 +409,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicEmailSyncRoute: ApiPublicEmailSyncRoute,
   ApiPublicGmailSyncRoute: ApiPublicGmailSyncRoute,
   ApiPublicInboundEmailTokenRoute: ApiPublicInboundEmailTokenRoute,
 }
