@@ -9,6 +9,7 @@ import { situacaoProtocolo, situacaoLabel, situacaoClasses, formatDate, PRAZOS }
 import { AlertTriangle, CheckCircle2, Clock, FileText, Building2, AlarmClock } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
+import { fetchAllPaginated } from "@/lib/fetch-all";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -18,14 +19,14 @@ function Dashboard() {
   const [detail, setDetail] = useState<any | null>(null);
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("protocolos")
-        .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
-        .order("data_abertura", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () =>
+      fetchAllPaginated((from, to) =>
+        supabase
+          .from("protocolos")
+          .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+          .order("data_abertura", { ascending: false })
+          .range(from, to),
+      ),
   });
 
   const { data: secretarias = [] } = useQuery({
