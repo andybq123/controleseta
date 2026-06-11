@@ -146,7 +146,7 @@ async function processInbound(token: string, request: Request) {
         tipo: extr.tipo,
         categoria: extr.categoria,
         assunto: extr.assunto || assunto || "Sem assunto",
-        descricao: extr.descricao || corpo.slice(0, 4000) || null,
+        descricao: null,
         solicitante: extr.solicitante || remetente || null,
         secretaria_id: secretariaId,
         local_id: localId,
