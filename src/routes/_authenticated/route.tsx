@@ -1,14 +1,23 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, FileText, Building2, LogOut, Shield, AlertTriangle, BarChart3, Mail } from "lucide-react";
+import { LayoutDashboard, FileText, Building2, LogOut, Shield, AlertTriangle, BarChart3, Mail, Users } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
+    const { data: roles } = await supabase
+      .from("user_roles").select("role").eq("user_id", data.user.id);
+    if (!roles || roles.length === 0) {
+      await supabase.auth.signOut();
+      throw redirect({ to: "/auth", search: { unauthorized: "1" } as any });
+    }
     return { user: data.user };
   },
   component: AuthLayout,
@@ -18,6 +27,15 @@ function AuthLayout() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: s => s.location.pathname });
+  const { user } = Route.useRouteContext();
+
+  const { data: isAdmin = false } = useQuery({
+    queryKey: ["is-admin", user.id],
+    queryFn: async () => {
+      const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      return !!data;
+    },
+  });
 
   async function handleLogout() {
     await queryClient.cancelQueries();
@@ -26,14 +44,15 @@ function AuthLayout() {
     router.navigate({ to: "/auth", replace: true });
   }
 
-  const nav = [
+  const nav = ([
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/protocolos", label: "Protocolos", icon: FileText },
     { to: "/atrasados", label: "Atrasados", icon: AlertTriangle },
     { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
     { to: "/secretarias", label: "Secretarias", icon: Building2 },
     { to: "/email-inbox", label: "E-mails", icon: Mail },
-  ] as const;
+    ...(isAdmin ? [{ to: "/users", label: "Usuários", icon: Users }] : []),
+  ]) as { to: string; label: string; icon: any }[];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

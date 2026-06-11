@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
 import { sincronizarGmail, sincronizarImap } from "@/lib/gmail-sync.functions";
 
-const SYNC_INTERVAL_MIN = 5;
+const SYNC_INTERVAL_MIN = 3;
 
 function useTick(ms = 1000) {
   const [, setN] = useState(0);
@@ -50,34 +50,26 @@ function EmailInboxPage() {
   const sincronizar = useServerFn(sincronizarGmail);
   const sincronizarImapFn = useServerFn(sincronizarImap);
   const [sincronizando, setSincronizando] = useState(false);
-  const [sincronizandoImap, setSincronizandoImap] = useState(false);
   useTick(1000);
 
   async function rodarSync() {
     setSincronizando(true);
     try {
-      const r: any = await sincronizar({});
-      toast.success(`Gmail: ${r.novos} novo(s), ${r.erros} erro(s) em ${r.contas} conta(s)`);
+      const [g, i] = await Promise.allSettled([sincronizar({}), sincronizarImapFn({})]);
+      const gOk = g.status === "fulfilled" ? g.value as any : null;
+      const iOk = i.status === "fulfilled" ? i.value as any : null;
+      const novos = (gOk?.novos ?? 0) + (iOk?.novos ?? 0);
+      const erros = (gOk?.erros ?? 0) + (iOk?.erros ?? 0);
+      const contas = (gOk?.contas ?? 0) + (iOk?.contas ?? 0);
+      toast.success(`Sincronização: ${novos} novo(s), ${erros} erro(s) em ${contas} conta(s)`);
+      if (g.status === "rejected") toast.error(`Gmail: ${String((g.reason as any)?.message ?? g.reason)}`);
+      if (i.status === "rejected") toast.error(`IMAP: ${String((i.reason as any)?.message ?? i.reason)}`);
       qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] });
       qc.invalidateQueries({ queryKey: ["email-inbox-log"] });
     } catch (e: any) {
       toast.error(e?.message ?? "Falha ao sincronizar");
     } finally {
       setSincronizando(false);
-    }
-  }
-
-  async function rodarSyncImap() {
-    setSincronizandoImap(true);
-    try {
-      const r: any = await sincronizarImapFn({});
-      toast.success(`IMAP: ${r.novos} novo(s), ${r.erros} erro(s) em ${r.contas} conta(s)`);
-      qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] });
-      qc.invalidateQueries({ queryKey: ["email-inbox-log"] });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao sincronizar IMAP");
-    } finally {
-      setSincronizandoImap(false);
     }
   }
 
@@ -159,13 +151,9 @@ function EmailInboxPage() {
           <p className="text-sm text-muted-foreground">Encaminhe e-mails para um endereço único e o sistema cria a ouvidoria automaticamente.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={rodarSyncImap} disabled={sincronizandoImap}>
-            <RefreshCw className={`h-4 w-4 mr-1 ${sincronizandoImap ? "animate-spin" : ""}`} />
-            Sincronizar IMAP
-          </Button>
           <Button variant="outline" onClick={rodarSync} disabled={sincronizando}>
             <RefreshCw className={`h-4 w-4 mr-1 ${sincronizando ? "animate-spin" : ""}`} />
-            Sincronizar Gmail
+            Sincronizar agora
           </Button>
           <NovaContaDialog secretarias={secretarias} />
         </div>
