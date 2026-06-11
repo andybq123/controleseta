@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Plus, Copy, Trash2, ExternalLink, AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
+import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
@@ -39,11 +39,6 @@ function formatDelta(ms: number): string {
 export const Route = createFileRoute("/_authenticated/email-inbox")({
   component: EmailInboxPage,
 });
-
-function baseUrl() {
-  if (typeof window !== "undefined") return window.location.origin;
-  return "";
-}
 
 function EmailInboxPage() {
   const qc = useQueryClient();
@@ -112,11 +107,6 @@ function EmailInboxPage() {
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] }); toast.success("Conta removida"); },
   });
-
-  function copiar(t: string) {
-    navigator.clipboard.writeText(t);
-    toast.success("Copiado");
-  }
 
   const statusBadge = (s: string) => {
     if (s === "processado") return <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30" variant="outline"><CheckCircle2 className="h-3 w-3 mr-1" />Processado</Badge>;
