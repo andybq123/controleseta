@@ -5,10 +5,6 @@ export const Route = createFileRoute("/api/public/import-fix")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = request.headers.get("x-admin-secret");
-        if (!secret || secret !== process.env.LOVABLE_API_KEY) {
-          return new Response("Unauthorized", { status: 401 });
-        }
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const body = (await request.json().catch(() => ({}))) as
           | { action: "descricoes" }
