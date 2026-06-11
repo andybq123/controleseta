@@ -141,15 +141,15 @@ function EmailInboxPage() {
     return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
   };
 
-  const gmailAccounts = accounts.filter((a: any) => a.provider === "gmail" && a.ativo);
-  const ultimaSync = gmailAccounts
+  const syncAccounts = accounts.filter((a: any) => (a.provider === "gmail" || a.provider === "imap") && a.ativo);
+  const ultimaSync = syncAccounts
     .map((a: any) => a.ultima_sincronizacao ? new Date(a.ultima_sincronizacao).getTime() : 0)
     .reduce((max, t) => Math.max(max, t), 0);
   const proximaSync = ultimaSync ? ultimaSync + SYNC_INTERVAL_MIN * 60_000 : 0;
   const agora = Date.now();
-  const totalNovos = gmailAccounts.reduce((s: number, a: any) => s + (a.ultima_sync_novos ?? 0), 0);
-  const totalErros = gmailAccounts.reduce((s: number, a: any) => s + (a.ultima_sync_erros ?? 0), 0);
-  const totalProc = gmailAccounts.reduce((s: number, a: any) => s + (a.ultima_sync_processados ?? 0), 0);
+  const totalNovos = syncAccounts.reduce((s: number, a: any) => s + (a.ultima_sync_novos ?? 0), 0);
+  const totalErros = syncAccounts.reduce((s: number, a: any) => s + (a.ultima_sync_erros ?? 0), 0);
+  const totalProc = syncAccounts.reduce((s: number, a: any) => s + (a.ultima_sync_processados ?? 0), 0);
 
   return (
     <div className="space-y-4">
@@ -171,7 +171,7 @@ function EmailInboxPage() {
         </div>
       </div>
 
-      {gmailAccounts.length > 0 && (
+      {syncAccounts.length > 0 && (
         <Card className="border-blue-500/30 bg-blue-500/5">
           <CardContent className="p-4">
             <div className="grid gap-3 md:grid-cols-4">
@@ -198,8 +198,8 @@ function EmailInboxPage() {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Contas Gmail ativas</p>
-                <p className="text-sm font-semibold mt-0.5">{gmailAccounts.length}</p>
+                <p className="text-xs text-muted-foreground">Contas ativas</p>
+                <p className="text-sm font-semibold mt-0.5">{syncAccounts.length}</p>
               </div>
             </div>
           </CardContent>
@@ -220,6 +220,7 @@ function EmailInboxPage() {
           {accounts.map(a => {
             const url = `${baseUrl()}/api/public/inbound-email/${a.token}`;
             const isGmail = (a as any).provider === "gmail";
+            const isImap = (a as any).provider === "imap";
             return (
               <Card key={a.id}>
                 <CardContent className="p-4 space-y-3">
@@ -229,11 +230,12 @@ function EmailInboxPage() {
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{a.email}</span>
                         {isGmail && <Badge className="bg-blue-500/15 text-blue-700 border-blue-500/30" variant="outline">Gmail</Badge>}
+                        {isImap && <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30" variant="outline">IMAP</Badge>}
                         {!a.ativo && <Badge variant="secondary">Inativa</Badge>}
                       </div>
                       {a.descricao && <p className="text-xs text-muted-foreground mt-0.5">{a.descricao}</p>}
                       {(a as any).secretarias && <p className="text-xs text-muted-foreground mt-0.5">Vinculada à secretaria: <strong>{(a as any).secretarias.nome}</strong></p>}
-                      {isGmail && (a as any).ultima_sincronizacao && (
+                      {(isGmail || isImap) && (a as any).ultima_sincronizacao && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Última sincronização: {format(new Date((a as any).ultima_sincronizacao), "dd/MM/yyyy HH:mm:ss")}
                           {" · "}processados: {(a as any).ultima_sync_processados ?? 0}
@@ -255,6 +257,10 @@ function EmailInboxPage() {
                   {isGmail ? (
                     <div className="rounded-md border border-blue-500/30 bg-blue-500/5 p-2 text-xs text-muted-foreground">
                       ✓ Conectado ao Google. O sistema verifica a caixa periodicamente e cria protocolos automaticamente.
+                    </div>
+                  ) : isImap ? (
+                    <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2 text-xs text-muted-foreground">
+                      ✓ Conectado via IMAP em <code className="font-mono">{(a as any).imap_host}:{(a as any).imap_port}</code>. Clique em <strong>Sincronizar IMAP</strong> para puxar os e-mails agora.
                     </div>
                   ) : (
                     <div className="rounded-md border bg-muted/40 p-2 flex items-center gap-2">
