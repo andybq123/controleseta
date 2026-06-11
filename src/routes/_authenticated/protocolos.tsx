@@ -380,7 +380,13 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
           </div>
           <div className="space-y-1.5">
             <Label>Secretaria</Label>
-            <Select value={secretariaId} onValueChange={v => { setSecretariaId(v); setResponsavelId(""); setLocalId(""); }}>
+            <Select value={secretariaId} onValueChange={v => {
+              setSecretariaId(v);
+              const locaisDaSec = locais.filter(l => l.secretaria_id === v);
+              setLocalId(locaisDaSec.length === 1 ? locaisDaSec[0].id : "");
+              const respDaSec = responsaveis.filter(r => r.secretaria_id === v);
+              setResponsavelId(respDaSec.length === 1 ? respDaSec[0].id : "");
+            }}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
                 {secretarias.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
