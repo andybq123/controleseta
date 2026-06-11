@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, CATEGORIAS, categoriaLabel, type TipoProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
+import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type TipoProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { Plus, Calendar, RotateCw, CheckCircle2, Trash2, Sparkles, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { extrairProtocolo } from "@/lib/protocolo-extract.functions";
@@ -111,7 +111,11 @@ function ProtocolosPage() {
           <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todas as categorias</SelectItem>
-            {CATEGORIAS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+            {CATEGORIAS.map(c => (
+              <SelectItem key={c.value} value={c.value}>
+                <span className="font-mono mr-2">{c.sigla}</span>{c.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={filtroStatus} onValueChange={setFiltroStatus}>
@@ -146,7 +150,12 @@ function ProtocolosPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-xs text-muted-foreground">{p.numero}</span>
                       <Badge variant="outline" className="text-[10px] uppercase">{PRAZOS[p.tipo as TipoProtocolo].label}</Badge>
-                      <Badge variant="outline" className="text-[10px]">{categoriaLabel(p.categoria as CategoriaProtocolo)}</Badge>
+                      <Badge
+                        className={`text-[10px] ${categoriaBadgeClass(p.categoria as CategoriaProtocolo)}`}
+                        title={categoriaLabel(p.categoria as CategoriaProtocolo)}
+                      >
+                        {categoriaSigla(p.categoria as CategoriaProtocolo)}
+                      </Badge>
                       <Badge variant="secondary" className="text-[10px]">{p.status.replace("_", " ")}</Badge>
                       {p.prorrogado && <Badge variant="outline" className="text-[10px]">prorrogado</Badge>}
                       <Badge variant="outline" className={`text-[10px] border ${situacaoClasses[s.situacao]}`}>
@@ -346,7 +355,11 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
             <Select value={categoria} onValueChange={v => setCategoria(v as CategoriaProtocolo)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {CATEGORIAS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                {CATEGORIAS.map(c => (
+                  <SelectItem key={c.value} value={c.value}>
+                    <span className="font-mono mr-2">{c.sigla}</span>{c.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
