@@ -218,13 +218,14 @@ function SecretariaRelatorio() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={110}
-                      paddingAngle={3}
+                      innerRadius={55}
+                      outerRadius={120}
+                      minAngle={6}
+                      paddingAngle={2}
                       stroke="#ffffff"
                       strokeWidth={2}
                       labelLine={false}
-                      label={({ percent }: any) => `${(percent * 100).toFixed(0)}%`}
+                      label={({ percent, name }: any) => `${(percent * 100).toFixed(0)}%`}
                     >
                       {categoriaData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
