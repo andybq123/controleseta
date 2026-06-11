@@ -340,8 +340,8 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
               <Select value={tipo} onValueChange={v => { setTipo(v as TipoProtocolo); if (v === "lai") setCategoria("pedido_informacao"); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ouvidoria">Ouvidoria (30+30d)</SelectItem>
-                  <SelectItem value="lai">LAI (20+10d)</SelectItem>
+                  <SelectItem value="ouvidoria">Ouvidoria</SelectItem>
+                  <SelectItem value="lai">LAI</SelectItem>
                 </SelectContent>
               </Select>
             </div>
