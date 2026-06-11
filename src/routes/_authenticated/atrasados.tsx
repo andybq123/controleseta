@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, type CategoriaProtocolo, type TipoProtocolo } from "@/lib/prazo";
+import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type CategoriaProtocolo, type TipoProtocolo } from "@/lib/prazo";
 import { AlertTriangle, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -136,7 +136,12 @@ function AtrasadosPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-xs text-muted-foreground">{p.numero}</span>
                     <Badge variant="outline" className="text-[10px] uppercase">{p.tipo}</Badge>
-                    <Badge variant="outline" className="text-[10px]">{categoriaLabel(p.categoria as CategoriaProtocolo)}</Badge>
+                    <Badge
+                      className={`text-[10px] ${categoriaBadgeClass(p.categoria as CategoriaProtocolo)}`}
+                      title={categoriaLabel(p.categoria as CategoriaProtocolo)}
+                    >
+                      {categoriaSigla(p.categoria as CategoriaProtocolo)}
+                    </Badge>
                     {p.prorrogado && <Badge variant="outline" className="text-[10px]">prorrogado</Badge>}
                   </div>
                   <p className="text-sm font-medium mt-1 truncate">{p.assunto}</p>
