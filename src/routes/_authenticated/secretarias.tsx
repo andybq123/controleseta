@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Building2, User, Trash2, Mail, Phone, MapPin } from "lucide-react";
+import { Plus, Building2, User, Trash2, Mail, Phone, MapPin, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/secretarias")({
@@ -58,6 +58,10 @@ function SecretariasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const [editSec, setEditSec] = useState<any | null>(null);
+  const [editLocal, setEditLocal] = useState<any | null>(null);
+  const [editResp, setEditResp] = useState<any | null>(null);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -89,9 +93,14 @@ function SecretariasPage() {
                     {s.sigla && <span className="text-xs text-muted-foreground font-normal">({s.sigla})</span>}
                     {s.centro_custo && <span className="text-xs text-muted-foreground font-normal font-mono">CC {s.centro_custo}</span>}
                   </CardTitle>
-                  <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir secretaria e seus responsáveis?")) delSec.mutate(s.id); }}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => setEditSec(s)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir secretaria e seus responsáveis?")) delSec.mutate(s.id); }}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-0 space-y-2">
@@ -101,7 +110,10 @@ function SecretariasPage() {
                   {locs.map(l => (
                     <div key={l.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
                       <span>{l.nome}{l.centro_custo && <span className="text-xs text-muted-foreground font-mono ml-2">{l.centro_custo}</span>}</span>
-                      <Button size="sm" variant="ghost" onClick={() => delLocal.mutate(l.id)}><Trash2 className="h-3 w-3" /></Button>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => setEditLocal(l)}><Pencil className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => delLocal.mutate(l.id)}><Trash2 className="h-3 w-3" /></Button>
+                      </div>
                     </div>
                   ))}
                   <AddLocalInline secretariaId={s.id} onAdd={(nome, cc) => addLocal.mutate({ secretaria_id: s.id, nome, centro_custo: cc })} />
@@ -117,7 +129,10 @@ function SecretariasPage() {
                         {r.telefone && <span><Phone className="inline h-3 w-3 mr-1" />{r.telefone}</span>}
                       </div>
                     </div>
-                    <Button size="sm" variant="ghost" onClick={() => delResp.mutate(r.id)}><Trash2 className="h-3 w-3" /></Button>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => setEditResp(r)}><Pencil className="h-3 w-3" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => delResp.mutate(r.id)}><Trash2 className="h-3 w-3" /></Button>
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -125,6 +140,10 @@ function SecretariasPage() {
           );
         })}
       </div>
+
+      <EditSecretariaDialog secretaria={editSec} onClose={() => setEditSec(null)} />
+      <EditLocalDialog local={editLocal} onClose={() => setEditLocal(null)} />
+      <EditResponsavelDialog responsavel={editResp} secretarias={secretarias} onClose={() => setEditResp(null)} />
     </div>
   );
 }
