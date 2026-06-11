@@ -248,3 +248,134 @@ function NovoResponsavelDialog({ secretarias }: { secretarias: any[] }) {
     </Dialog>
   );
 }
+function EditSecretariaDialog({ secretaria, onClose }: { secretaria: any | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [nome, setNome] = useState("");
+  const [sigla, setSigla] = useState("");
+  const [centroCusto, setCentroCusto] = useState("");
+  const open = !!secretaria;
+
+  useState(() => {});
+  // sync on open
+  if (secretaria && nome === "" && sigla === "" && centroCusto === "" && (secretaria.nome || secretaria.sigla || secretaria.centro_custo)) {
+    setNome(secretaria.nome ?? "");
+    setSigla(secretaria.sigla ?? "");
+    setCentroCusto(secretaria.centro_custo ?? "");
+  }
+
+  const update = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("secretarias").update({ nome, sigla: sigla || null, centro_custo: centroCusto || null }).eq("id", secretaria.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["secretarias"] }); toast.success("Secretaria atualizada"); handleClose(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  function handleClose() { setNome(""); setSigla(""); setCentroCusto(""); onClose(); }
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && handleClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Editar secretaria</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5"><Label>Nome *</Label><Input value={nome} onChange={e => setNome(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Sigla</Label><Input value={sigla} onChange={e => setSigla(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Centro de Custo</Label><Input value={centroCusto} onChange={e => setCentroCusto(e.target.value)} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button onClick={() => update.mutate()} disabled={!nome || update.isPending}>Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditLocalDialog({ local, onClose }: { local: any | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [nome, setNome] = useState("");
+  const [cc, setCc] = useState("");
+  const open = !!local;
+  if (local && nome === "" && cc === "" && (local.nome || local.centro_custo)) {
+    setNome(local.nome ?? "");
+    setCc(local.centro_custo ?? "");
+  }
+  const update = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("locais").update({ nome, centro_custo: cc || null }).eq("id", local.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["locais"] }); toast.success("Local atualizado"); handleClose(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  function handleClose() { setNome(""); setCc(""); onClose(); }
+  return (
+    <Dialog open={open} onOpenChange={v => !v && handleClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Editar local</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5"><Label>Nome *</Label><Input value={nome} onChange={e => setNome(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Centro de Custo</Label><Input value={cc} onChange={e => setCc(e.target.value)} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button onClick={() => update.mutate()} disabled={!nome || update.isPending}>Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditResponsavelDialog({ responsavel, secretarias, onClose }: { responsavel: any | null; secretarias: any[]; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [cargo, setCargo] = useState("");
+  const [secId, setSecId] = useState("");
+  const open = !!responsavel;
+  if (responsavel && nome === "" && email === "" && telefone === "" && cargo === "" && secId === "" &&
+      (responsavel.nome || responsavel.email || responsavel.telefone || responsavel.cargo || responsavel.secretaria_id)) {
+    setNome(responsavel.nome ?? "");
+    setEmail(responsavel.email ?? "");
+    setTelefone(responsavel.telefone ?? "");
+    setCargo(responsavel.cargo ?? "");
+    setSecId(responsavel.secretaria_id ?? "");
+  }
+  const update = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("responsaveis").update({
+        nome, email: email || null, telefone: telefone || null, cargo: cargo || null, secretaria_id: secId,
+      }).eq("id", responsavel.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["responsaveis"] }); toast.success("Responsável atualizado"); handleClose(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  function handleClose() { setNome(""); setEmail(""); setTelefone(""); setCargo(""); setSecId(""); onClose(); }
+  return (
+    <Dialog open={open} onOpenChange={v => !v && handleClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Editar responsável</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Secretaria *</Label>
+            <Select value={secId} onValueChange={setSecId}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{secretarias.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5"><Label>Nome *</Label><Input value={nome} onChange={e => setNome(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Cargo</Label><Input value={cargo} onChange={e => setCargo(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Telefone</Label><Input value={telefone} onChange={e => setTelefone(e.target.value)} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button onClick={() => update.mutate()} disabled={!nome || !secId || update.isPending}>Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
