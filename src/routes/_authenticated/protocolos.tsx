@@ -383,9 +383,9 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
             <Select value={secretariaId} onValueChange={v => {
               setSecretariaId(v);
               const locaisDaSec = locais.filter(l => l.secretaria_id === v);
-              setLocalId(locaisDaSec.length === 1 ? locaisDaSec[0].id : "");
+              setLocalId(locaisDaSec[0]?.id ?? "");
               const respDaSec = responsaveis.filter(r => r.secretaria_id === v);
-              setResponsavelId(respDaSec.length === 1 ? respDaSec[0].id : "");
+              setResponsavelId(respDaSec[0]?.id ?? "");
             }}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
