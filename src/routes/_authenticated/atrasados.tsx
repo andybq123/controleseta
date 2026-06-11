@@ -22,15 +22,15 @@ function AtrasadosPage() {
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("protocolos")
-        .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
-        .neq("status", "concluido")
-        .order("data_abertura", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () =>
+      fetchAllPaginated((from, to) =>
+        supabase
+          .from("protocolos")
+          .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+          .neq("status", "concluido")
+          .order("data_abertura", { ascending: true })
+          .range(from, to),
+      ),
   });
 
   const { data: secretarias = [] } = useQuery({
