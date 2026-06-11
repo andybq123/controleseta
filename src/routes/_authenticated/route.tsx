@@ -2,10 +2,7 @@ import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } fr
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, FileText, Building2, LogOut, Shield, AlertTriangle, BarChart3, Mail, Users } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { useEffect } from "react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
