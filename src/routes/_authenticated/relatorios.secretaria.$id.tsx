@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/relatorios/secretaria/$id"
 });
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
+const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316"];
 
 function SecretariaRelatorio() {
   const { id } = Route.useParams();
@@ -210,12 +210,35 @@ function SecretariaRelatorio() {
               {categoriaData.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height={320}>
                   <PieChart>
-                    <Pie data={categoriaData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={(e: any) => `${e.name}: ${e.value}`}>
-                      {categoriaData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    <Pie
+                      data={categoriaData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={110}
+                      paddingAngle={3}
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                      labelLine={false}
+                      label={({ percent }: any) => `${(percent * 100).toFixed(0)}%`}
+                    >
+                      {categoriaData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip
+                      formatter={(value: number, name: string) => [`${value} protocolos`, name]}
+                      contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      iconType="circle"
+                      formatter={(value: string) => <span className="text-xs">{value}</span>}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -228,13 +251,35 @@ function SecretariaRelatorio() {
               {tipoData.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height={320}>
                   <PieChart>
-                    <Pie data={tipoData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={(e: any) => `${e.name}: ${e.value}`}>
-                      {tipoData.map((_, i) => <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />)}
+                    <Pie
+                      data={tipoData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={110}
+                      paddingAngle={3}
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                      labelLine={false}
+                      label={({ percent }: any) => `${(percent * 100).toFixed(0)}%`}
+                    >
+                      {tipoData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />
+                      ))}
                     </Pie>
-                    <Tooltip />
-                    <Legend />
+                    <Tooltip
+                      formatter={(value: number, name: string) => [`${value} protocolos`, name]}
+                      contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      iconType="circle"
+                      formatter={(value: string) => <span className="text-xs">{value}</span>}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               )}
