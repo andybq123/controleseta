@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -255,27 +255,25 @@ function EditSecretariaDialog({ secretaria, onClose }: { secretaria: any | null;
   const [centroCusto, setCentroCusto] = useState("");
   const open = !!secretaria;
 
-  useState(() => {});
-  // sync on open
-  if (secretaria && nome === "" && sigla === "" && centroCusto === "" && (secretaria.nome || secretaria.sigla || secretaria.centro_custo)) {
-    setNome(secretaria.nome ?? "");
-    setSigla(secretaria.sigla ?? "");
-    setCentroCusto(secretaria.centro_custo ?? "");
-  }
+  useEffect(() => {
+    if (secretaria) {
+      setNome(secretaria.nome ?? "");
+      setSigla(secretaria.sigla ?? "");
+      setCentroCusto(secretaria.centro_custo ?? "");
+    }
+  }, [secretaria]);
 
   const update = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("secretarias").update({ nome, sigla: sigla || null, centro_custo: centroCusto || null }).eq("id", secretaria.id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["secretarias"] }); toast.success("Secretaria atualizada"); handleClose(); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["secretarias"] }); toast.success("Secretaria atualizada"); onClose(); },
     onError: (e: any) => toast.error(e.message),
   });
 
-  function handleClose() { setNome(""); setSigla(""); setCentroCusto(""); onClose(); }
-
   return (
-    <Dialog open={open} onOpenChange={v => !v && handleClose()}>
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent>
         <DialogHeader><DialogTitle>Editar secretaria</DialogTitle></DialogHeader>
         <div className="space-y-3">
@@ -284,7 +282,7 @@ function EditSecretariaDialog({ secretaria, onClose }: { secretaria: any | null;
           <div className="space-y-1.5"><Label>Centro de Custo</Label><Input value={centroCusto} onChange={e => setCentroCusto(e.target.value)} /></div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={() => update.mutate()} disabled={!nome || update.isPending}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
@@ -297,21 +295,22 @@ function EditLocalDialog({ local, onClose }: { local: any | null; onClose: () =>
   const [nome, setNome] = useState("");
   const [cc, setCc] = useState("");
   const open = !!local;
-  if (local && nome === "" && cc === "" && (local.nome || local.centro_custo)) {
-    setNome(local.nome ?? "");
-    setCc(local.centro_custo ?? "");
-  }
+  useEffect(() => {
+    if (local) {
+      setNome(local.nome ?? "");
+      setCc(local.centro_custo ?? "");
+    }
+  }, [local]);
   const update = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("locais").update({ nome, centro_custo: cc || null }).eq("id", local.id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["locais"] }); toast.success("Local atualizado"); handleClose(); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["locais"] }); toast.success("Local atualizado"); onClose(); },
     onError: (e: any) => toast.error(e.message),
   });
-  function handleClose() { setNome(""); setCc(""); onClose(); }
   return (
-    <Dialog open={open} onOpenChange={v => !v && handleClose()}>
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent>
         <DialogHeader><DialogTitle>Editar local</DialogTitle></DialogHeader>
         <div className="space-y-3">
@@ -319,7 +318,7 @@ function EditLocalDialog({ local, onClose }: { local: any | null; onClose: () =>
           <div className="space-y-1.5"><Label>Centro de Custo</Label><Input value={cc} onChange={e => setCc(e.target.value)} /></div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={() => update.mutate()} disabled={!nome || update.isPending}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
@@ -335,14 +334,15 @@ function EditResponsavelDialog({ responsavel, secretarias, onClose }: { responsa
   const [cargo, setCargo] = useState("");
   const [secId, setSecId] = useState("");
   const open = !!responsavel;
-  if (responsavel && nome === "" && email === "" && telefone === "" && cargo === "" && secId === "" &&
-      (responsavel.nome || responsavel.email || responsavel.telefone || responsavel.cargo || responsavel.secretaria_id)) {
-    setNome(responsavel.nome ?? "");
-    setEmail(responsavel.email ?? "");
-    setTelefone(responsavel.telefone ?? "");
-    setCargo(responsavel.cargo ?? "");
-    setSecId(responsavel.secretaria_id ?? "");
-  }
+  useEffect(() => {
+    if (responsavel) {
+      setNome(responsavel.nome ?? "");
+      setEmail(responsavel.email ?? "");
+      setTelefone(responsavel.telefone ?? "");
+      setCargo(responsavel.cargo ?? "");
+      setSecId(responsavel.secretaria_id ?? "");
+    }
+  }, [responsavel]);
   const update = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("responsaveis").update({
@@ -350,12 +350,11 @@ function EditResponsavelDialog({ responsavel, secretarias, onClose }: { responsa
       }).eq("id", responsavel.id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["responsaveis"] }); toast.success("Responsável atualizado"); handleClose(); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["responsaveis"] }); toast.success("Responsável atualizado"); onClose(); },
     onError: (e: any) => toast.error(e.message),
   });
-  function handleClose() { setNome(""); setEmail(""); setTelefone(""); setCargo(""); setSecId(""); onClose(); }
   return (
-    <Dialog open={open} onOpenChange={v => !v && handleClose()}>
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent>
         <DialogHeader><DialogTitle>Editar responsável</DialogTitle></DialogHeader>
         <div className="space-y-3">
@@ -372,7 +371,7 @@ function EditResponsavelDialog({ responsavel, secretarias, onClose }: { responsa
           <div className="space-y-1.5"><Label>Telefone</Label><Input value={telefone} onChange={e => setTelefone(e.target.value)} /></div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={() => update.mutate()} disabled={!nome || !secId || update.isPending}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
