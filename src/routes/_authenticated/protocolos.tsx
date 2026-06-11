@@ -337,11 +337,10 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Tipo *</Label>
-              <Select value={tipo} onValueChange={v => { setTipo(v as TipoProtocolo); if (v === "lai") setCategoria("pedido_informacao"); }}>
+              <Select value={tipo} onValueChange={v => setTipo(v as TipoProtocolo)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ouvidoria">Ouvidoria</SelectItem>
-                  <SelectItem value="lai">LAI</SelectItem>
                 </SelectContent>
               </Select>
             </div>
