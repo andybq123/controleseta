@@ -15,7 +15,7 @@ import { Mail, Plus, Copy, Trash2, ExternalLink, AlertCircle, CheckCircle2, Cloc
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { sincronizarGmail } from "@/lib/gmail-sync.functions";
+import { sincronizarGmail, sincronizarImap } from "@/lib/gmail-sync.functions";
 
 const SYNC_INTERVAL_MIN = 5;
 
@@ -48,7 +48,9 @@ function baseUrl() {
 function EmailInboxPage() {
   const qc = useQueryClient();
   const sincronizar = useServerFn(sincronizarGmail);
+  const sincronizarImapFn = useServerFn(sincronizarImap);
   const [sincronizando, setSincronizando] = useState(false);
+  const [sincronizandoImap, setSincronizandoImap] = useState(false);
   useTick(1000);
 
   async function rodarSync() {
@@ -62,6 +64,20 @@ function EmailInboxPage() {
       toast.error(e?.message ?? "Falha ao sincronizar");
     } finally {
       setSincronizando(false);
+    }
+  }
+
+  async function rodarSyncImap() {
+    setSincronizandoImap(true);
+    try {
+      const r: any = await sincronizarImapFn({});
+      toast.success(`IMAP: ${r.novos} novo(s), ${r.erros} erro(s) em ${r.contas} conta(s)`);
+      qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] });
+      qc.invalidateQueries({ queryKey: ["email-inbox-log"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao sincronizar IMAP");
+    } finally {
+      setSincronizandoImap(false);
     }
   }
 
@@ -143,6 +159,10 @@ function EmailInboxPage() {
           <p className="text-sm text-muted-foreground">Encaminhe e-mails para um endereço único e o sistema cria a ouvidoria automaticamente.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={rodarSyncImap} disabled={sincronizandoImap}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${sincronizandoImap ? "animate-spin" : ""}`} />
+            Sincronizar IMAP
+          </Button>
           <Button variant="outline" onClick={rodarSync} disabled={sincronizando}>
             <RefreshCw className={`h-4 w-4 mr-1 ${sincronizando ? "animate-spin" : ""}`} />
             Sincronizar Gmail
