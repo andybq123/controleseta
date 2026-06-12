@@ -19,10 +19,12 @@ export const Route = createFileRoute("/_authenticated/relatorios/")({
 });
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 function RelatoriosPage() {
   const currentYear = new Date().getFullYear();
   const [ano, setAno] = useState(String(currentYear));
+  const [mes, setMes] = useState<string>("all");
   const [q, setQ] = useState("");
   const [fCategoria, setFCategoria] = useState<string>("all");
   const [fTipo, setFTipo] = useState<string>("all");
@@ -78,7 +80,11 @@ function RelatoriosPage() {
   };
 
   const filtrados = protocolos.filter(matchesFilter);
-  const doAno = filtrados.filter(p => p.data_abertura.startsWith(ano));
+  const doAno = filtrados.filter(p => {
+    if (!p.data_abertura.startsWith(ano)) return false;
+    if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
+    return true;
+  });
   const filtrosAtivos = q || fCategoria !== "all" || fTipo !== "all" || fStatus !== "all" || fSecretaria !== "all";
   const clearFilters = () => { setQ(""); setFCategoria("all"); setFTipo("all"); setFStatus("all"); setFSecretaria("all"); };
 
@@ -300,12 +306,23 @@ function RelatoriosPage() {
           </h1>
           <p className="text-sm text-muted-foreground">{doAno.length} protocolos em {ano}</p>
         </div>
-        <Select value={ano} onValueChange={setAno}>
-          <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {anosDisponiveis.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select value={mes} onValueChange={setMes}>
+            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Ano inteiro</SelectItem>
+              {MESES_FULL.map((m, i) => (
+                <SelectItem key={i} value={String(i + 1).padStart(2, "0")}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={ano} onValueChange={setAno}>
+            <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {anosDisponiveis.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Tabs defaultValue="mensal" className="space-y-4">
