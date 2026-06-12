@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { situacaoProtocolo, CATEGORIAS, type CategoriaProtocolo } from "@/lib/prazo";
 import {
   AlertTriangle, CheckCircle2, Clock, FileText, Smile,
@@ -42,6 +45,9 @@ const CAT_COLORS: Record<CategoriaProtocolo, string> = {
 };
 
 function Dashboard() {
+  const [drill, setDrill] = useState<{ title: string; items: any[] } | null>(null);
+  const [detail, setDetail] = useState<any | null>(null);
+
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
     queryFn: () =>
@@ -194,6 +200,11 @@ function Dashboard() {
       .sort((a, b) => b.qtd - a.qtd)
       .slice(0, 10);
   }, [enriched]);
+
+  const openDrill = (title: string, predicate: (p: any) => boolean) => {
+    const items = enriched.filter(predicate);
+    setDrill({ title: `${title} (${items.length})`, items });
+  };
 
   const exportarRelatorio = () => {
     const linhas = [
