@@ -396,14 +396,24 @@ function Dashboard() {
                   {reclamacoesSaude.length === 0 && <p className="text-xs text-muted-foreground">Sem reclamações.</p>}
                   {(() => {
                     const max = Math.max(1, ...reclamacoesSaude.map(r => r.qtd));
+                    const saudeIds = secretarias.filter(s => /sa[uú]de/i.test(s.nome)).map(s => s.id);
                     return reclamacoesSaude.map(r => (
-                      <div key={r.nome} className="flex items-center gap-2">
+                      <button
+                        key={r.nome}
+                        type="button"
+                        onClick={() => openDrill(`Saúde — Reclamação: ${r.nome}`, p =>
+                          p.secretaria_id != null && saudeIds.includes(p.secretaria_id) &&
+                          p.categoria === "reclamacao" &&
+                          (p.assunto ?? "Outros").slice(0, 30) === r.nome,
+                        )}
+                        className="w-full flex items-center gap-2 rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                      >
                         <span className="text-[11px] truncate flex-1" title={r.nome}>{r.nome}</span>
                         <div className="h-2 w-16 rounded-sm bg-muted overflow-hidden">
                           <div className="h-full bg-orange-500" style={{ width: `${(r.qtd / max) * 100}%` }} />
                         </div>
                         <span className="text-[11px] font-semibold w-5 text-right">{r.qtd}</span>
-                      </div>
+                      </button>
                     ));
                   })()}
                 </div>
@@ -414,10 +424,19 @@ function Dashboard() {
                   {porUnidade.length === 0 && <p className="text-xs text-muted-foreground">Sem dados.</p>}
                   {(() => {
                     const max = Math.max(1, ...porUnidade.map(u => u.qtd));
+                    const saudeIds = secretarias.filter(s => /sa[uú]de/i.test(s.nome)).map(s => s.id);
                     return porUnidade.map(u => {
                       const intensity = Math.ceil((u.qtd / max) * 5);
                       return (
-                        <div key={u.nome} className="flex items-center gap-2">
+                        <button
+                          key={u.nome}
+                          type="button"
+                          onClick={() => openDrill(`Saúde — Unidade: ${u.nome}`, p =>
+                            p.secretaria_id != null && saudeIds.includes(p.secretaria_id) &&
+                            (((p as any).locais?.nome ?? "Sem unidade").slice(0, 18) === u.nome),
+                          )}
+                          className="w-full flex items-center gap-2 rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                        >
                           <span className="text-[11px] truncate flex-1" title={u.nome}>{u.nome}</span>
                           <div className="flex gap-0.5">
                             {Array.from({ length: 5 }).map((_, i) => (
@@ -425,7 +444,7 @@ function Dashboard() {
                                 style={{ background: i < intensity ? `hsl(25 95% ${65 - i * 6}%)` : "hsl(var(--muted))" }} />
                             ))}
                           </div>
-                        </div>
+                        </button>
                       );
                     });
                   })()}
