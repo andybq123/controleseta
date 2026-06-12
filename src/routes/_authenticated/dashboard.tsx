@@ -367,7 +367,17 @@ function Dashboard() {
                   <XAxis dataKey="nome" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" interval={0} angle={-15} textAnchor="end" height={50} />
                   <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="qtd" fill="hsl(217 91% 60%)" radius={[6, 6, 0, 0]} label={{ position: "top", fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                  <Bar
+                    dataKey="qtd"
+                    fill="hsl(217 91% 60%)"
+                    radius={[6, 6, 0, 0]}
+                    label={{ position: "top", fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    cursor="pointer"
+                    onClick={(d: any) => {
+                      const sec = secretarias.find(s => s.nome === d?.full);
+                      if (sec) openDrill(`Secretaria: ${sec.nome}`, p => p.secretaria_id === sec.id);
+                    }}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
