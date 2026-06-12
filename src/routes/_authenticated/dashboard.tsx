@@ -510,10 +510,11 @@ const tooltipStyle = {
   fontSize: 12,
 } as const;
 
-function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone }: {
+function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone, onClick }: {
   icon: any; label: string; value: number | string; hint?: string; suffix?: string;
   hintTrend?: "up" | "down";
   tone: "primary" | "info" | "success" | "destructive" | "violet" | "emerald";
+  onClick?: () => void;
 }) {
   const tones: Record<string, { bg: string; fg: string }> = {
     primary:     { bg: "bg-primary/10",     fg: "text-primary" },
@@ -525,7 +526,10 @@ function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone }: {
   };
   const t = tones[tone];
   return (
-    <Card>
+    <Card
+      onClick={onClick}
+      className={onClick ? "cursor-pointer transition hover:shadow-md hover:-translate-y-0.5" : undefined}
+    >
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
           <div className={`h-10 w-10 rounded-full ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}>
