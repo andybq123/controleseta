@@ -80,6 +80,24 @@ function SaudePage() {
       .filter(d => d.value > 0),
   [saude]);
 
+  // Para cada categoria, contagem por unidade de saúde (usado no tooltip)
+  const unidadesPorCategoria = useMemo(() => {
+    const map: Record<string, { name: string; value: number }[]> = {};
+    CATEGORIAS.forEach(c => {
+      const counts = new Map<string, number>();
+      saude
+        .filter(p => p.categoria === c.value)
+        .forEach(p => {
+          const nome = (p as any).locais?.nome ?? "Sem unidade";
+          counts.set(nome, (counts.get(nome) ?? 0) + 1);
+        });
+      map[c.label] = Array.from(counts.entries())
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+    });
+    return map;
+  }, [saude]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -170,6 +188,45 @@ function SaudePage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {saude.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Manifestações por tipo × unidade de saúde</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-secondary/40 text-left">
+                  <th className="py-2 px-3 font-medium">Tipo de manifestação</th>
+                  <th className="py-2 px-3 font-medium text-right">Total</th>
+                  <th className="py-2 px-3 font-medium">Unidades de saúde</th>
+                </tr>
+              </thead>
+              <tbody>
+                {porCategoria.map(c => {
+                  const unidades = unidadesPorCategoria[c.name] ?? [];
+                  return (
+                    <tr key={c.name} className="border-b align-top">
+                      <td className="py-2 px-3 font-medium">{c.name}</td>
+                      <td className="py-2 px-3 text-right font-mono">{c.value}</td>
+                      <td className="py-2 px-3">
+                        <div className="flex flex-wrap gap-1">
+                          {unidades.map(u => (
+                            <Badge key={u.name} variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-700">
+                              {u.name} · {u.value}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid gap-3">
