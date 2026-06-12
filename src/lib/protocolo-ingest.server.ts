@@ -5,6 +5,38 @@ function norm(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+function normalizarNumero(n: string): string[] {
+  // Retorna variantes equivalentes do mesmo número (com/sem pontos de milhar)
+  const trim = (n || "").trim();
+  if (!trim) return [];
+  const [num, ano] = trim.split("/");
+  if (!num || !ano) return [trim];
+  const semPontos = num.replace(/\./g, "");
+  const numLimpo = String(parseInt(semPontos, 10));
+  const variantes = new Set<string>([trim]);
+  // sem separador de milhar
+  variantes.add(`${numLimpo}/${ano}`);
+  // com ponto a cada 3 dígitos (pt-BR)
+  if (numLimpo.length > 3) {
+    const comPonto = numLimpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    variantes.add(`${comPonto}/${ano}`);
+  }
+  return Array.from(variantes);
+}
+
+function detectarAcao(assunto: string, corpo: string): "conclusao" | "atualizacao" {
+  const texto = norm(`${assunto}\n${corpo}`);
+  const padroesConclusao = [
+    "encerrad", "encerramento", "finalizad", "finalizacao",
+    "conclui", "conclus", "concluid",
+    "baixa", "dar baixa", "deu baixa",
+    "arquivad", "arquivamento",
+    "respondida e encerrada", "atendid",
+  ];
+  if (padroesConclusao.some(p => texto.includes(p))) return "conclusao";
+  return "atualizacao";
+}
+
 async function extrairComIA(texto: string) {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
