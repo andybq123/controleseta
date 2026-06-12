@@ -45,6 +45,11 @@ function SecretariaRelatorio() {
       ),
   });
 
+  const { data: locais = [] } = useQuery({
+    queryKey: ["locais-sec", id],
+    queryFn: async () => (await supabase.from("locais").select("id,nome").eq("secretaria_id", id)).data ?? [],
+  });
+
   const anosDisponiveis = useMemo(() => {
     const set = new Set<string>([String(new Date().getFullYear())]);
     protocolosAll.forEach(p => set.add(p.data_abertura.slice(0, 4)));
@@ -79,6 +84,18 @@ function SecretariaRelatorio() {
     protocolos.forEach(p => { counts[p.tipo] = (counts[p.tipo] || 0) + 1; });
     return Object.entries(counts).map(([k, v]) => ({ name: PRAZOS[k as TipoProtocolo]?.label ?? k, value: v }));
   }, [protocolos]);
+
+  const localData = useMemo(() => {
+    const map = new Map(locais.map((l: any) => [l.id, l.nome]));
+    const counts: Record<string, number> = {};
+    protocolos.forEach(p => {
+      const nome = (p as any).local_id ? (map.get((p as any).local_id) ?? "—") : "Sem unidade";
+      counts[nome] = (counts[nome] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [protocolos, locais]);
 
   const mensalData = useMemo(() => {
     const year = new Date().getFullYear();
@@ -253,15 +270,15 @@ function SecretariaRelatorio() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="text-base">Por tipo</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Por unidade</CardTitle></CardHeader>
             <CardContent>
-              {tipoData.length === 0 ? (
+              {localData.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
                   <PieChart>
                     <Pie
-                      data={tipoData}
+                      data={localData}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
@@ -275,7 +292,7 @@ function SecretariaRelatorio() {
                       labelLine={false}
                       label={({ value }: any) => `${value}`}
                     >
-                      {tipoData.map((_, i) => (
+                      {localData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
