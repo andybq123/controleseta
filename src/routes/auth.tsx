@@ -66,19 +66,10 @@ function AuthPage() {
           <div className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-accent blur-3xl" />
         </div>
         <div className="relative z-10 flex flex-col items-center text-center max-w-md">
-          <div className="mb-8 p-6 rounded-2xl bg-white/80 shadow-lg backdrop-blur-sm">
-            <img 
-              src={brusqueLogo} 
-              alt="Brasão de Brusque" 
-              className="w-32 h-32 object-contain"
-              loading="eager"
-            />
-          </div>
           <h2 className="text-3xl font-bold text-foreground mb-4">
-            Prefeitura de Brusque
+            Ouvidoria de Brusque
           </h2>
           <p className="text-muted-foreground text-lg leading-relaxed">
-            Sistema de Ouvidoria Municipal<br />
             Controle de Protocolos e Prazos
           </p>
           <div className="mt-8 flex items-center gap-3 text-sm text-muted-foreground">
@@ -91,22 +82,16 @@ function AuthPage() {
       {/* Right side - login form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
         <Card className="w-full max-w-md border-0 shadow-2xl bg-card/95 backdrop-blur">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex flex-col items-center pt-8 pb-2">
-            <div className="p-3 rounded-xl bg-primary/5 mb-4">
-              <img 
-                src={brusqueLogo} 
-                alt="Brasão de Brusque" 
-                className="w-20 h-20 object-contain"
+          <CardHeader className="text-center space-y-2 pb-2 pt-8">
+            <div className="flex justify-center mb-1">
+              <img
+                src={brusqueLogo}
+                alt="Ouvidoria de Brusque"
+                className="w-12 h-12 object-contain"
                 loading="eager"
               />
             </div>
-            <h2 className="text-xl font-bold text-foreground">Prefeitura de Brusque</h2>
-            <p className="text-sm text-muted-foreground">Ouvidoria Municipal</p>
-          </div>
-
-          <CardHeader className="text-center space-y-1 pb-2">
-            <CardTitle className="text-2xl font-bold hidden lg:block">Acesso ao Sistema</CardTitle>
+            <CardTitle className="text-2xl font-bold">Acesso ao Sistema</CardTitle>
             <p className="text-sm text-muted-foreground">
               Entre com suas credenciais para acessar
             </p>
@@ -122,7 +107,7 @@ function AuthPage() {
                     id="email" 
                     type="email" 
                     required 
-                    placeholder="seu.email@brusque.sc.gov.br"
+                    placeholder="E-mail"
                     value={email} 
                     onChange={e => setEmail(e.target.value)} 
                     className="pl-10 h-11"
