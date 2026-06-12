@@ -96,6 +96,53 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     if (textoCompleto.trim().length < 10) throw new Error("Conteúdo vazio");
     const extr = await extrairComIA(textoCompleto);
 
+    // ===== Detectar se é atualização/baixa de protocolo já existente =====
+    if (extr.numero) {
+      const variantes = normalizarNumero(extr.numero);
+      const { data: existente } = await supabaseAdmin
+        .from("protocolos")
+        .select("id, numero, status")
+        .in("numero", variantes)
+        .maybeSingle();
+
+      if (existente) {
+        const acao = detectarAcao(assunto, corpo);
+        const resumoEmail = [
+          `E-mail recebido em ${new Date().toLocaleString("pt-BR")}`,
+          `De: ${remetente}`,
+          `Assunto: ${assunto}`,
+          "",
+          (corpo || "").slice(0, 4000),
+        ].join("\n");
+
+        if (acao === "conclusao" && existente.status !== "concluido") {
+          const hoje = new Date().toISOString().slice(0, 10);
+          await supabaseAdmin
+            .from("protocolos")
+            .update({ status: "concluido", data_conclusao: hoje })
+            .eq("id", existente.id);
+        }
+
+        await supabaseAdmin.from("protocolo_historico").insert({
+          protocolo_id: existente.id,
+          campo: acao === "conclusao" ? "_baixa_email" : "_atualizacao_email",
+          valor_anterior: null,
+          valor_novo: resumoEmail.slice(0, 8000),
+          acao: acao === "conclusao" ? "baixa" : "atualizacao",
+          autor_nome: `E-mail · ${remetente}`.slice(0, 200),
+        });
+
+        await supabaseAdmin.from("email_inbox_log").update({
+          status: "processado",
+          protocolo_id: existente.id,
+          processado_em: new Date().toISOString(),
+          erro: acao === "conclusao" ? "baixa registrada" : "atualização registrada",
+        }).eq("id", logRow!.id);
+
+        return { ok: true, protocoloId: existente.id, numero: existente.numero, logId: logRow!.id };
+      }
+    }
+
     let secretariaId: string | null = account.secretaria_id;
     if (!secretariaId && extr.secretaria_sugerida) {
       const { data: secs } = await supabaseAdmin.from("secretarias").select("id, nome, sigla");
