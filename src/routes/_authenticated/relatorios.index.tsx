@@ -13,6 +13,14 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { fetchAllPaginated } from "@/lib/fetch-all";
+import { useServerFn } from "@tanstack/react-start";
+import { gerarRelatorioIA } from "@/lib/relatorio-ia.functions";
+import { useMutation } from "@tanstack/react-query";
+import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, Loader2, Copy } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/relatorios/")({
   component: RelatoriosPage,
@@ -56,6 +64,11 @@ function RelatoriosPage() {
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
     queryFn: async () => (await supabase.from("secretarias").select("*").order("nome")).data ?? [],
+  });
+
+  const { data: locais = [] } = useQuery({
+    queryKey: ["locais-all"],
+    queryFn: async () => (await supabase.from("locais").select("id, nome, secretaria_id").order("nome")).data ?? [],
   });
 
   const anosDisponiveis = useMemo(() => {
@@ -382,6 +395,7 @@ function RelatoriosPage() {
           <TabsTrigger value="mensal">Comparativo mensal</TabsTrigger>
           <TabsTrigger value="secretaria">Por secretaria</TabsTrigger>
           <TabsTrigger value="atrasadas">Atrasadas ({atrasadas.length})</TabsTrigger>
+          <TabsTrigger value="ia"><Sparkles className="h-3.5 w-3.5 mr-1" /> Relatório IA</TabsTrigger>
         </TabsList>
 
         <TabsContent value="mensal" className="space-y-4">
