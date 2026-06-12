@@ -1,0 +1,1 @@
+ALTER TYPE public.protocolo_tipo ADD VALUE IF NOT EXISTS 'esic';

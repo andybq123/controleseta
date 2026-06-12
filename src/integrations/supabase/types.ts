@@ -481,7 +481,7 @@ export type Database = {
         | "solicitacao"
         | "outros"
       protocolo_status: "aberto" | "em_andamento" | "concluido"
-      protocolo_tipo: "ouvidoria" | "lai"
+      protocolo_tipo: "ouvidoria" | "lai" | "esic"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -619,7 +619,7 @@ export const Constants = {
         "outros",
       ],
       protocolo_status: ["aberto", "em_andamento", "concluido"],
-      protocolo_tipo: ["ouvidoria", "lai"],
+      protocolo_tipo: ["ouvidoria", "lai", "esic"],
     },
   },
 } as const
