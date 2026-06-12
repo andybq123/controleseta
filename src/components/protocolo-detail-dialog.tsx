@@ -17,7 +17,7 @@ import {
   type TipoProtocolo, type CategoriaProtocolo,
 } from "@/lib/prazo";
 
-export function ProtocoloDetailDialog({ protocolo, open, onOpenChange }: {
+export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenChange }: {
   protocolo: any | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -25,6 +25,21 @@ export function ProtocoloDetailDialog({ protocolo, open, onOpenChange }: {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
+
+  const { data: protocoloFresh } = useQuery({
+    queryKey: ["protocolo", protocoloProp?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("protocolos")
+        .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+        .eq("id", protocoloProp.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!protocoloProp?.id,
+  });
+  const protocolo = protocoloFresh ?? protocoloProp;
 
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
@@ -83,6 +98,7 @@ export function ProtocoloDetailDialog({ protocolo, open, onOpenChange }: {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["protocolos"] });
+      qc.invalidateQueries({ queryKey: ["protocolo", protocolo.id] });
       qc.invalidateQueries({ queryKey: ["historico", protocolo.id] });
       toast.success("Protocolo atualizado");
     },
