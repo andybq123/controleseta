@@ -111,7 +111,7 @@ function AtrasadosPage() {
           <SelectContent>
             <SelectItem value="todos">Todos os tipos</SelectItem>
             <SelectItem value="ouvidoria">Ouvidoria</SelectItem>
-            <SelectItem value="lai">LAI</SelectItem>
+            <SelectItem value="esic">e-SIC</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filtroSec} onValueChange={setFiltroSec}>
@@ -141,7 +141,7 @@ function AtrasadosPage() {
                       className={`text-[10px] ${categoriaBadgeClass(p.categoria as CategoriaProtocolo)}`}
                       title={categoriaLabel(p.categoria as CategoriaProtocolo)}
                     >
-                      {categoriaSigla(p.categoria as CategoriaProtocolo)}
+                      {categoriaLabel(p.categoria as CategoriaProtocolo)}
                     </Badge>
                     {p.prorrogado && <Badge variant="outline" className="text-[10px]">prorrogado</Badge>}
                   </div>

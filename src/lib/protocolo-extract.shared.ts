@@ -96,7 +96,7 @@ export type ExtracaoProtocolo = {
   destinatario: string;
   assunto_categoria: string;
   // Campos derivados/padrão mantidos para compatibilidade com o restante do fluxo
-  tipo: "ouvidoria" | "lai";
+  tipo: "ouvidoria" | "lai" | "esic";
   categoria: "elogio" | "reclamacao" | "pedido_informacao" | "denuncia" | "solicitacao" | "outros";
   descricao: string;
   data_abertura: string;

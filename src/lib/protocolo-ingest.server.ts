@@ -191,6 +191,14 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     if (textoCompleto.trim().length < 10) throw new Error("Conteúdo vazio");
     const extr = await extrairComIA(textoCompleto);
 
+    // Detecta e-SIC pelo assunto/corpo do e-mail (ex: "Pedido de e-SIC")
+    {
+      const t = norm(`${assunto}\n${corpo}`);
+      if (/\be[\s\-]?sic\b/.test(t) || t.includes("pedido de e sic") || t.includes("pedido de esic")) {
+        extr.tipo = "esic" as any;
+      }
+    }
+
     // ===== Detectar se é atualização/baixa de protocolo já existente =====
     if (extr.numero) {
       const variantes = normalizarNumero(extr.numero);

@@ -1,6 +1,6 @@
 import { addDays, differenceInCalendarDays, format } from "date-fns";
 
-export type TipoProtocolo = "ouvidoria" | "lai";
+export type TipoProtocolo = "ouvidoria" | "lai" | "esic";
 export type StatusProtocolo = "aberto" | "em_andamento" | "concluido";
 export type CategoriaProtocolo =
   | "elogio"
@@ -36,6 +36,7 @@ export const categoriaBadgeClass = (c: CategoriaProtocolo) =>
 export const PRAZOS = {
   ouvidoria: { inicial: 30, prorrogacao: 30, label: "Ouvidoria" },
   lai: { inicial: 20, prorrogacao: 10, label: "LAI" },
+  esic: { inicial: 20, prorrogacao: 10, label: "e-SIC" },
 } as const;
 
 export function calcularPrazo(opts: {

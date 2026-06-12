@@ -168,7 +168,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               className={`text-[10px] ${categoriaBadgeClass(protocolo.categoria as CategoriaProtocolo)}`}
               title={categoriaLabel(protocolo.categoria as CategoriaProtocolo)}
             >
-              {categoriaSigla(protocolo.categoria as CategoriaProtocolo)}
+              {categoriaLabel(protocolo.categoria as CategoriaProtocolo)}
             </Badge>
             <Badge variant="outline" className={`text-[10px] border ${situacaoClasses[s.situacao]}`}>
               {situacaoLabel[s.situacao]} · {s.dias < 0 ? `${Math.abs(s.dias)}d atrasado` : `${s.dias}d`}
@@ -251,7 +251,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ouvidoria">Ouvidoria</SelectItem>
-                    <SelectItem value="lai">LAI</SelectItem>
+                    <SelectItem value="esic">e-SIC</SelectItem>
                   </SelectContent>
                 </Select>
               </Field2>
