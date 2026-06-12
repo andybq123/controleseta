@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, FileText, Building2, LogOut, Shield, AlertTriangle, BarChart3, Mail, Users } from "lucide-react";
+import { LayoutDashboard, FileText, Building2, LogOut, Shield, AlertTriangle, BarChart3, Mail, Users, HeartPulse } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -45,6 +45,7 @@ function AuthLayout() {
   const nav = ([
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/protocolos", label: "Protocolos", icon: FileText },
+    { to: "/saude", label: "Saúde", icon: HeartPulse },
     { to: "/atrasados", label: "Atrasados", icon: AlertTriangle },
     { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
     { to: "/secretarias", label: "Secretarias", icon: Building2 },
