@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { LayoutDashboard, FileText, Building2, LogOut, Shield, AlertTriangle, BarChart3, Mail, Users, HeartPulse } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/notification-bell";
+import brusqueLogo from "@/assets/brusque-brasao.png";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -58,12 +59,10 @@ function AuthLayout() {
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center">
-              <Shield className="h-4 w-4" />
-            </div>
+            <img src={brusqueLogo} alt="Ouvidoria de Brusque" className="h-9 w-9 object-contain" />
             <div className="hidden sm:block">
-              <div className="text-sm font-semibold leading-tight">Ouvidoria</div>
-              <div className="text-xs text-muted-foreground leading-tight">Controle de Prazos</div>
+              <div className="text-sm font-semibold leading-tight">Ouvidoria de Brusque</div>
+              <div className="text-xs text-muted-foreground leading-tight">Controle de Protocolos e Prazos</div>
             </div>
           </div>
           <nav className="flex items-center gap-1">
