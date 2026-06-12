@@ -45,6 +45,7 @@ function AuthLayout() {
   const nav = ([
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/protocolos", label: "Protocolos", icon: FileText },
+    { to: "/saude", label: "Saúde", icon: HeartPulse },
     { to: "/atrasados", label: "Atrasados", icon: AlertTriangle },
     { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
     { to: "/secretarias", label: "Secretarias", icon: Building2 },
