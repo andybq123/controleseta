@@ -59,28 +59,7 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side - decorative panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-primary/5 flex-col items-center justify-center p-12 overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-primary blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-accent blur-3xl" />
-        </div>
-        <div className="relative z-10 flex flex-col items-center text-center max-w-md">
-          <h2 className="text-3xl font-bold text-foreground mb-4">
-            Ouvidoria de Brusque
-          </h2>
-          <p className="text-muted-foreground text-lg leading-relaxed">
-            Controle de Protocolos e Prazos
-          </p>
-          <div className="mt-8 flex items-center gap-3 text-sm text-muted-foreground">
-            <Shield className="h-5 w-5 text-primary" />
-            <span>Acesso restrito a servidores autorizados</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Right side - login form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
+      <div className="w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
         <Card className="w-full max-w-md border-0 shadow-2xl bg-card/95 backdrop-blur">
           <CardHeader className="text-center space-y-2 pb-2 pt-8">
             <div className="flex justify-center mb-1">
