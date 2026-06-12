@@ -304,12 +304,18 @@ function Dashboard() {
             <div className="mt-2 space-y-1">
               {categoriaData.map(d => {
                 const pct = total > 0 ? ((d.value / total) * 100).toFixed(2) : "0";
+                const cat = CATEGORIAS.find(c => c.label === d.name);
                 return (
-                  <div key={d.name} className="flex items-center gap-2 text-xs">
+                  <button
+                    key={d.name}
+                    type="button"
+                    onClick={() => openDrill(`Categoria: ${d.name}`, p => (p.categoria ?? "outros") === (cat?.value ?? "outros"))}
+                    className="w-full flex items-center gap-2 text-xs rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                  >
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />
                     <span className="font-medium">{d.name}</span>
                     <span className="ml-auto text-muted-foreground">{pct}% ({d.value})</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -326,7 +332,12 @@ function Dashboard() {
               {(() => {
                 const max = Math.max(1, ...topAssuntos.map(a => a.qtd));
                 return topAssuntos.map(a => (
-                  <div key={a.nome} className="grid grid-cols-[1fr_auto] items-center gap-2">
+                  <button
+                    key={a.nome}
+                    type="button"
+                    onClick={() => openDrill(`Assunto: ${a.nome}`, p => (p.assunto ?? "Outros").slice(0, 40) === a.nome)}
+                    className="w-full grid grid-cols-[1fr_auto] items-center gap-2 text-left rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                  >
                     <div className="min-w-0">
                       <p className="text-xs truncate" title={a.nome}>{a.nome}</p>
                       <div className="h-1.5 mt-1 rounded-full bg-muted overflow-hidden">
@@ -334,7 +345,7 @@ function Dashboard() {
                       </div>
                     </div>
                     <span className="text-xs font-semibold tabular-nums">{a.qtd}</span>
-                  </div>
+                  </button>
                 ));
               })()}
             </div>
