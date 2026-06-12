@@ -146,7 +146,7 @@ function Dashboard() {
   const reclamacoesSaude = useMemo(() => {
     const saudeIds = secretarias.filter(s => /sa[uú]de/i.test(s.nome)).map(s => s.id);
     const recs = enriched.filter(
-      p => saudeIds.includes(p.secretaria_id) && p.categoria === "reclamacao",
+      p => p.secretaria_id != null && saudeIds.includes(p.secretaria_id) && p.categoria === "reclamacao",
     );
     const counts: Record<string, number> = {};
     recs.forEach(p => {
@@ -164,7 +164,7 @@ function Dashboard() {
     const saudeIds = secretarias.filter(s => /sa[uú]de/i.test(s.nome)).map(s => s.id);
     const counts: Record<string, number> = {};
     enriched
-      .filter(p => saudeIds.includes(p.secretaria_id))
+      .filter(p => p.secretaria_id != null && saudeIds.includes(p.secretaria_id))
       .forEach(p => {
         const nome = (p as any).locais?.nome ?? "Sem unidade";
         counts[nome] = (counts[nome] ?? 0) + 1;
