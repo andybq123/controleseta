@@ -479,12 +479,21 @@ function Dashboard() {
             <div className="mt-2 space-y-1">
               {situacaoData.map(d => {
                 const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                const pred =
+                  d.name === "Em andamento" ? (p: any) => p.status !== "concluido"
+                  : d.name === "Concluídos" ? (p: any) => p.status === "concluido"
+                  : (p: any) => p.status !== "concluido" && p._s.situacao === "vencido";
                 return (
-                  <div key={d.name} className="flex items-center gap-2 text-xs">
+                  <button
+                    key={d.name}
+                    type="button"
+                    onClick={() => openDrill(`Situação: ${d.name}`, pred)}
+                    className="w-full flex items-center gap-2 text-xs rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                  >
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />
                     <span className="font-medium">{d.name}</span>
                     <span className="ml-auto text-muted-foreground">{d.value} ({pct}%)</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
