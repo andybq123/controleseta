@@ -239,14 +239,28 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     }
 
     let secretariaId: string | null = account.secretaria_id;
-    if (!secretariaId && extr.secretaria_sugerida) {
+    if (!secretariaId) {
       const { data: secs } = await supabaseAdmin.from("secretarias").select("id, nome, sigla");
-      const alvo = norm(extr.secretaria_sugerida);
-      const hit = (secs ?? []).find(s =>
-        norm(s.nome).includes(alvo) || alvo.includes(norm(s.nome)) ||
-        (s.sigla && norm(s.sigla) === alvo)
-      );
-      if (hit) secretariaId = hit.id;
+
+      // 1) Tenta pelo destinatário do e-mail (header "Para:")
+      if (extr.secretaria_sugerida) {
+        const alvo = norm(extr.secretaria_sugerida);
+        const hit = (secs ?? []).find(s =>
+          norm(s.nome).includes(alvo) || alvo.includes(norm(s.nome)) ||
+          (s.sigla && norm(s.sigla) === alvo)
+        );
+        if (hit) secretariaId = hit.id;
+      }
+
+      // 2) Fallback: classifica pelo assunto/categoria detectada pela IA
+      if (!secretariaId && extr.assunto_categoria) {
+        const alvoNome = ASSUNTO_PARA_SECRETARIA[extr.assunto_categoria];
+        if (alvoNome) {
+          const alvo = norm(alvoNome);
+          const hit = (secs ?? []).find(s => norm(s.nome) === alvo);
+          if (hit) secretariaId = hit.id;
+        }
+      }
     }
 
     let localId: string | null = null;
