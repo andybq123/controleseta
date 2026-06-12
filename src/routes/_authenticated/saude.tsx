@@ -1,15 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type CategoriaProtocolo, type TipoProtocolo } from "@/lib/prazo";
+import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, categoriaBadgeClass, CATEGORIAS, type CategoriaProtocolo, type TipoProtocolo } from "@/lib/prazo";
 import { HeartPulse } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+
+const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316", "#84cc16", "#14b8a6", "#a855f7", "#eab308"];
 
 export const Route = createFileRoute("/_authenticated/saude")({
   component: SaudePage,
@@ -60,6 +63,23 @@ function SaudePage() {
     return true;
   });
 
+  const porUnidade = useMemo(() => {
+    const counts = new Map<string, number>();
+    saude.forEach(p => {
+      const nome = (p as any).locais?.nome ?? "Sem unidade";
+      counts.set(nome, (counts.get(nome) ?? 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [saude]);
+
+  const porCategoria = useMemo(() =>
+    CATEGORIAS
+      .map(c => ({ name: c.label, value: saude.filter(p => p.categoria === c.value).length }))
+      .filter(d => d.value > 0),
+  [saude]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -81,6 +101,76 @@ function SaudePage() {
           </SelectContent>
         </Select>
       </div>
+
+      {saude.length > 0 && (
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Por unidade de saúde</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={340}>
+                <PieChart>
+                  <Pie
+                    data={porUnidade}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={120}
+                    minAngle={4}
+                    paddingAngle={2}
+                    stroke="#ffffff"
+                    strokeWidth={2}
+                    labelLine={false}
+                    label={({ value }: any) => value}
+                  >
+                    {porUnidade.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v: number, n: string) => [`${v} protocolo(s)`, n]} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }} />
+                  <Legend verticalAlign="bottom" iconType="circle" formatter={(v: string) => <span className="text-xs">{v}</span>} />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Por tipo de manifestação</CardTitle></CardHeader>
+            <CardContent>
+              {porCategoria.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={340}>
+                  <PieChart>
+                    <Pie
+                      data={porCategoria}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={120}
+                      minAngle={6}
+                      paddingAngle={2}
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                      labelLine={false}
+                      label={({ value, percent }: any) => `${value} (${(percent * 100).toFixed(0)}%)`}
+                    >
+                      {porCategoria.map((_, i) => (
+                        <Cell key={i} fill={COLORS[(i + 3) % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number, n: string) => [`${v} protocolo(s)`, n]} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }} />
+                    <Legend verticalAlign="bottom" iconType="circle" formatter={(v: string) => <span className="text-xs">{v}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="grid gap-3">
         {saude.length === 0 && (
