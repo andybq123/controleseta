@@ -5,6 +5,101 @@ function norm(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+// Mapeamento de assunto/categoria → nome da secretaria responsável.
+// Os valores devem bater (após normalização) com `secretarias.nome` no banco.
+const ASSUNTO_PARA_SECRETARIA: Record<string, string> = {
+  // Assistência Social / Programas Sociais
+  "Assistência Social": "SDS - Assistencia Social",
+  "Programas Sociais": "SDS - Assistencia Social",
+  // Educação
+  "Creches e Escolas": "SME - Educação",
+  // RH / Conduta
+  "Conduta de Funcionários": "SAGE RH",
+  "Denúncia de Assédio": "SAGE RH",
+  "Recursos Humanos": "SAGE RH",
+  // Saneamento
+  "Esgoto": "Administração/SAMAE",
+  // Vigilância Sanitária
+  "Condição sanitária irregular": "Vigilancia Sanitária",
+  "Falta de Higiene": "Vigilancia Sanitária",
+  "Foco de dengue": "Vigilancia Sanitária",
+  "Infestação / Proliferação de animais ou pragas": "Vigilancia Sanitária",
+  // PROCON
+  "Estabelecimento sem nota fiscal": "PROCON",
+  "Mercadorias vencidas": "PROCON",
+  // SEFAZ
+  "Estabelecimento sem alvará": "SEFAZ",
+  "Pagamentos": "SEFAZ",
+  // Defesa Civil
+  "Estabelecimento sem saída de emergência": "Defesa Civil",
+  "Risco de desmoronamento": "Defesa Civil",
+  // SEPLAN / Urbanismo
+  "Estabelecimento com acessibilidade irregular": "SEPLAN",
+  "Ocupação irregular de área pública": "SEPLAN",
+  "Construção Irregular": "SEPLAN",
+  "Fiscalização de Obras": "SEPLAN",
+  "Imóvel abandonado": "SEPLAN",
+  "Invasão de área pública": "SEPLAN",
+  // Controladoria / Governo
+  "Abuso de poder": "Controladoria",
+  "Demora em processo": "Controladoria",
+  "Desorganização": "Controladoria",
+  "Desvio de função": "Controladoria",
+  "Desvio de verba pública": "Controladoria",
+  "Nepotismo": "Controladoria",
+  // Infraestrutura / Energia
+  "Iluminação e Energia": "SIE - Infraestrutura Estratégica",
+  // Obras / Limpeza urbana
+  "Coleta de Lixo Comum": "Secretaria de Obras",
+  "Coleta pesada": "Secretaria de Obras",
+  "Entulho em via pública": "Secretaria de Obras",
+  "Limpeza em terreno baldio": "Secretaria de Obras",
+  "Limpeza urbana": "Secretaria de Obras",
+  "Mato alto": "Secretaria de Obras",
+  "Poda de árvores de rua": "Secretaria de Obras",
+  "Asfalto": "Secretaria de Obras",
+  "Buraco": "Secretaria de Obras",
+  "Calçadas": "Secretaria de Obras",
+  "Via sem pavimentação (Estrada de chão)": "Secretaria de Obras",
+  "Demora em Obra Pública": "Secretaria de Obras",
+  "Serviço mal feito": "Secretaria de Obras",
+  // Meio Ambiente
+  "Aterro sanitário irregular": "Fundema",
+  "Desmatamento irregular": "Fundema",
+  "Poluição Ambiental": "Fundema",
+  "Queimada irregular": "Fundema",
+  // Animais
+  "Maus tratos a animais": "Bem-Estar Animal",
+  // Esportes
+  "Praça e ou quadra para lazer e esportes": "Esportes",
+  // Saúde
+  "Demora em marcar consulta / procedimento": "Saúde",
+  "Falta de materiais em Posto de Saúde": "Saúde",
+  "Falta de medicação": "Saúde",
+  "Médicos": "Saúde",
+  "Postos de Saúde": "Saúde",
+  "Transporte para tratamento": "Saúde",
+  "Vacinas": "Saúde",
+  // Segurança
+  "Baderna": "COPPEASM",
+  "Ponto de assalto/roubo": "COPPEASM",
+  "Ponto de tráfico de drogas": "COPPEASM",
+  // Trânsito
+  "Acessibilidade para deficientes visuais": "SETRAM",
+  "Bloqueio na via": "SETRAM",
+  "Estacionamento irregular": "SETRAM",
+  "Faixa de pedestre": "SETRAM",
+  "Lombadas": "SETRAM",
+  "Placas de sinalização": "SETRAM",
+  "Semáforos": "SETRAM",
+  // Transporte Público
+  "Horários de Ônibus": "SETRAM",
+  "Ônibus danificado": "SETRAM",
+  "Ponto de ônibus": "SETRAM",
+  "Super-lotação em ônibus": "SETRAM",
+  "Transporte irregular": "SETRAM",
+};
+
 function normalizarNumero(n: string): string[] {
   // Retorna variantes equivalentes do mesmo número (com/sem pontos de milhar)
   const trim = (n || "").trim();
@@ -144,14 +239,28 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     }
 
     let secretariaId: string | null = account.secretaria_id;
-    if (!secretariaId && extr.secretaria_sugerida) {
+    if (!secretariaId) {
       const { data: secs } = await supabaseAdmin.from("secretarias").select("id, nome, sigla");
-      const alvo = norm(extr.secretaria_sugerida);
-      const hit = (secs ?? []).find(s =>
-        norm(s.nome).includes(alvo) || alvo.includes(norm(s.nome)) ||
-        (s.sigla && norm(s.sigla) === alvo)
-      );
-      if (hit) secretariaId = hit.id;
+
+      // 1) Tenta pelo destinatário do e-mail (header "Para:")
+      if (extr.secretaria_sugerida) {
+        const alvo = norm(extr.secretaria_sugerida);
+        const hit = (secs ?? []).find(s =>
+          norm(s.nome).includes(alvo) || alvo.includes(norm(s.nome)) ||
+          (s.sigla && norm(s.sigla) === alvo)
+        );
+        if (hit) secretariaId = hit.id;
+      }
+
+      // 2) Fallback: classifica pelo assunto/categoria detectada pela IA
+      if (!secretariaId && extr.assunto_categoria) {
+        const alvoNome = ASSUNTO_PARA_SECRETARIA[extr.assunto_categoria];
+        if (alvoNome) {
+          const alvo = norm(alvoNome);
+          const hit = (secs ?? []).find(s => norm(s.nome) === alvo);
+          if (hit) secretariaId = hit.id;
+        }
+      }
     }
 
     let localId: string | null = null;
