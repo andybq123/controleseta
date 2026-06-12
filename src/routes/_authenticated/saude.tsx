@@ -274,7 +274,7 @@ function SaudePage() {
                         className={`text-[10px] ${categoriaBadgeClass(p.categoria as CategoriaProtocolo)}`}
                         title={categoriaLabel(p.categoria as CategoriaProtocolo)}
                       >
-                        {categoriaSigla(p.categoria as CategoriaProtocolo)}
+                        {categoriaLabel(p.categoria as CategoriaProtocolo)}
                       </Badge>
                       <Badge variant="secondary" className="text-[10px]">{p.status.replace("_", " ")}</Badge>
                       {(p as any).locais?.nome && (

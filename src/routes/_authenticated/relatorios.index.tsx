@@ -349,7 +349,7 @@ function RelatoriosPage() {
                 <SelectContent>
                   <SelectItem value="all">Todos os tipos</SelectItem>
                   <SelectItem value="ouvidoria">Ouvidoria</SelectItem>
-                  <SelectItem value="lai">LAI</SelectItem>
+                  <SelectItem value="esic">e-SIC</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={fCategoria} onValueChange={setFCategoria}>

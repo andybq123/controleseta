@@ -87,7 +87,7 @@ export function NotificationBell() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs font-semibold">{p.numero}</span>
-                            <Badge variant="outline" className="text-[10px] py-0 h-4">{p.tipo === "lai" ? "LAI" : "OUV"}</Badge>
+                            <Badge variant="outline" className="text-[10px] py-0 h-4">{p.tipo === "esic" ? "e-SIC" : p.tipo === "lai" ? "LAI" : "OUV"}</Badge>
                           </div>
                           <div className="text-sm truncate">{p.assunto}</div>
                           <div className={`text-xs ${tone} font-medium`}>
