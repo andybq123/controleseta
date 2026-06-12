@@ -104,7 +104,7 @@ function SaudePage() {
 
       {saude.length > 0 && (
         <div className="grid md:grid-cols-2 gap-4">
-          <ChartCard>
+          <Card>
             <CardHeader><CardTitle className="text-base">Por unidade de saúde</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={340}>
@@ -133,9 +133,9 @@ function SaudePage() {
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
-          </ChartCard>
+          </Card>
 
-          <ChartCard>
+          <Card>
             <CardHeader><CardTitle className="text-base">Por tipo de manifestação</CardTitle></CardHeader>
             <CardContent>
               {porCategoria.length === 0 ? (
@@ -168,7 +168,7 @@ function SaudePage() {
                 </ResponsiveContainer>
               )}
             </CardContent>
-          </ChartCard>
+          </Card>
         </div>
       )}
 
