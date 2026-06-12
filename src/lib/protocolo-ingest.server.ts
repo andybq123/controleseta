@@ -19,11 +19,11 @@ const ASSUNTO_PARA_SECRETARIA: Record<string, string> = {
   "Recursos Humanos": "SAGE RH",
   // Saneamento
   "Esgoto": "Administração/SAMAE",
-  // Vigilância Sanitária
-  "Condição sanitária irregular": "Vigilancia Sanitária",
-  "Falta de Higiene": "Vigilancia Sanitária",
-  "Foco de dengue": "Vigilancia Sanitária",
-  "Infestação / Proliferação de animais ou pragas": "Vigilancia Sanitária",
+  // Vigilância Sanitária → subgrupo de Saúde
+  "Condição sanitária irregular": "Saúde",
+  "Falta de Higiene": "Saúde",
+  "Foco de dengue": "Saúde",
+  "Infestação / Proliferação de animais ou pragas": "Saúde",
   // PROCON
   "Estabelecimento sem nota fiscal": "PROCON",
   "Mercadorias vencidas": "PROCON",
