@@ -5,6 +5,38 @@ function norm(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+function normalizarNumero(n: string): string[] {
+  // Retorna variantes equivalentes do mesmo número (com/sem pontos de milhar)
+  const trim = (n || "").trim();
+  if (!trim) return [];
+  const [num, ano] = trim.split("/");
+  if (!num || !ano) return [trim];
+  const semPontos = num.replace(/\./g, "");
+  const numLimpo = String(parseInt(semPontos, 10));
+  const variantes = new Set<string>([trim]);
+  // sem separador de milhar
+  variantes.add(`${numLimpo}/${ano}`);
+  // com ponto a cada 3 dígitos (pt-BR)
+  if (numLimpo.length > 3) {
+    const comPonto = numLimpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    variantes.add(`${comPonto}/${ano}`);
+  }
+  return Array.from(variantes);
+}
+
+function detectarAcao(assunto: string, corpo: string): "conclusao" | "atualizacao" {
+  const texto = norm(`${assunto}\n${corpo}`);
+  const padroesConclusao = [
+    "encerrad", "encerramento", "finalizad", "finalizacao",
+    "conclui", "conclus", "concluid",
+    "baixa", "dar baixa", "deu baixa",
+    "arquivad", "arquivamento",
+    "respondida e encerrada", "atendid",
+  ];
+  if (padroesConclusao.some(p => texto.includes(p))) return "conclusao";
+  return "atualizacao";
+}
+
 async function extrairComIA(texto: string) {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
@@ -63,6 +95,53 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
   try {
     if (textoCompleto.trim().length < 10) throw new Error("Conteúdo vazio");
     const extr = await extrairComIA(textoCompleto);
+
+    // ===== Detectar se é atualização/baixa de protocolo já existente =====
+    if (extr.numero) {
+      const variantes = normalizarNumero(extr.numero);
+      const { data: existente } = await supabaseAdmin
+        .from("protocolos")
+        .select("id, numero, status")
+        .in("numero", variantes)
+        .maybeSingle();
+
+      if (existente) {
+        const acao = detectarAcao(assunto, corpo);
+        const resumoEmail = [
+          `E-mail recebido em ${new Date().toLocaleString("pt-BR")}`,
+          `De: ${remetente}`,
+          `Assunto: ${assunto}`,
+          "",
+          (corpo || "").slice(0, 4000),
+        ].join("\n");
+
+        if (acao === "conclusao" && existente.status !== "concluido") {
+          const hoje = new Date().toISOString().slice(0, 10);
+          await supabaseAdmin
+            .from("protocolos")
+            .update({ status: "concluido", data_conclusao: hoje })
+            .eq("id", existente.id);
+        }
+
+        await supabaseAdmin.from("protocolo_historico").insert({
+          protocolo_id: existente.id,
+          campo: acao === "conclusao" ? "_baixa_email" : "_atualizacao_email",
+          valor_anterior: null,
+          valor_novo: resumoEmail.slice(0, 8000),
+          acao: acao === "conclusao" ? "baixa" : "atualizacao",
+          autor_nome: `E-mail · ${remetente}`.slice(0, 200),
+        });
+
+        await supabaseAdmin.from("email_inbox_log").update({
+          status: "processado",
+          protocolo_id: existente.id,
+          processado_em: new Date().toISOString(),
+          erro: acao === "conclusao" ? "baixa registrada" : "atualização registrada",
+        }).eq("id", logRow!.id);
+
+        return { ok: true, protocoloId: existente.id, numero: existente.numero, logId: logRow!.id };
+      }
+    }
 
     let secretariaId: string | null = account.secretaria_id;
     if (!secretariaId && extr.secretaria_sugerida) {
