@@ -97,6 +97,33 @@ function SecretariaRelatorio() {
       .sort((a, b) => b.value - a.value);
   }, [protocolos, locais]);
 
+  const crossTab = useMemo(() => {
+    const map = new Map(locais.map((l: any) => [l.id, l.nome]));
+    const rows = CATEGORIAS.map(c => {
+      const filtered = protocolos.filter(p => p.categoria === c.value);
+      const porLocal: Record<string, number> = {};
+      let concluidos = 0, abertos = 0, vencidos = 0;
+      filtered.forEach(p => {
+        const nome = (p as any).local_id ? (map.get((p as any).local_id) ?? "—") : "Sem unidade";
+        porLocal[nome] = (porLocal[nome] || 0) + 1;
+        if (p.status === "concluido") concluidos++;
+        else {
+          abertos++;
+          if (situacaoProtocolo(p as any).situacao === "vencido") vencidos++;
+        }
+      });
+      return {
+        categoria: c.label,
+        total: filtered.length,
+        concluidos,
+        abertos,
+        vencidos,
+        unidades: Object.entries(porLocal).sort((a, b) => b[1] - a[1]),
+      };
+    }).filter(r => r.total > 0);
+    return rows;
+  }, [protocolos, locais]);
+
   const mensalData = useMemo(() => {
     const year = new Date().getFullYear();
     const counts = Array(12).fill(0);
@@ -311,6 +338,47 @@ function SecretariaRelatorio() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Manifestações por tipo × unidade</CardTitle></CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-secondary/40 text-left">
+                  <th className="py-2 px-3 font-medium">Tipo</th>
+                  <th className="py-2 px-2 font-medium text-xs text-center">Total</th>
+                  <th className="py-2 px-2 font-medium text-xs text-center">Concluídos</th>
+                  <th className="py-2 px-2 font-medium text-xs text-center">Abertos</th>
+                  <th className="py-2 px-2 font-medium text-xs text-center">Vencidos</th>
+                  <th className="py-2 px-3 font-medium text-xs">Unidades</th>
+                </tr>
+              </thead>
+              <tbody>
+                {crossTab.length === 0 && (
+                  <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">Sem dados</td></tr>
+                )}
+                {crossTab.map(row => (
+                  <tr key={row.categoria} className="border-b hover:bg-secondary/30 align-top">
+                    <td className="py-2 px-3 font-medium">{row.categoria}</td>
+                    <td className="py-2 px-2 text-center">{row.total}</td>
+                    <td className="py-2 px-2 text-center text-green-600">{row.concluidos}</td>
+                    <td className="py-2 px-2 text-center text-blue-600">{row.abertos}</td>
+                    <td className="py-2 px-2 text-center text-destructive">{row.vencidos}</td>
+                    <td className="py-2 px-3">
+                      <div className="flex flex-wrap gap-1">
+                        {row.unidades.map(([nome, qtd]) => (
+                          <Badge key={nome} variant="outline" className="text-xs">
+                            {nome} · {qtd}
+                          </Badge>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader><CardTitle className="text-base">Protocolos por mês ({new Date().getFullYear()})</CardTitle></CardHeader>
