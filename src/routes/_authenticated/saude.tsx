@@ -86,9 +86,9 @@ function SaudePage() {
                       {p.solicitante && <span>{p.solicitante}</span>}
                     </div>
                   </div>
-                  <div className="shrink-0">
-                    <Badge className={`text-[10px] border ${s.situacao === "vencido" ? "border-destructive bg-destructive/5 text-destructive" : s.situacao === "hoje" ? "border-[var(--warning)] bg-[var(--warning)]/5 text-[var(--warning)]" : "border-emerald-500 bg-emerald-500/5 text-emerald-500"}`}>
-                      {s.situacao === "vencido" ? "Atrasado" : s.situacao === "hoje" ? "Vence hoje" : "Em dia"} · {s.dias < 0 ? `${Math.abs(s.dias)}d atrasado` : `${s.dias}d restantes`}
+                    <div className="shrink-0">
+                    <Badge className={`text-[10px] border ${s.situacao === "vencido" ? "border-destructive bg-destructive/5 text-destructive" : s.situacao === "critico" ? "border-[var(--warning)] bg-[var(--warning)]/5 text-[var(--warning-foreground)]" : s.situacao === "atencao" ? "border-yellow-500 bg-yellow-500/5 text-yellow-600" : "border-emerald-500 bg-emerald-500/5 text-emerald-500"}`}>
+                      {s.situacao === "vencido" ? "Atrasado" : s.situacao === "critico" ? "Crítico" : s.situacao === "atencao" ? "Atenção" : "Em dia"} · {s.dias < 0 ? `${Math.abs(s.dias)}d atrasado` : `${s.dias}d restantes`}
                     </Badge>
                   </div>
                 </div>
