@@ -13,6 +13,14 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { fetchAllPaginated } from "@/lib/fetch-all";
+import { useServerFn } from "@tanstack/react-start";
+import { gerarRelatorioIA } from "@/lib/relatorio-ia.functions";
+import { useMutation } from "@tanstack/react-query";
+import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, Loader2, Copy } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/relatorios/")({
   component: RelatoriosPage,
@@ -56,6 +64,11 @@ function RelatoriosPage() {
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
     queryFn: async () => (await supabase.from("secretarias").select("*").order("nome")).data ?? [],
+  });
+
+  const { data: locais = [] } = useQuery({
+    queryKey: ["locais-all"],
+    queryFn: async () => (await supabase.from("locais").select("id, nome, secretaria_id").order("nome")).data ?? [],
   });
 
   const anosDisponiveis = useMemo(() => {
@@ -382,6 +395,7 @@ function RelatoriosPage() {
           <TabsTrigger value="mensal">Comparativo mensal</TabsTrigger>
           <TabsTrigger value="secretaria">Por secretaria</TabsTrigger>
           <TabsTrigger value="atrasadas">Atrasadas ({atrasadas.length})</TabsTrigger>
+          <TabsTrigger value="ia"><Sparkles className="h-3.5 w-3.5 mr-1" /> Relatório IA</TabsTrigger>
         </TabsList>
 
         <TabsContent value="mensal" className="space-y-4">
@@ -535,7 +549,136 @@ function RelatoriosPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="ia" className="space-y-4">
+          <RelatorioIA secretarias={secretarias as any} locais={locais as any} ano={ano} mes={mes} />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function RelatorioIA({ secretarias, locais, ano, mes }: { secretarias: any[]; locais: any[]; ano: string; mes: string }) {
+  const [secretariaId, setSecretariaId] = useState<string>("all");
+  const [localId, setLocalId] = useState<string>("all");
+  const [pergunta, setPergunta] = useState<string>("");
+  const [resultado, setResultado] = useState<{ relatorio: string; total: number; escopo: string; periodo: string } | null>(null);
+
+  const gerar = useServerFn(gerarRelatorioIA);
+  const mut = useMutation({
+    mutationFn: async () => gerar({
+      data: {
+        secretariaId: secretariaId === "all" ? null : secretariaId,
+        localId: localId === "all" ? null : localId,
+        ano, mes: mes as any, pergunta,
+      },
+    }),
+    onSuccess: (data: any) => setResultado(data),
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao gerar relatório"),
+  });
+
+  const locaisFiltrados = secretariaId === "all" ? locais : locais.filter(l => l.secretaria_id === secretariaId);
+
+  const sugestoes = [
+    "Faça um panorama executivo do período, destacando volume, principais categorias e gargalos.",
+    "Quais UBS/locais concentram o maior volume de reclamações? Liste os top 5 com números.",
+    "Identifique padrões recorrentes nos assuntos e proponha 3 ações de melhoria.",
+    "Compare desempenho mês a mês e aponte tendências de alta ou queda.",
+  ];
+
+  return (
+    <div className="grid lg:grid-cols-[400px_1fr] gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" /> Relatório personalizado por IA
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Secretaria</label>
+            <Select value={secretariaId} onValueChange={(v) => { setSecretariaId(v); setLocalId("all"); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as secretarias</SelectItem>
+                {secretarias.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">UBS / Local (opcional)</label>
+            <Select value={localId} onValueChange={setLocalId} disabled={secretariaId === "all"}>
+              <SelectTrigger><SelectValue placeholder={secretariaId === "all" ? "Selecione uma secretaria" : "Todos os locais"} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os locais</SelectItem>
+                {locaisFiltrados.map(l => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Período usado: <strong>{mes === "all" ? `ano de ${ano}` : `${mes}/${ano}`}</strong> (altere acima na página).
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">O que você quer no relatório?</label>
+            <Textarea
+              rows={5}
+              placeholder="Ex.: Quero um relatório sobre a Saúde no mês de junho, com foco nas reclamações por UBS e sugestões de melhoria."
+              value={pergunta}
+              onChange={(e) => setPergunta(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Sugestões rápidas</div>
+            <div className="flex flex-wrap gap-1">
+              {sugestoes.map((s, i) => (
+                <button key={i} type="button" onClick={() => setPergunta(s)}
+                  className="text-[11px] px-2 py-1 rounded border hover:bg-secondary text-left">
+                  {s.length > 60 ? s.slice(0, 57) + "…" : s}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending || pergunta.trim().length < 3} className="w-full">
+            {mut.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando…</> : <><Sparkles className="h-4 w-4 mr-2" /> Gerar relatório</>}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="min-h-[400px]">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Resultado</CardTitle>
+          {resultado && (
+            <Button size="sm" variant="ghost" onClick={() => {
+              navigator.clipboard.writeText(resultado.relatorio);
+              toast.success("Relatório copiado");
+            }}>
+              <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {!resultado && !mut.isPending && (
+            <div className="text-sm text-muted-foreground py-12 text-center">
+              Configure o escopo ao lado e descreva o relatório desejado. A IA analisará os protocolos do período e gerará um documento personalizado.
+            </div>
+          )}
+          {mut.isPending && (
+            <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" /> Analisando protocolos e redigindo…
+            </div>
+          )}
+          {resultado && (
+            <div className="space-y-3">
+              <div className="text-xs text-muted-foreground border-b pb-2">
+                {resultado.escopo} · {resultado.periodo} · {resultado.total} protocolo(s) analisado(s)
+              </div>
+              <article className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-h1:text-xl prose-h2:text-base prose-h3:text-sm prose-table:text-xs">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{resultado.relatorio}</ReactMarkdown>
+              </article>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
