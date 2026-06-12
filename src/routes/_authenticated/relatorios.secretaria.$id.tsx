@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Download, FileText } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { CATEGORIAS, type CategoriaProtocolo, situacaoProtocolo, formatDate, categoriaLabel, PRAZOS, type TipoProtocolo } from "@/lib/prazo";
@@ -17,18 +18,21 @@ export const Route = createFileRoute("/_authenticated/relatorios/secretaria/$id"
 });
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316"];
 
 function SecretariaRelatorio() {
   const { id } = Route.useParams();
   const printRef = useRef<HTMLDivElement>(null);
+  const [mes, setMes] = useState<string>("all");
+  const [ano, setAno] = useState<string>(String(new Date().getFullYear()));
 
   const { data: secretaria } = useQuery({
     queryKey: ["secretaria", id],
     queryFn: async () => (await supabase.from("secretarias").select("*").eq("id", id).maybeSingle()).data,
   });
 
-  const { data: protocolos = [] } = useQuery({
+  const { data: protocolosAll = [] } = useQuery({
     queryKey: ["protocolos-sec", id],
     queryFn: () =>
       fetchAllPaginated((from, to) =>
@@ -40,6 +44,18 @@ function SecretariaRelatorio() {
           .range(from, to),
       ),
   });
+
+  const anosDisponiveis = useMemo(() => {
+    const set = new Set<string>([String(new Date().getFullYear())]);
+    protocolosAll.forEach(p => set.add(p.data_abertura.slice(0, 4)));
+    return Array.from(set).sort().reverse();
+  }, [protocolosAll]);
+
+  const protocolos = useMemo(() => protocolosAll.filter(p => {
+    if (!p.data_abertura.startsWith(ano)) return false;
+    if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
+    return true;
+  }), [protocolosAll, ano, mes]);
 
   const { data: responsaveis = [] } = useQuery({
     queryKey: ["resp-sec", id],
@@ -202,9 +218,26 @@ function SecretariaRelatorio() {
             </p>
           </div>
         </div>
-        <Button onClick={exportPDF}>
-          <FileText className="h-4 w-4 mr-1" /> Exportar PDF
-        </Button>
+        <div className="flex gap-2 items-center">
+          <Select value={mes} onValueChange={setMes}>
+            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Ano inteiro</SelectItem>
+              {MESES_FULL.map((m, i) => (
+                <SelectItem key={i} value={String(i + 1).padStart(2, "0")}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={ano} onValueChange={setAno}>
+            <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {anosDisponiveis.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button onClick={exportPDF}>
+            <FileText className="h-4 w-4 mr-1" /> Exportar PDF
+          </Button>
+        </div>
       </div>
 
       <div ref={printRef} className="space-y-4">
