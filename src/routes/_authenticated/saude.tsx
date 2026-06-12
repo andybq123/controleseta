@@ -21,6 +21,8 @@ export const Route = createFileRoute("/_authenticated/saude")({
 function SaudePage() {
   const [busca, setBusca] = useState("");
   const [unidade, setUnidade] = useState<string>("todas");
+  const [mes, setMes] = useState<string>("all");
+  const [ano, setAno] = useState<string>(String(new Date().getFullYear()));
   const [detail, setDetail] = useState<any>(null);
 
   const { data: saudeSec } = useQuery({
@@ -55,6 +57,8 @@ function SaudePage() {
   const saude = protocolos.filter(p => {
     if (!saudeSec?.id || (p as any).secretaria_id !== saudeSec.id) return false;
     if (unidade !== "todas" && (p as any).local_id !== unidade) return false;
+    if (!p.data_abertura.startsWith(ano)) return false;
+    if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
     if (busca) {
       const s = busca.toLowerCase();
       const txt = `${p.numero} ${p.assunto} ${p.solicitante ?? ""}`.toLowerCase();
@@ -62,6 +66,14 @@ function SaudePage() {
     }
     return true;
   });
+
+  const anosDisponiveis = useMemo(() => {
+    const set = new Set<string>([String(new Date().getFullYear())]);
+    protocolos.forEach(p => set.add(p.data_abertura.slice(0, 4)));
+    return Array.from(set).sort().reverse();
+  }, [protocolos]);
+
+  const MESES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
   const porUnidade = useMemo(() => {
     const counts = new Map<string, number>();
@@ -116,6 +128,21 @@ function SaudePage() {
           <SelectContent className="max-h-[300px]">
             <SelectItem value="todas">Todas as unidades</SelectItem>
             {unidades.map((u: any) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={mes} onValueChange={setMes}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Ano inteiro</SelectItem>
+            {MESES_FULL.map((m, i) => (
+              <SelectItem key={i} value={String(i + 1).padStart(2, "0")}>{m}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={ano} onValueChange={setAno}>
+          <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {anosDisponiveis.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
