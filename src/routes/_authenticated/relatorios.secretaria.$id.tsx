@@ -251,6 +251,7 @@ function SecretariaRelatorio() {
               )}
             </CardContent>
           </Card>
+        </div>
 
         <Card>
           <CardHeader><CardTitle className="text-base">Protocolos por mês ({new Date().getFullYear()})</CardTitle></CardHeader>
