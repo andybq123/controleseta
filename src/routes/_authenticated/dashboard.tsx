@@ -241,14 +241,20 @@ function Dashboard() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard icon={FileText} tone="primary" label="Total de Protocolos" value={total} hint="100% do período" />
-        <KpiCard icon={Clock} tone="info" label="Em Andamento" value={ativos.length} hint={`${pctAndamento}% do total`} />
-        <KpiCard icon={CheckCircle2} tone="success" label="Concluídos" value={concluidos.length} hint={`${pctConcluidos}% do total`} />
-        <KpiCard icon={AlertTriangle} tone="destructive" label="Atrasados" value={vencidos.length} hint={`${pctAtrasados}% do total`} />
-        <KpiCard icon={Timer} tone="violet" label="Prazo Médio de Resposta" value={`${prazoMedio}`} suffix="dias" hint="Meta: 5 dias" />
+        <KpiCard icon={FileText} tone="primary" label="Total de Protocolos" value={total} hint="100% do período"
+          onClick={() => openDrill("Todos os protocolos", () => true)} />
+        <KpiCard icon={Clock} tone="info" label="Em Andamento" value={ativos.length} hint={`${pctAndamento}% do total`}
+          onClick={() => openDrill("Protocolos em andamento", p => p.status !== "concluido")} />
+        <KpiCard icon={CheckCircle2} tone="success" label="Concluídos" value={concluidos.length} hint={`${pctConcluidos}% do total`}
+          onClick={() => openDrill("Protocolos concluídos", p => p.status === "concluido")} />
+        <KpiCard icon={AlertTriangle} tone="destructive" label="Atrasados" value={vencidos.length} hint={`${pctAtrasados}% do total`}
+          onClick={() => openDrill("Protocolos atrasados", p => p.status !== "concluido" && p._s.situacao === "vencido")} />
+        <KpiCard icon={Timer} tone="violet" label="Prazo Médio de Resposta" value={`${prazoMedio}`} suffix="dias" hint="Meta: 5 dias"
+          onClick={() => openDrill("Protocolos concluídos (prazo médio)", p => p.status === "concluido" && !!p.data_conclusao)} />
         <KpiCard icon={Smile} tone="emerald" label="Satisfação do Usuário" value={`${satisfacao}%`}
           hint={satisfacao >= 80 ? "Ótimo" : satisfacao >= 60 ? "Bom" : "Atenção"}
-          hintTrend={satisfacao >= 80 ? "up" : "down"} />
+          hintTrend={satisfacao >= 80 ? "up" : "down"}
+          onClick={() => openDrill("Protocolos no prazo", p => p._s.situacao !== "vencido")} />
       </div>
 
       {/* Charts row 1 */}
