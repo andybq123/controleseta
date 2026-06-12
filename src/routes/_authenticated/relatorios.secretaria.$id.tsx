@@ -38,7 +38,7 @@ function SecretariaRelatorio() {
       fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
-          .select("*, responsaveis(nome), locais(nome,centro_custo)")
+          .select("*")
           .eq("secretaria_id", id)
           .order("data_abertura", { ascending: false })
           .range(from, to),
@@ -56,16 +56,6 @@ function SecretariaRelatorio() {
     if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
     return true;
   }), [protocolosAll, ano, mes]);
-
-  const { data: responsaveis = [] } = useQuery({
-    queryKey: ["resp-sec", id],
-    queryFn: async () => (await supabase.from("responsaveis").select("*").eq("secretaria_id", id)).data ?? [],
-  });
-
-  const { data: locais = [] } = useQuery({
-    queryKey: ["locais-sec", id],
-    queryFn: async () => (await supabase.from("locais").select("*").eq("secretaria_id", id)).data ?? [],
-  });
 
   const stats = useMemo(() => {
     const enriched = protocolos.map(p => ({ ...p, _s: situacaoProtocolo(p as any) }));
@@ -88,17 +78,6 @@ function SecretariaRelatorio() {
     const counts: Record<string, number> = {};
     protocolos.forEach(p => { counts[p.tipo] = (counts[p.tipo] || 0) + 1; });
     return Object.entries(counts).map(([k, v]) => ({ name: PRAZOS[k as TipoProtocolo]?.label ?? k, value: v }));
-  }, [protocolos]);
-
-  const localData = useMemo(() => {
-    const counts = new Map<string, number>();
-    protocolos.forEach(p => {
-      const nome = (p as any).locais?.nome ?? "Sem local";
-      counts.set(nome, (counts.get(nome) ?? 0) + 1);
-    });
-    return Array.from(counts.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
   }, [protocolos]);
 
   const mensalData = useMemo(() => {
@@ -151,34 +130,6 @@ function SecretariaRelatorio() {
       theme: "striped",
       headStyles: { fillColor: [139, 92, 246] },
     });
-
-    // Por local
-    if (localData.length > 0) {
-      autoTable(doc, {
-        head: [["Local", "Quantidade"]],
-        body: localData.map(l => [l.name, String(l.value)]),
-        theme: "striped",
-        headStyles: { fillColor: [6, 182, 212] },
-      });
-    }
-
-    // Responsáveis
-    if (responsaveis.length > 0) {
-      autoTable(doc, {
-        head: [["Responsável", "Cargo", "E-mail", "Telefone"]],
-        body: responsaveis.map(r => [r.nome, r.cargo ?? "—", r.email ?? "—", r.telefone ?? "—"]),
-        theme: "grid",
-      });
-    }
-
-    // Locais
-    if (locais.length > 0) {
-      autoTable(doc, {
-        head: [["Local", "Centro de Custo"]],
-        body: locais.map(l => [l.nome, l.centro_custo ?? "—"]),
-        theme: "grid",
-      });
-    }
 
     // Protocolos
     autoTable(doc, {
@@ -300,48 +251,6 @@ function SecretariaRelatorio() {
               )}
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Por local</CardTitle></CardHeader>
-            <CardContent>
-              {localData.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={320}>
-                  <PieChart>
-                    <Pie
-                      data={localData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={120}
-                      minAngle={4}
-                      paddingAngle={2}
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                      labelLine={false}
-                      label={({ value }: any) => value}
-                    >
-                      {localData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value: number, name: string) => [`${value} protocolo(s)`, name]}
-                      contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}
-                    />
-                    <Legend
-                      verticalAlign="bottom"
-                      iconType="circle"
-                      formatter={(value: string) => <span className="text-xs">{value}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         <Card>
@@ -358,55 +267,6 @@ function SecretariaRelatorio() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Responsáveis ({responsaveis.length})</CardTitle></CardHeader>
-            <CardContent className="p-0">
-              {responsaveis.length === 0 ? (
-                <p className="text-sm text-muted-foreground p-6 text-center">Nenhum responsável</p>
-              ) : (
-                <table className="w-full text-sm">
-                  <tbody>
-                    {responsaveis.map(r => (
-                      <tr key={r.id} className="border-b last:border-0">
-                        <td className="py-2 px-4">
-                          <div className="font-medium">{r.nome}</div>
-                          {r.cargo && <div className="text-xs text-muted-foreground">{r.cargo}</div>}
-                          {(r.email || r.telefone) && (
-                            <div className="text-xs text-muted-foreground">{[r.email, r.telefone].filter(Boolean).join(" · ")}</div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Locais ({locais.length})</CardTitle></CardHeader>
-            <CardContent className="p-0">
-              {locais.length === 0 ? (
-                <p className="text-sm text-muted-foreground p-6 text-center">Nenhum local</p>
-              ) : (
-                <table className="w-full text-sm">
-                  <tbody>
-                    {locais.map(l => (
-                      <tr key={l.id} className="border-b last:border-0">
-                        <td className="py-2 px-4">
-                          <div className="font-medium">{l.nome}</div>
-                          {l.centro_custo && <div className="text-xs font-mono text-muted-foreground">{l.centro_custo}</div>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
-        </div>
 
         <Card>
           <CardHeader><CardTitle className="text-base">Todos os protocolos ({stats.enriched.length})</CardTitle></CardHeader>

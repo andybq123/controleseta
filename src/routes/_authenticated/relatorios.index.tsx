@@ -47,7 +47,7 @@ function RelatoriosPage() {
       fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
-          .select("*, secretarias(nome), responsaveis(nome), locais(nome,centro_custo)")
+          .select("*, secretarias(nome)")
           .order("data_abertura", { ascending: false })
           .range(from, to),
       ),
@@ -72,7 +72,7 @@ function RelatoriosPage() {
     if (fSecretaria !== "all" && p.secretaria_id !== fSecretaria) return false;
     if (q.trim()) {
       const needle = q.toLowerCase();
-      const hay = [p.numero, p.assunto, p.descricao, p.solicitante, (p as any).secretarias?.nome, (p as any).responsaveis?.nome]
+      const hay = [p.numero, p.assunto, p.descricao, p.solicitante, (p as any).secretarias?.nome]
         .filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(needle)) return false;
     }
@@ -166,8 +166,6 @@ function RelatoriosPage() {
       "Categoria": categoriaLabel(p.categoria as CategoriaProtocolo),
       "Assunto": p.assunto,
       "Secretaria": (p as any).secretarias?.nome ?? "",
-      "Local": (p as any).locais?.nome ?? "",
-      "Responsável": (p as any).responsaveis?.nome ?? "",
       "Solicitante": p.solicitante ?? "",
       "Data Abertura": formatDate(p.data_abertura),
       "Prazo Final": formatDate(p._s.prazoFinal),
