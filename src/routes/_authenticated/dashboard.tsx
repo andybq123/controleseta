@@ -662,3 +662,54 @@ function Legenda({ dot, label }: { dot: string; label: string }) {
     </span>
   );
 }
+
+function DrillDialog({
+  data,
+  onOpenChange,
+  onSelect,
+}: {
+  data: { title: string; items: any[] } | null;
+  onOpenChange: (v: boolean) => void;
+  onSelect: (p: any) => void;
+}) {
+  return (
+    <Dialog open={!!data} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{data?.title ?? ""}</DialogTitle>
+          <DialogDescription>
+            Clique em um protocolo para abrir os detalhes.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="overflow-y-auto -mx-2 px-2">
+          {!data || data.items.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Nenhum protocolo encontrado.</p>
+          ) : (
+            <ul className="divide-y">
+              {data.items.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(p)}
+                    className="w-full text-left py-2 px-2 hover:bg-muted/60 transition rounded flex items-center gap-3"
+                  >
+                    <span className="font-mono text-xs font-semibold shrink-0">{p.numero}</span>
+                    <span className="text-sm truncate flex-1" title={p.assunto ?? ""}>
+                      {p.assunto ?? "Sem assunto"}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] shrink-0">
+                      {(p as any).secretarias?.sigla ?? (p as any).secretarias?.nome ?? "—"}
+                    </Badge>
+                    <span className="text-[11px] text-muted-foreground shrink-0">
+                      {format(new Date(p.data_abertura), "dd/MM/yyyy")}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
