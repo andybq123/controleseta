@@ -251,6 +251,48 @@ function SecretariaRelatorio() {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Por tipo</CardTitle></CardHeader>
+            <CardContent>
+              {tipoData.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={320}>
+                  <PieChart>
+                    <Pie
+                      data={tipoData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={120}
+                      minAngle={6}
+                      paddingAngle={2}
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                      labelLine={false}
+                      label={({ value }: any) => `${value}`}
+                    >
+                      {tipoData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number, name: string) => [`${value} protocolos`, name]}
+                      contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      iconType="circle"
+                      formatter={(value: string) => <span className="text-xs">{value}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <Card>
