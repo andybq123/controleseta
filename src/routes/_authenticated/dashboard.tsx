@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { situacaoProtocolo, CATEGORIAS, type CategoriaProtocolo } from "@/lib/prazo";
 import {
   AlertTriangle, CheckCircle2, Clock, FileText, Smile,
@@ -42,6 +45,9 @@ const CAT_COLORS: Record<CategoriaProtocolo, string> = {
 };
 
 function Dashboard() {
+  const [drill, setDrill] = useState<{ title: string; items: any[] } | null>(null);
+  const [detail, setDetail] = useState<any | null>(null);
+
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
     queryFn: () =>
@@ -195,6 +201,11 @@ function Dashboard() {
       .slice(0, 10);
   }, [enriched]);
 
+  const openDrill = (title: string, predicate: (p: any) => boolean) => {
+    const items = enriched.filter(predicate);
+    setDrill({ title: `${title} (${items.length})`, items });
+  };
+
   const exportarRelatorio = () => {
     const linhas = [
       ["Numero", "Tipo", "Categoria", "Assunto", "Secretaria", "Status", "Aberto", "Concluído"].join(";"),
@@ -230,14 +241,20 @@ function Dashboard() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard icon={FileText} tone="primary" label="Total de Protocolos" value={total} hint="100% do período" />
-        <KpiCard icon={Clock} tone="info" label="Em Andamento" value={ativos.length} hint={`${pctAndamento}% do total`} />
-        <KpiCard icon={CheckCircle2} tone="success" label="Concluídos" value={concluidos.length} hint={`${pctConcluidos}% do total`} />
-        <KpiCard icon={AlertTriangle} tone="destructive" label="Atrasados" value={vencidos.length} hint={`${pctAtrasados}% do total`} />
-        <KpiCard icon={Timer} tone="violet" label="Prazo Médio de Resposta" value={`${prazoMedio}`} suffix="dias" hint="Meta: 5 dias" />
+        <KpiCard icon={FileText} tone="primary" label="Total de Protocolos" value={total} hint="100% do período"
+          onClick={() => openDrill("Todos os protocolos", () => true)} />
+        <KpiCard icon={Clock} tone="info" label="Em Andamento" value={ativos.length} hint={`${pctAndamento}% do total`}
+          onClick={() => openDrill("Protocolos em andamento", p => p.status !== "concluido")} />
+        <KpiCard icon={CheckCircle2} tone="success" label="Concluídos" value={concluidos.length} hint={`${pctConcluidos}% do total`}
+          onClick={() => openDrill("Protocolos concluídos", p => p.status === "concluido")} />
+        <KpiCard icon={AlertTriangle} tone="destructive" label="Atrasados" value={vencidos.length} hint={`${pctAtrasados}% do total`}
+          onClick={() => openDrill("Protocolos atrasados", p => p.status !== "concluido" && p._s.situacao === "vencido")} />
+        <KpiCard icon={Timer} tone="violet" label="Prazo Médio de Resposta" value={`${prazoMedio}`} suffix="dias" hint="Meta: 5 dias"
+          onClick={() => openDrill("Protocolos concluídos (prazo médio)", p => p.status === "concluido" && !!p.data_conclusao)} />
         <KpiCard icon={Smile} tone="emerald" label="Satisfação do Usuário" value={`${satisfacao}%`}
           hint={satisfacao >= 80 ? "Ótimo" : satisfacao >= 60 ? "Bom" : "Atenção"}
-          hintTrend={satisfacao >= 80 ? "up" : "down"} />
+          hintTrend={satisfacao >= 80 ? "up" : "down"}
+          onClick={() => openDrill("Protocolos no prazo", p => p._s.situacao !== "vencido")} />
       </div>
 
       {/* Charts row 1 */}
@@ -287,12 +304,18 @@ function Dashboard() {
             <div className="mt-2 space-y-1">
               {categoriaData.map(d => {
                 const pct = total > 0 ? ((d.value / total) * 100).toFixed(2) : "0";
+                const cat = CATEGORIAS.find(c => c.label === d.name);
                 return (
-                  <div key={d.name} className="flex items-center gap-2 text-xs">
+                  <button
+                    key={d.name}
+                    type="button"
+                    onClick={() => openDrill(`Categoria: ${d.name}`, p => (p.categoria ?? "outros") === (cat?.value ?? "outros"))}
+                    className="w-full flex items-center gap-2 text-xs rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                  >
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />
                     <span className="font-medium">{d.name}</span>
                     <span className="ml-auto text-muted-foreground">{pct}% ({d.value})</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -309,7 +332,12 @@ function Dashboard() {
               {(() => {
                 const max = Math.max(1, ...topAssuntos.map(a => a.qtd));
                 return topAssuntos.map(a => (
-                  <div key={a.nome} className="grid grid-cols-[1fr_auto] items-center gap-2">
+                  <button
+                    key={a.nome}
+                    type="button"
+                    onClick={() => openDrill(`Assunto: ${a.nome}`, p => (p.assunto ?? "Outros").slice(0, 40) === a.nome)}
+                    className="w-full grid grid-cols-[1fr_auto] items-center gap-2 text-left rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                  >
                     <div className="min-w-0">
                       <p className="text-xs truncate" title={a.nome}>{a.nome}</p>
                       <div className="h-1.5 mt-1 rounded-full bg-muted overflow-hidden">
@@ -317,7 +345,7 @@ function Dashboard() {
                       </div>
                     </div>
                     <span className="text-xs font-semibold tabular-nums">{a.qtd}</span>
-                  </div>
+                  </button>
                 ));
               })()}
             </div>
@@ -339,7 +367,17 @@ function Dashboard() {
                   <XAxis dataKey="nome" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" interval={0} angle={-15} textAnchor="end" height={50} />
                   <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="qtd" fill="hsl(217 91% 60%)" radius={[6, 6, 0, 0]} label={{ position: "top", fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                  <Bar
+                    dataKey="qtd"
+                    fill="hsl(217 91% 60%)"
+                    radius={[6, 6, 0, 0]}
+                    label={{ position: "top", fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    cursor="pointer"
+                    onClick={(d: any) => {
+                      const sec = secretarias.find(s => s.nome === d?.full);
+                      if (sec) openDrill(`Secretaria: ${sec.nome}`, p => p.secretaria_id === sec.id);
+                    }}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -358,14 +396,24 @@ function Dashboard() {
                   {reclamacoesSaude.length === 0 && <p className="text-xs text-muted-foreground">Sem reclamações.</p>}
                   {(() => {
                     const max = Math.max(1, ...reclamacoesSaude.map(r => r.qtd));
+                    const saudeIds = secretarias.filter(s => /sa[uú]de/i.test(s.nome)).map(s => s.id);
                     return reclamacoesSaude.map(r => (
-                      <div key={r.nome} className="flex items-center gap-2">
+                      <button
+                        key={r.nome}
+                        type="button"
+                        onClick={() => openDrill(`Saúde — Reclamação: ${r.nome}`, p =>
+                          p.secretaria_id != null && saudeIds.includes(p.secretaria_id) &&
+                          p.categoria === "reclamacao" &&
+                          (p.assunto ?? "Outros").slice(0, 30) === r.nome,
+                        )}
+                        className="w-full flex items-center gap-2 rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                      >
                         <span className="text-[11px] truncate flex-1" title={r.nome}>{r.nome}</span>
                         <div className="h-2 w-16 rounded-sm bg-muted overflow-hidden">
                           <div className="h-full bg-orange-500" style={{ width: `${(r.qtd / max) * 100}%` }} />
                         </div>
                         <span className="text-[11px] font-semibold w-5 text-right">{r.qtd}</span>
-                      </div>
+                      </button>
                     ));
                   })()}
                 </div>
@@ -376,10 +424,19 @@ function Dashboard() {
                   {porUnidade.length === 0 && <p className="text-xs text-muted-foreground">Sem dados.</p>}
                   {(() => {
                     const max = Math.max(1, ...porUnidade.map(u => u.qtd));
+                    const saudeIds = secretarias.filter(s => /sa[uú]de/i.test(s.nome)).map(s => s.id);
                     return porUnidade.map(u => {
                       const intensity = Math.ceil((u.qtd / max) * 5);
                       return (
-                        <div key={u.nome} className="flex items-center gap-2">
+                        <button
+                          key={u.nome}
+                          type="button"
+                          onClick={() => openDrill(`Saúde — Unidade: ${u.nome}`, p =>
+                            p.secretaria_id != null && saudeIds.includes(p.secretaria_id) &&
+                            (((p as any).locais?.nome ?? "Sem unidade").slice(0, 18) === u.nome),
+                          )}
+                          className="w-full flex items-center gap-2 rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                        >
                           <span className="text-[11px] truncate flex-1" title={u.nome}>{u.nome}</span>
                           <div className="flex gap-0.5">
                             {Array.from({ length: 5 }).map((_, i) => (
@@ -387,7 +444,7 @@ function Dashboard() {
                                 style={{ background: i < intensity ? `hsl(25 95% ${65 - i * 6}%)` : "hsl(var(--muted))" }} />
                             ))}
                           </div>
-                        </div>
+                        </button>
                       );
                     });
                   })()}
@@ -422,12 +479,21 @@ function Dashboard() {
             <div className="mt-2 space-y-1">
               {situacaoData.map(d => {
                 const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                const pred =
+                  d.name === "Em andamento" ? (p: any) => p.status !== "concluido"
+                  : d.name === "Concluídos" ? (p: any) => p.status === "concluido"
+                  : (p: any) => p.status !== "concluido" && p._s.situacao === "vencido";
                 return (
-                  <div key={d.name} className="flex items-center gap-2 text-xs">
+                  <button
+                    key={d.name}
+                    type="button"
+                    onClick={() => openDrill(`Situação: ${d.name}`, pred)}
+                    className="w-full flex items-center gap-2 text-xs rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                  >
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />
                     <span className="font-medium">{d.name}</span>
                     <span className="ml-auto text-muted-foreground">{d.value} ({pct}%)</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -460,12 +526,14 @@ function Dashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 {porRegiao.slice(0, 5).map((r, i) => (
-                  <RegiaoRow key={r.nome} pos={i + 1} nome={r.nome} qtd={r.qtd} max={porRegiao[0]?.qtd ?? 1} />
+                  <RegiaoRow key={r.nome} pos={i + 1} nome={r.nome} qtd={r.qtd} max={porRegiao[0]?.qtd ?? 1}
+                    onClick={() => openDrill(`Local: ${r.nome}`, p => ((p as any).locais?.nome ?? "Sem local") === r.nome)} />
                 ))}
               </div>
               <div className="space-y-1.5">
                 {porRegiao.slice(5, 10).map((r, i) => (
-                  <RegiaoRow key={r.nome} pos={i + 6} nome={r.nome} qtd={r.qtd} max={porRegiao[0]?.qtd ?? 1} />
+                  <RegiaoRow key={r.nome} pos={i + 6} nome={r.nome} qtd={r.qtd} max={porRegiao[0]?.qtd ?? 1}
+                    onClick={() => openDrill(`Local: ${r.nome}`, p => ((p as any).locais?.nome ?? "Sem local") === r.nome)} />
                 ))}
               </div>
             </div>
@@ -482,6 +550,13 @@ function Dashboard() {
       <p className="text-[11px] text-muted-foreground text-center">
         Dados atualizados em {format(new Date(), "dd/MM/yyyy HH:mm")}
       </p>
+
+      <DrillDialog
+        data={drill}
+        onOpenChange={(v) => !v && setDrill(null)}
+        onSelect={(p) => { setDetail(p); setDrill(null); }}
+      />
+      <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
     </div>
   );
 }
@@ -493,10 +568,11 @@ const tooltipStyle = {
   fontSize: 12,
 } as const;
 
-function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone }: {
+function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone, onClick }: {
   icon: any; label: string; value: number | string; hint?: string; suffix?: string;
   hintTrend?: "up" | "down";
   tone: "primary" | "info" | "success" | "destructive" | "violet" | "emerald";
+  onClick?: () => void;
 }) {
   const tones: Record<string, { bg: string; fg: string }> = {
     primary:     { bg: "bg-primary/10",     fg: "text-primary" },
@@ -508,7 +584,10 @@ function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone }: {
   };
   const t = tones[tone];
   return (
-    <Card>
+    <Card
+      onClick={onClick}
+      className={onClick ? "cursor-pointer transition hover:shadow-md hover:-translate-y-0.5" : undefined}
+    >
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
           <div className={`h-10 w-10 rounded-full ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}>
@@ -561,17 +640,17 @@ function Gauge({ label, value, suffix, meta, good, max = 100, invert }: {
   );
 }
 
-function RegiaoRow({ pos, nome, qtd, max }: { pos: number; nome: string; qtd: number; max: number }) {
+function RegiaoRow({ pos, nome, qtd, max, onClick }: { pos: number; nome: string; qtd: number; max: number; onClick?: () => void }) {
   const ratio = qtd / max;
   const color = ratio > 0.66 ? "hsl(0 84% 60%)" : ratio > 0.33 ? "hsl(25 95% 53%)" : ratio > 0.1 ? "hsl(142 71% 45%)" : "hsl(215 16% 60%)";
   return (
-    <div className="flex items-center gap-2">
+    <button type="button" onClick={onClick} className="w-full flex items-center gap-2 rounded px-1 py-0.5 hover:bg-muted/60 transition text-left">
       <span className="h-6 w-6 rounded-full text-white text-[11px] font-bold flex items-center justify-center shrink-0" style={{ background: color }}>
         {qtd}
       </span>
       <span className="text-xs text-muted-foreground w-4 text-right">{pos}.</span>
       <span className="text-xs font-medium truncate flex-1" title={nome}>{nome}</span>
-    </div>
+    </button>
   );
 }
 
@@ -581,5 +660,56 @@ function Legenda({ dot, label }: { dot: string; label: string }) {
       <span className="h-2 w-2 rounded-full" style={{ background: dot }} />
       {label}
     </span>
+  );
+}
+
+function DrillDialog({
+  data,
+  onOpenChange,
+  onSelect,
+}: {
+  data: { title: string; items: any[] } | null;
+  onOpenChange: (v: boolean) => void;
+  onSelect: (p: any) => void;
+}) {
+  return (
+    <Dialog open={!!data} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{data?.title ?? ""}</DialogTitle>
+          <DialogDescription>
+            Clique em um protocolo para abrir os detalhes.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="overflow-y-auto -mx-2 px-2">
+          {!data || data.items.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Nenhum protocolo encontrado.</p>
+          ) : (
+            <ul className="divide-y">
+              {data.items.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(p)}
+                    className="w-full text-left py-2 px-2 hover:bg-muted/60 transition rounded flex items-center gap-3"
+                  >
+                    <span className="font-mono text-xs font-semibold shrink-0">{p.numero}</span>
+                    <span className="text-sm truncate flex-1" title={p.assunto ?? ""}>
+                      {p.assunto ?? "Sem assunto"}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] shrink-0">
+                      {(p as any).secretarias?.sigla ?? (p as any).secretarias?.nome ?? "—"}
+                    </Badge>
+                    <span className="text-[11px] text-muted-foreground shrink-0">
+                      {format(new Date(p.data_abertura), "dd/MM/yyyy")}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
