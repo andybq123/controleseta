@@ -74,6 +74,17 @@ function SecretariaRelatorio() {
     return Object.entries(counts).map(([k, v]) => ({ name: PRAZOS[k as TipoProtocolo]?.label ?? k, value: v }));
   }, [protocolos]);
 
+  const localData = useMemo(() => {
+    const counts = new Map<string, number>();
+    protocolos.forEach(p => {
+      const nome = (p as any).locais?.nome ?? "Sem local";
+      counts.set(nome, (counts.get(nome) ?? 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [protocolos]);
+
   const mensalData = useMemo(() => {
     const year = new Date().getFullYear();
     const counts = Array(12).fill(0);
@@ -124,6 +135,16 @@ function SecretariaRelatorio() {
       theme: "striped",
       headStyles: { fillColor: [139, 92, 246] },
     });
+
+    // Por local
+    if (localData.length > 0) {
+      autoTable(doc, {
+        head: [["Local", "Quantidade"]],
+        body: localData.map(l => [l.name, String(l.value)]),
+        theme: "striped",
+        headStyles: { fillColor: [6, 182, 212] },
+      });
+    }
 
     // Responsáveis
     if (responsaveis.length > 0) {
@@ -248,34 +269,34 @@ function SecretariaRelatorio() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="text-base">Por tipo</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Por local</CardTitle></CardHeader>
             <CardContent>
-              {tipoData.length === 0 ? (
+              {localData.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
                   <PieChart>
                     <Pie
-                      data={tipoData}
+                      data={localData}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
                       cy="50%"
                       innerRadius={55}
                       outerRadius={120}
-                      minAngle={6}
+                      minAngle={4}
                       paddingAngle={2}
                       stroke="#ffffff"
                       strokeWidth={2}
                       labelLine={false}
-                      label={({ percent }: any) => `${(percent * 100).toFixed(0)}%`}
+                      label={({ value }: any) => value}
                     >
-                      {tipoData.map((_, i) => (
+                      {localData.map((_, i) => (
                         <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number, name: string) => [`${value} protocolos`, name]}
+                      formatter={(value: number, name: string) => [`${value} protocolo(s)`, name]}
                       contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}
                     />
                     <Legend
