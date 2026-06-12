@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type CategoriaProtocolo, type TipoProtocolo } from "@/lib/prazo";
 import { HeartPulse } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
+import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/saude")({
   component: SaudePage,
@@ -16,6 +17,25 @@ export const Route = createFileRoute("/_authenticated/saude")({
 
 function SaudePage() {
   const [busca, setBusca] = useState("");
+  const [unidade, setUnidade] = useState<string>("todas");
+  const [detail, setDetail] = useState<any>(null);
+
+  const { data: saudeSec } = useQuery({
+    queryKey: ["secretaria-saude"],
+    queryFn: async () => {
+      const { data } = await supabase.from("secretarias").select("id,nome").eq("nome", "Saúde").maybeSingle();
+      return data;
+    },
+  });
+
+  const { data: unidades = [] } = useQuery({
+    queryKey: ["locais-saude", saudeSec?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("locais").select("id,nome").eq("secretaria_id", saudeSec!.id).order("nome");
+      return data ?? [];
+    },
+    enabled: !!saudeSec?.id,
+  });
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
@@ -30,8 +50,8 @@ function SaudePage() {
   });
 
   const saude = protocolos.filter(p => {
-    const texto = `${p.assunto} ${p.descricao ?? ""} ${p.numero}`.toLowerCase();
-    if (!texto.includes("saude") && !texto.includes("saúde") && !texto.includes("hospital") && !texto.includes("medico") && !texto.includes("médico") && !texto.includes("vacina") && !texto.includes("ubs") && !texto.includes("sus") && !texto.includes("posto") && !texto.includes("enfermagem") && !texto.includes("psf")) return false;
+    if (!saudeSec?.id || (p as any).secretaria_id !== saudeSec.id) return false;
+    if (unidade !== "todas" && (p as any).local_id !== unidade) return false;
     if (busca) {
       const s = busca.toLowerCase();
       const txt = `${p.numero} ${p.assunto} ${p.solicitante ?? ""}`.toLowerCase();
@@ -47,22 +67,29 @@ function SaudePage() {
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <HeartPulse className="h-6 w-6 text-emerald-500" /> Saúde
           </h1>
-          <p className="text-sm text-muted-foreground">{saude.length} protocolo(s) relacionados à saúde</p>
+          <p className="text-sm text-muted-foreground">{saude.length} protocolo(s) da Secretaria de Saúde</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         <Input placeholder="Buscar nº, assunto, solicitante…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[280px]" />
+        <Select value={unidade} onValueChange={setUnidade}>
+          <SelectTrigger className="w-[260px]"><SelectValue placeholder="Unidade de saúde" /></SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value="todas">Todas as unidades</SelectItem>
+            {unidades.map((u: any) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid gap-3">
         {saude.length === 0 && (
-          <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Nenhum protocolo relacionado à saúde encontrado.</CardContent></Card>
+          <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Nenhum protocolo da Saúde encontrado. Marque um protocolo definindo a Secretaria como "Saúde" e selecione a unidade no campo Local.</CardContent></Card>
         )}
         {saude.map(p => {
           const s = situacaoProtocolo(p as any);
           return (
-            <Card key={p.id}>
+            <Card key={p.id} className="cursor-pointer hover:border-primary/50 transition" onClick={() => setDetail(p)}>
               <CardContent className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -76,6 +103,11 @@ function SaudePage() {
                         {categoriaSigla(p.categoria as CategoriaProtocolo)}
                       </Badge>
                       <Badge variant="secondary" className="text-[10px]">{p.status.replace("_", " ")}</Badge>
+                      {(p as any).locais?.nome && (
+                        <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-600">
+                          {(p as any).locais.nome}
+                        </Badge>
+                      )}
                     </div>
                     <h3 className="font-semibold mt-2">{p.assunto}</h3>
                     {p.descricao && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{p.descricao}</p>}
@@ -97,6 +129,8 @@ function SaudePage() {
           );
         })}
       </div>
+
+      <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
     </div>
   );
 }
