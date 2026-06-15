@@ -361,8 +361,15 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             <Field2 label="Endereço (para mapa)">
               <AddressAutocomplete
                 value={form.endereco ?? ""}
-                onChange={(v) => { setForm({ ...form, endereco: v }); setEnderecoCoords(null); }}
-                onSelect={(s) => { setForm({ ...form, endereco: s.label }); setEnderecoCoords({ lat: s.lat, lng: s.lng }); }}
+                onChange={(v) => { setForm({ ...form, endereco: v }); setEnderecoCoords(null); setEnderecoTemNumero(false); }}
+                onSelect={(s) => {
+                  setForm({ ...form, endereco: s.label });
+                  setEnderecoCoords({ lat: s.lat, lng: s.lng });
+                  setEnderecoTemNumero(!!s.houseNumber);
+                  if (!s.houseNumber) {
+                    toast.warning("Sugestão sem número do imóvel. Inclua o número (ex.: \"Rua X, 174\") para um pino preciso.");
+                  }
+                }}
                 placeholder="Digite e selecione uma rua de Brusque…"
               />
               <p className="text-[11px] text-muted-foreground">
