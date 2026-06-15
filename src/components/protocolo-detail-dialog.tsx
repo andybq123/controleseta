@@ -156,6 +156,9 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         if (enderecoCoords) {
           patch.latitude = enderecoCoords.lat;
           patch.longitude = enderecoCoords.lng;
+          if (!enderecoTemNumero) {
+            toast.warning("Endereço sem número do imóvel — o pino pode ficar impreciso no mapa.");
+          }
         } else if (form.endereco && form.endereco.trim()) {
           try {
             const r = await geocode({ data: { endereco: form.endereco } });
