@@ -6,7 +6,7 @@ import { fetchAllPaginated } from "@/lib/fetch-all";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ManifestacoesMap, type MapPoint } from "@/components/manifestacoes-map";
+import { ManifestacoesMap, type MapPoint, type SecretariaPoint } from "@/components/manifestacoes-map";
 import { Map as MapIcon } from "lucide-react";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 
@@ -34,7 +34,7 @@ function MapaPage() {
 
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
-    queryFn: async () => (await supabase.from("secretarias").select("id, nome").order("nome")).data ?? [],
+    queryFn: async () => (await supabase.from("secretarias").select("id, nome, sigla, endereco, latitude, longitude, icone").order("nome")).data ?? [],
   });
 
   const points = useMemo<MapPoint[]>(() => {
@@ -57,6 +57,16 @@ function MapaPage() {
         local: p.locais?.nome,
       }));
   }, [protocolos, status, secretariaId]);
+
+  const secretariaPoints = useMemo<SecretariaPoint[]>(() => {
+    return (secretarias as any[])
+      .filter(s => s.latitude != null && s.longitude != null)
+      .filter(s => secretariaId === "todas" || s.id === secretariaId)
+      .map(s => ({
+        id: s.id, lat: s.latitude, lng: s.longitude, nome: s.nome,
+        sigla: s.sigla, endereco: s.endereco, icone: s.icone,
+      }));
+  }, [secretarias, secretariaId]);
 
   return (
     <div className="space-y-4">
@@ -111,6 +121,7 @@ function MapaPage() {
           <ManifestacoesMap
             points={points}
             height={600}
+            secretarias={secretariaPoints}
             onOpenProtocolo={(id) => {
               const p = (protocolos as any[]).find((x) => x.id === id);
               if (p) setDetail(p);
