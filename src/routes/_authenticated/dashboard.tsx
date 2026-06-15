@@ -572,6 +572,11 @@ function Dashboard() {
                 endereco: p.endereco,
                 status: p.status,
                 secretaria: p.secretarias?.nome,
+                data_abertura: p.data_abertura,
+                data_conclusao: p.data_conclusao,
+                categoria: p.categoria,
+                tipo: p.tipo,
+                local: p.locais?.nome,
               }))}
           />
         </CardContent>
