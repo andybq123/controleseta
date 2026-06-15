@@ -84,14 +84,21 @@ export const geocodeAddress = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const q = data.endereco?.trim();
     if (!q) {
-      return { lat: null as number | null, lng: null as number | null, exact: false };
+      return { lat: null as number | null, lng: null as number | null, exact: false, refused: false };
     }
     const best = await findBestMatch(q);
-    if (!best) return { lat: null, lng: null, exact: false };
+    if (!best) return { lat: null, lng: null, exact: false, refused: false };
+    // Refuse street-centroid results: when the user supplied a house number but
+    // Nominatim could not match it exactly, returning the street midpoint would
+    // place a misleading pin on the map. Drop the coords and signal `refused`.
+    if (extractQueryNumber(q) && !best.exact) {
+      return { lat: null, lng: null, exact: false, refused: true };
+    }
     return {
       lat: parseFloat(best.result.lat),
       lng: parseFloat(best.result.lon),
       exact: best.exact,
+      refused: false,
     };
   });
 
@@ -154,12 +161,9 @@ export const searchAddresses = createServerFn({ method: "POST" })
         }));
       }
 
-      // No exact match anywhere — return street-centroid fallbacks flagged as non-exact.
-      const fallback = (sArr.length ? sArr : fArr).slice(0, 6);
-      return fallback.map(r => ({
-        ...parseSuggestion(r, numero),
-        exact: false,
-      }));
+      // No exact match anywhere — refuse street-centroid fallbacks entirely so
+      // the user does not pick a pin in the middle of the road by mistake.
+      return [];
     }
 
     const params = new URLSearchParams({
