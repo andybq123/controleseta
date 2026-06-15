@@ -79,11 +79,19 @@ export const searchAddresses = createServerFn({ method: "POST" })
     function toSuggestions(arr: Array<{
       lat: string; lon: string; display_name: string;
       address?: Record<string, string>;
-    }>) {
+    }>, fallbackNumero?: string) {
       return arr.map(r => {
         const a = r.address ?? {};
         const rua = a.road || a.pedestrian || a.cycleway || a.footway || "";
-        const numero = a.house_number || "";
+        // Prefer house_number from Nominatim; otherwise try to extract from display_name
+        // (e.g. "Rua X, 174, Bairro, ..."); finally fall back to the number the user typed.
+        let numero = a.house_number || "";
+        if (!numero && rua && r.display_name) {
+          const esc = rua.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const m = r.display_name.match(new RegExp(`${esc},\\s*(\\d{1,6})\\b`));
+          if (m) numero = m[1];
+        }
+        if (!numero && fallbackNumero) numero = fallbackNumero;
         const bairro = a.suburb || a.neighbourhood || a.village || "";
         const cidade = a.city || a.town || a.municipality || "Brusque";
         const ruaComNumero = rua ? (numero ? `${rua}, ${numero}` : rua) : "";
@@ -117,7 +125,7 @@ export const searchAddresses = createServerFn({ method: "POST" })
         addressdetails: "1",
       });
       const sArr = await call(structured);
-      if (sArr.length) return toSuggestions(sArr);
+      if (sArr.length) return toSuggestions(sArr, numero);
     }
 
     const params = new URLSearchParams({
