@@ -701,7 +701,14 @@ function DrillDialog({
                       {(p as any).secretarias?.sigla ?? (p as any).secretarias?.nome ?? "—"}
                     </Badge>
                     <span className="text-[11px] text-muted-foreground shrink-0">
-                      {format(new Date(p.data_abertura), "dd/MM/yyyy")}
+                      {(() => {
+                        const s = String(p.data_abertura);
+                        const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                        const d = iso
+                          ? new Date(+iso[1], +iso[2] - 1, +iso[3])
+                          : new Date(s);
+                        return format(d, "dd/MM/yyyy");
+                      })()}
                     </span>
                   </button>
                 </li>
