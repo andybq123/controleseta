@@ -411,8 +411,15 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
             <Label>Endereço (para mapa)</Label>
             <AddressAutocomplete
               value={endereco}
-              onChange={(v) => { setEndereco(v); setEnderecoCoords(null); }}
-              onSelect={(s) => { setEndereco(s.label); setEnderecoCoords({ lat: s.lat, lng: s.lng }); }}
+              onChange={(v) => { setEndereco(v); setEnderecoCoords(null); setEnderecoTemNumero(false); }}
+              onSelect={(s) => {
+                setEndereco(s.label);
+                setEnderecoCoords({ lat: s.lat, lng: s.lng });
+                setEnderecoTemNumero(!!s.houseNumber);
+                if (!s.houseNumber) {
+                  toast.warning("Sugestão sem número do imóvel. Inclua o número (ex.: \"Rua X, 174\") para um pino preciso.");
+                }
+              }}
               placeholder="Digite e selecione uma rua de Brusque…"
             />
             <p className="text-[11px] text-muted-foreground">
