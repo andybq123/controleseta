@@ -560,6 +560,10 @@ function Dashboard() {
         <CardContent>
           <ManifestacoesMap
             height={320}
+            onOpenProtocolo={(id) => {
+              const p = enriched.find((x: any) => x.id === id);
+              if (p) setDetail(p);
+            }}
             points={enriched
               .filter((p: any) => p.latitude != null && p.longitude != null)
               .map((p: any) => ({
