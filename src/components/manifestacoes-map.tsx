@@ -32,6 +32,51 @@ function pinIcon(categoria?: string | null) {
   });
 }
 
+export const SECRETARIA_ICONES: Record<string, { emoji: string; label: string }> = {
+  saude:              { emoji: "🏥", label: "Saúde" },
+  educacao:           { emoji: "🎓", label: "Educação" },
+  obras:              { emoji: "🚧", label: "Obras" },
+  seguranca:          { emoji: "🛡️", label: "Segurança" },
+  meio_ambiente:      { emoji: "🌳", label: "Meio Ambiente" },
+  transporte:         { emoji: "🚌", label: "Transporte" },
+  cultura:            { emoji: "🎭", label: "Cultura" },
+  esporte:            { emoji: "⚽", label: "Esporte" },
+  agricultura:        { emoji: "🌱", label: "Agricultura" },
+  assistencia_social: { emoji: "🤝", label: "Assistência Social" },
+  fazenda:            { emoji: "💰", label: "Fazenda" },
+  turismo:            { emoji: "🧳", label: "Turismo" },
+  administracao:      { emoji: "🏛️", label: "Administração" },
+};
+
+function secretariaIcon(icone?: string | null) {
+  const cfg = SECRETARIA_ICONES[icone ?? "administracao"] ?? SECRETARIA_ICONES.administracao;
+  const html = `
+    <div style="position:relative;width:36px;height:46px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="46" viewBox="0 0 36 46" style="position:absolute;inset:0;">
+        <path d="M18 1 L33 1 Q35 1 35 3 L35 30 Q35 32 33 32 L24 32 L18 45 L12 32 L3 32 Q1 32 1 30 L1 3 Q1 1 3 1 Z"
+          fill="#ffffff" stroke="#1d4ed8" stroke-width="2"/>
+      </svg>
+      <div style="position:absolute;top:3px;left:0;width:36px;height:28px;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;">${cfg.emoji}</div>
+    </div>`;
+  return L.divIcon({
+    html,
+    className: "secretaria-pin",
+    iconSize: [36, 46],
+    iconAnchor: [18, 45],
+    popupAnchor: [0, -40],
+  });
+}
+
+export type SecretariaPoint = {
+  id: string;
+  lat: number;
+  lng: number;
+  nome: string;
+  sigla?: string | null;
+  endereco?: string | null;
+  icone?: string | null;
+};
+
 export type MapPoint = {
   id: string;
   lat: number;
@@ -73,15 +118,21 @@ export function ManifestacoesMap({
   height = 400,
   className,
   onOpenProtocolo,
+  secretarias = [],
 }: {
   points: MapPoint[];
   height?: number | string;
   className?: string;
   onOpenProtocolo?: (id: string) => void;
+  secretarias?: SecretariaPoint[];
 }) {
   const valid = useMemo(
     () => points.filter(p => typeof p.lat === "number" && typeof p.lng === "number"),
     [points],
+  );
+  const validSecs = useMemo(
+    () => secretarias.filter(s => typeof s.lat === "number" && typeof s.lng === "number"),
+    [secretarias],
   );
   return (
     <div className={className} style={{ height, width: "100%", isolation: "isolate", position: "relative", zIndex: 0 }}>
@@ -95,7 +146,25 @@ export function ManifestacoesMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <FitBounds points={valid} />
+        <FitBounds points={[...valid, ...validSecs.map(s => ({ ...s, id: s.id, numero: s.nome }))]} />
+        {validSecs.map(s => {
+          const cfg = SECRETARIA_ICONES[s.icone ?? "administracao"] ?? SECRETARIA_ICONES.administracao;
+          return (
+            <Marker key={`sec-${s.id}`} position={[s.lat, s.lng]} icon={secretariaIcon(s.icone)}>
+              <Popup maxWidth={300}>
+                <div className="space-y-1 min-w-[200px]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg leading-none">{cfg.emoji}</span>
+                    <span className="text-sm font-bold">{s.nome}</span>
+                    {s.sigla && <span className="text-xs text-muted-foreground">({s.sigla})</span>}
+                  </div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Secretaria · {cfg.label}</p>
+                  {s.endereco && <p className="text-xs">{s.endereco}</p>}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
         {valid.map(p => (
           <Marker key={p.id} position={[p.lat, p.lng]} icon={pinIcon(p.categoria)}>
             <Popup maxWidth={320}>
