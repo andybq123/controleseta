@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Building2, User, Trash2, Mail, Phone, MapPin, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { SECRETARIA_ICONES } from "@/components/manifestacoes-map";
 
 export const Route = createFileRoute("/_authenticated/secretarias")({
   component: SecretariasPage,
@@ -104,6 +106,17 @@ function SecretariasPage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-0 space-y-2">
+                {(s.endereco || s.icone) && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground -mt-1">
+                    {s.icone && SECRETARIA_ICONES[s.icone] && (
+                      <span title={SECRETARIA_ICONES[s.icone].label}>{SECRETARIA_ICONES[s.icone].emoji}</span>
+                    )}
+                    {s.endereco && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{s.endereco}</span>}
+                    {s.latitude == null && s.endereco && (
+                      <span className="text-amber-600 dark:text-amber-400">(sem coordenadas)</span>
+                    )}
+                  </div>
+                )}
                 <div className="space-y-1">
                   <div className="text-xs font-medium text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />Locais</div>
                   {locs.length === 0 && <p className="text-xs text-muted-foreground">Sem locais cadastrados.</p>}
