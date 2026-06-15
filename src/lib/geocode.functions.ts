@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { parseSuggestion, extractQueryNumber, type NominatimResult } from "./address-parse";
 
 export const geocodeAddress = createServerFn({ method: "POST" })
   .inputValidator((d: { endereco: string }) => d)
@@ -6,8 +7,7 @@ export const geocodeAddress = createServerFn({ method: "POST" })
     const q = data.endereco?.trim();
     if (!q) return { lat: null as number | null, lng: null as number | null };
     // Try structured search first when a house number is present, for precise location
-    const allNums = [...q.matchAll(/\b(\d{1,6})\b/g)];
-    const numMatch = allNums.length ? allNums[allNums.length - 1] : null;
+    const numero = extractQueryNumber(q);
     const headers = {
       "User-Agent": "OuvidoriaBrusque/1.0 (controleseta.lovable.app)",
       "Accept-Language": "pt-BR",
@@ -17,9 +17,8 @@ export const geocodeAddress = createServerFn({ method: "POST" })
       if (!res.ok) return [] as Array<{ lat: string; lon: string }>;
       return (await res.json()) as Array<{ lat: string; lon: string }>;
     }
-    if (numMatch) {
-      const numero = numMatch[0];
-      const idx = numMatch.index ?? 0;
+    if (numero) {
+      const idx = q.lastIndexOf(numero);
       const street = (q.slice(0, idx) + q.slice(idx + numero.length))
         .replace(/,\s*,/g, ",").replace(/\s+/g, " ").trim().replace(/^,|,$/g, "");
       const structured = new URLSearchParams({
@@ -76,42 +75,15 @@ export const searchAddresses = createServerFn({ method: "POST" })
       }>;
     }
 
-    function toSuggestions(arr: Array<{
-      lat: string; lon: string; display_name: string;
-      address?: Record<string, string>;
-    }>, fallbackNumero?: string) {
-      return arr.map(r => {
-        const a = r.address ?? {};
-        const rua = a.road || a.pedestrian || a.cycleway || a.footway || "";
-        // Prefer house_number from Nominatim; otherwise try to extract from display_name
-        // (e.g. "Rua X, 174, Bairro, ..."); finally fall back to the number the user typed.
-        let numero = a.house_number || "";
-        if (!numero && rua && r.display_name) {
-          const esc = rua.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const m = r.display_name.match(new RegExp(`${esc},\\s*(\\d{1,6})\\b`));
-          if (m) numero = m[1];
-        }
-        if (!numero && fallbackNumero) numero = fallbackNumero;
-        const bairro = a.suburb || a.neighbourhood || a.village || "";
-        const cidade = a.city || a.town || a.municipality || "Brusque";
-        const ruaComNumero = rua ? (numero ? `${rua}, ${numero}` : rua) : "";
-        const short = [ruaComNumero, bairro, cidade].filter(Boolean).join(" - ");
-        return {
-          label: short || r.display_name,
-          lat: parseFloat(r.lat),
-          lng: parseFloat(r.lon),
-          houseNumber: numero || undefined,
-        };
-      });
+    function toSuggestions(arr: NominatimResult[], fallbackNumero?: string) {
+      return arr.map(r => parseSuggestion(r, fallbackNumero));
     }
 
     // If a house number is present, try structured search for precise results.
     // Use the LAST number in the query (house numbers come after street names like "Rua 7 de Setembro, 174").
-    const allNums = [...q.matchAll(/\b(\d{1,6})\b/g)];
-    const numMatch = allNums.length ? allNums[allNums.length - 1] : null;
-    if (numMatch) {
-      const numero = numMatch[0];
-      const idx = numMatch.index ?? 0;
+    const numero = extractQueryNumber(q);
+    if (numero) {
+      const idx = q.lastIndexOf(numero);
       const street = (q.slice(0, idx) + q.slice(idx + numero.length))
         .replace(/,\s*,/g, ",").replace(/\s+/g, " ").trim().replace(/^,|,$/g, "");
       const structured = new URLSearchParams({
