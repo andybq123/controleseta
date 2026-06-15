@@ -13,6 +13,8 @@ import {
   Timer, Download, MapPin, TrendingUp,
 } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
+import { ManifestacoesMap } from "@/components/manifestacoes-map";
+import { Link } from "@tanstack/react-router";
 import {
   ResponsiveContainer,
   LineChart,
@@ -546,6 +548,34 @@ function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" /> Mapa de Manifestações
+          </CardTitle>
+          <Link to="/mapa" className="text-xs text-primary hover:underline">
+            Abrir mapa completo →
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <ManifestacoesMap
+            height={320}
+            points={enriched
+              .filter((p: any) => p.latitude != null && p.longitude != null)
+              .map((p: any) => ({
+                id: p.id,
+                lat: p.latitude,
+                lng: p.longitude,
+                numero: p.numero,
+                assunto: p.assunto,
+                endereco: p.endereco,
+                status: p.status,
+                secretaria: p.secretarias?.nome,
+              }))}
+          />
+        </CardContent>
+      </Card>
 
       <p className="text-[11px] text-muted-foreground text-center">
         Dados atualizados em {format(new Date(), "dd/MM/yyyy HH:mm")}
