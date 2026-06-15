@@ -282,6 +282,9 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
       if (enderecoCoords) {
         lat = enderecoCoords.lat;
         lng = enderecoCoords.lng;
+        if (!enderecoTemNumero) {
+          toast.warning("Endereço sem número do imóvel — o pino pode ficar impreciso no mapa.");
+        }
       } else if (endereco.trim()) {
         try {
           const r = await geocode({ data: { endereco } });
