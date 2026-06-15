@@ -6,7 +6,8 @@ export const geocodeAddress = createServerFn({ method: "POST" })
     const q = data.endereco?.trim();
     if (!q) return { lat: null as number | null, lng: null as number | null };
     // Try structured search first when a house number is present, for precise location
-    const numMatch = q.match(/\b(\d{1,6})\b/);
+    const allNums = [...q.matchAll(/\b(\d{1,6})\b/g)];
+    const numMatch = allNums.length ? allNums[allNums.length - 1] : null;
     const headers = {
       "User-Agent": "OuvidoriaBrusque/1.0 (controleseta.lovable.app)",
       "Accept-Language": "pt-BR",
@@ -17,9 +18,12 @@ export const geocodeAddress = createServerFn({ method: "POST" })
       return (await res.json()) as Array<{ lat: string; lon: string }>;
     }
     if (numMatch) {
-      const street = q.replace(numMatch[0], "").replace(/,\s*,/g, ",").replace(/\s+/g, " ").trim().replace(/^,|,$/g, "");
+      const numero = numMatch[0];
+      const idx = numMatch.index ?? 0;
+      const street = (q.slice(0, idx) + q.slice(idx + numero.length))
+        .replace(/,\s*,/g, ",").replace(/\s+/g, " ").trim().replace(/^,|,$/g, "");
       const structured = new URLSearchParams({
-        street: `${numMatch[0]} ${street}`.trim(),
+        street: `${numero} ${street}`.trim(),
         city: "Brusque",
         state: "Santa Catarina",
         country: "Brasil",
