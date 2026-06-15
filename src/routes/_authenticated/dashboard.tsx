@@ -225,7 +225,7 @@ function Dashboard() {
   const exportarRelatorio = () => {
     const linhas = [
       ["Numero", "Tipo", "Categoria", "Assunto", "Secretaria", "Status", "Aberto", "Concluído"].join(";"),
-      ...enriched.map(p =>
+      ...filtrados.map(p =>
         [
           p.numero, p.tipo, p.categoria, (p.assunto ?? "").replace(/;/g, ","),
           (p as any).secretarias?.nome ?? "", p.status, p.data_abertura, p.data_conclusao ?? "",
@@ -593,7 +593,7 @@ function Dashboard() {
               const p = enriched.find((x: any) => x.id === id);
               if (p) setDetail(p);
             }}
-            points={enriched
+            points={filtrados
               .filter((p: any) => p.latitude != null && p.longitude != null)
               .map((p: any) => ({
                 id: p.id,
