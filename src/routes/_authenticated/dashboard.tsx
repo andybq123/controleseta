@@ -13,7 +13,7 @@ import {
   Timer, Download, MapPin, TrendingUp,
 } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
-import { ManifestacoesMap } from "@/components/manifestacoes-map";
+import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestacoes-map";
 import { Link } from "@tanstack/react-router";
 import {
   ResponsiveContainer,
@@ -560,6 +560,12 @@ function Dashboard() {
         <CardContent>
           <ManifestacoesMap
             height={320}
+            secretarias={(secretarias as any[])
+              .filter((s) => s.latitude != null && s.longitude != null)
+              .map<SecretariaPoint>((s) => ({
+                id: s.id, lat: s.latitude, lng: s.longitude, nome: s.nome,
+                sigla: s.sigla, endereco: s.endereco, icone: s.icone,
+              }))}
             onOpenProtocolo={(id) => {
               const p = enriched.find((x: any) => x.id === id);
               if (p) setDetail(p);

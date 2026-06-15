@@ -421,7 +421,11 @@ export type Database = {
           centro_custo: string | null
           created_at: string
           created_by: string | null
+          endereco: string | null
+          icone: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           nome: string
           sigla: string | null
           updated_at: string
@@ -430,7 +434,11 @@ export type Database = {
           centro_custo?: string | null
           created_at?: string
           created_by?: string | null
+          endereco?: string | null
+          icone?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           nome: string
           sigla?: string | null
           updated_at?: string
@@ -439,7 +447,11 @@ export type Database = {
           centro_custo?: string | null
           created_at?: string
           created_by?: string | null
+          endereco?: string | null
+          icone?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           nome?: string
           sigla?: string | null
           updated_at?: string
