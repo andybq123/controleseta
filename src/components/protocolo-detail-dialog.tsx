@@ -165,11 +165,13 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         endereco: form.endereco || null,
       };
       const enderecoChanged = (form.endereco ?? "") !== (protocolo.endereco ?? "");
-      if (enderecoChanged) {
-        if (enderecoCoords && enderecoExact) {
-          patch.latitude = enderecoCoords.lat;
-          patch.longitude = enderecoCoords.lng;
-        } else if (forceNoCoords) {
+      // Se o usuário ajustou o pino manualmente (enderecoCoords definido),
+      // sempre persiste — mesmo que o texto do endereço não tenha mudado.
+      if (enderecoCoords) {
+        patch.latitude = enderecoCoords.lat;
+        patch.longitude = enderecoCoords.lng;
+      } else if (enderecoChanged) {
+        if (forceNoCoords) {
           patch.latitude = null;
           patch.longitude = null;
         } else if (form.endereco && form.endereco.trim()) {
