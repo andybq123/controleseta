@@ -24,7 +24,19 @@ export type MapPoint = {
   endereco?: string | null;
   status?: string | null;
   secretaria?: string | null;
+  data_abertura?: string | null;
+  data_conclusao?: string | null;
+  categoria?: string | null;
+  tipo?: string | null;
+  local?: string | null;
 };
+
+function formatLocalDate(s: string) {
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return s;
+  const [, y, mo, d] = m;
+  return `${d}/${mo}/${y}`;
+}
 
 // Brusque center
 const BRUSQUE: [number, number] = [-27.0978, -48.9114];
@@ -67,13 +79,61 @@ export function ManifestacoesMap({
         <FitBounds points={valid} />
         {valid.map(p => (
           <Marker key={p.id} position={[p.lat, p.lng]}>
-            <Popup>
-              <div className="text-xs space-y-0.5">
-                <div className="font-mono font-semibold">{p.numero}</div>
-                {p.assunto && <div>{p.assunto}</div>}
-                {p.endereco && <div className="text-muted-foreground">{p.endereco}</div>}
-                {p.secretaria && <div className="text-muted-foreground">{p.secretaria}</div>}
-                {p.status && <div className="capitalize">{p.status.replace(/_/g, " ")}</div>}
+            <Popup maxWidth={320}>
+              <div className="space-y-1.5 min-w-[220px]">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm font-bold text-primary">{p.numero}</span>
+                  {p.status && (
+                    <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-muted">
+                      {p.status.replace(/_/g, " ")}
+                    </span>
+                  )}
+                </div>
+                {p.assunto && <p className="text-sm font-medium leading-snug">{p.assunto}</p>}
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  {p.categoria && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-foreground">Categoria:</span>
+                      <span className="capitalize">{p.categoria.replace(/_/g, " ")}</span>
+                    </div>
+                  )}
+                  {p.tipo && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-foreground">Tipo:</span>
+                      <span>{p.tipo}</span>
+                    </div>
+                  )}
+                  {p.secretaria && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-foreground">Secretaria:</span>
+                      <span>{p.secretaria}</span>
+                    </div>
+                  )}
+                  {p.local && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-foreground">Local:</span>
+                      <span>{p.local}</span>
+                    </div>
+                  )}
+                  {p.endereco && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-foreground">Endereço:</span>
+                      <span>{p.endereco}</span>
+                    </div>
+                  )}
+                  {p.data_abertura && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-foreground">Aberto em:</span>
+                      <span>{formatLocalDate(p.data_abertura)}</span>
+                    </div>
+                  )}
+                  {p.data_conclusao && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-foreground">Concluído em:</span>
+                      <span>{formatLocalDate(p.data_conclusao)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </Popup>
           </Marker>
