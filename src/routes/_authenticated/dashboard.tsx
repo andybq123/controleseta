@@ -15,6 +15,8 @@ import {
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestacoes-map";
 import { Link } from "@tanstack/react-router";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { currentMonthValue, monthOptionsFromDates, isInMonth, formatMonthLabel } from "@/lib/month-filter";
 import {
   ResponsiveContainer,
   LineChart,
@@ -49,6 +51,7 @@ const CAT_COLORS: Record<CategoriaProtocolo, string> = {
 function Dashboard() {
   const [drill, setDrill] = useState<{ title: string; items: any[] } | null>(null);
   const [detail, setDetail] = useState<any | null>(null);
+  const [mes, setMes] = useState<string>(currentMonthValue());
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
@@ -75,9 +78,15 @@ function Dashboard() {
     () => protocolos.map(p => ({ ...p, _s: situacaoProtocolo(p as any) })),
     [protocolos],
   );
-  const total = enriched.length;
-  const ativos = enriched.filter(p => p.status !== "concluido");
-  const concluidos = enriched.filter(p => p.status === "concluido");
+  // Filtro de mês aplicado à maior parte das métricas. O gráfico
+  // "Evolução por mês" continua usando todos os protocolos (precisa do histórico).
+  const filtrados = useMemo(
+    () => (mes === "all" ? enriched : enriched.filter(p => isInMonth(p.data_abertura, mes))),
+    [enriched, mes],
+  );
+  const total = filtrados.length;
+  const ativos = filtrados.filter(p => p.status !== "concluido");
+  const concluidos = filtrados.filter(p => p.status === "concluido");
   const vencidos = ativos.filter(p => p._s.situacao === "vencido");
   const noPrazo = ativos.filter(p => p._s.situacao !== "vencido");
 
@@ -114,7 +123,7 @@ function Dashboard() {
   // Distribuição por categoria
   const categoriaData = useMemo(() => {
     const counts: Record<string, number> = {};
-    enriched.forEach(p => {
+    filtrados.forEach(p => {
       const c = (p.categoria as CategoriaProtocolo) ?? "outros";
       counts[c] = (counts[c] ?? 0) + 1;
     });
@@ -123,12 +132,12 @@ function Dashboard() {
       value: counts[c.value] ?? 0,
       color: CAT_COLORS[c.value],
     })).filter(d => d.value > 0);
-  }, [enriched]);
+  }, [filtrados]);
 
   // Top 10 assuntos
   const topAssuntos = useMemo(() => {
     const counts: Record<string, number> = {};
-    enriched.forEach(p => {
+    filtrados.forEach(p => {
       const a = (p.assunto ?? "Outros").slice(0, 40);
       counts[a] = (counts[a] ?? 0) + 1;
     });
@@ -136,24 +145,24 @@ function Dashboard() {
       .map(([nome, qtd]) => ({ nome, qtd }))
       .sort((a, b) => b.qtd - a.qtd)
       .slice(0, 10);
-  }, [enriched]);
+  }, [filtrados]);
 
   // Manifestações por secretaria
   const porSecretaria = useMemo(() => {
     return secretarias
       .map(s => {
-        const qtd = enriched.filter(p => p.secretaria_id === s.id).length;
+        const qtd = filtrados.filter(p => p.secretaria_id === s.id).length;
         return { nome: s.sigla || s.nome.slice(0, 14), full: s.nome, qtd };
       })
       .filter(s => s.qtd > 0)
       .sort((a, b) => b.qtd - a.qtd)
       .slice(0, 8);
-  }, [enriched, secretarias]);
+  }, [filtrados, secretarias]);
 
   // Reclamações - Área da Saúde (por assunto)
   const reclamacoesSaude = useMemo(() => {
     const saudeIds = secretarias.filter(s => /sa[uú]de/i.test(s.nome)).map(s => s.id);
-    const recs = enriched.filter(
+    const recs = filtrados.filter(
       p => p.secretaria_id != null && saudeIds.includes(p.secretaria_id) && p.categoria === "reclamacao",
     );
     const counts: Record<string, number> = {};
@@ -165,13 +174,13 @@ function Dashboard() {
       .map(([nome, qtd]) => ({ nome, qtd }))
       .sort((a, b) => b.qtd - a.qtd)
       .slice(0, 6);
-  }, [enriched, secretarias]);
+  }, [filtrados, secretarias]);
 
   // Por unidade (local) na saúde
   const porUnidade = useMemo(() => {
     const saudeIds = secretarias.filter(s => /sa[uú]de/i.test(s.nome)).map(s => s.id);
     const counts: Record<string, number> = {};
-    enriched
+    filtrados
       .filter(p => p.secretaria_id != null && saudeIds.includes(p.secretaria_id))
       .forEach(p => {
         const nome = (p as any).locais?.nome ?? "Sem unidade";
@@ -181,7 +190,7 @@ function Dashboard() {
       .map(([nome, qtd]) => ({ nome: nome.slice(0, 18), qtd }))
       .sort((a, b) => b.qtd - a.qtd)
       .slice(0, 8);
-  }, [enriched, secretarias]);
+  }, [filtrados, secretarias]);
 
   // Situação dos protocolos (donut)
   const situacaoData = [
@@ -193,7 +202,7 @@ function Dashboard() {
   // Concentração por região (top locais)
   const porRegiao = useMemo(() => {
     const counts: Record<string, number> = {};
-    enriched.forEach(p => {
+    filtrados.forEach(p => {
       const nome = (p as any).locais?.nome ?? "Sem local";
       counts[nome] = (counts[nome] ?? 0) + 1;
     });
@@ -201,17 +210,22 @@ function Dashboard() {
       .map(([nome, qtd]) => ({ nome, qtd }))
       .sort((a, b) => b.qtd - a.qtd)
       .slice(0, 10);
-  }, [enriched]);
+  }, [filtrados]);
 
   const openDrill = (title: string, predicate: (p: any) => boolean) => {
-    const items = enriched.filter(predicate);
+    const items = filtrados.filter(predicate);
     setDrill({ title: `${title} (${items.length})`, items });
   };
+
+  const opcoesMes = useMemo(
+    () => monthOptionsFromDates(protocolos.map(p => p.data_abertura)),
+    [protocolos],
+  );
 
   const exportarRelatorio = () => {
     const linhas = [
       ["Numero", "Tipo", "Categoria", "Assunto", "Secretaria", "Status", "Aberto", "Concluído"].join(";"),
-      ...enriched.map(p =>
+      ...filtrados.map(p =>
         [
           p.numero, p.tipo, p.categoria, (p.assunto ?? "").replace(/;/g, ","),
           (p as any).secretarias?.nome ?? "", p.status, p.data_abertura, p.data_conclusao ?? "",
@@ -233,12 +247,21 @@ function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard Executivo</h1>
           <p className="text-sm text-muted-foreground">
-            Visão geral das manifestações da Ouvidoria — {format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}
+            Visão geral das manifestações da Ouvidoria — {mes === "all" ? "todos os meses" : formatMonthLabel(mes)}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={exportarRelatorio} className="gap-2">
-          <Download className="h-4 w-4" /> Exportar Relatório
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={mes} onValueChange={setMes}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+            <SelectContent className="max-h-[320px]">
+              <SelectItem value="all">Todos os meses</SelectItem>
+              {opcoesMes.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={exportarRelatorio} className="gap-2">
+            <Download className="h-4 w-4" /> Exportar Relatório
+          </Button>
+        </div>
       </div>
 
       {/* KPI Row */}
@@ -570,7 +593,7 @@ function Dashboard() {
               const p = enriched.find((x: any) => x.id === id);
               if (p) setDetail(p);
             }}
-            points={enriched
+            points={filtrados
               .filter((p: any) => p.latitude != null && p.longitude != null)
               .map((p: any) => ({
                 id: p.id,
