@@ -165,11 +165,13 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         endereco: form.endereco || null,
       };
       const enderecoChanged = (form.endereco ?? "") !== (protocolo.endereco ?? "");
-      if (enderecoChanged) {
-        if (enderecoCoords && enderecoExact) {
-          patch.latitude = enderecoCoords.lat;
-          patch.longitude = enderecoCoords.lng;
-        } else if (forceNoCoords) {
+      // Se o usuário ajustou o pino manualmente (enderecoCoords definido),
+      // sempre persiste — mesmo que o texto do endereço não tenha mudado.
+      if (enderecoCoords) {
+        patch.latitude = enderecoCoords.lat;
+        patch.longitude = enderecoCoords.lng;
+      } else if (enderecoChanged) {
+        if (forceNoCoords) {
           patch.latitude = null;
           patch.longitude = null;
         } else if (form.endereco && form.endereco.trim()) {
@@ -291,6 +293,16 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               <Field label="Responsável" value={protocolo.responsaveis?.nome ?? "—"} />
               {protocolo.locais && <Field label="Local" value={`${protocolo.locais.nome}${protocolo.locais.centro_custo ? ` · ${protocolo.locais.centro_custo}` : ""}`} />}
               <Field label="Solicitante" value={protocolo.solicitante ?? "—"} />
+            </div>
+            <div className="pt-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => { setPendingPatch({}); setPickerOpen(true); }}>
+                <MapPin className="h-3 w-3 mr-1" /> Ajustar ponto no mapa
+              </Button>
+              {protocolo.latitude != null && protocolo.longitude != null && (
+                <span className="ml-2 text-[11px] text-muted-foreground">
+                  Atual: {Number(protocolo.latitude).toFixed(5)}, {Number(protocolo.longitude).toFixed(5)}
+                </span>
+              )}
             </div>
           </div>
         ) : (
