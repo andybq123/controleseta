@@ -103,7 +103,7 @@ function formatLocalDate(s: string) {
 // Brusque center
 const BRUSQUE: [number, number] = [-27.0978, -48.9114];
 
-function FitBounds({ points }: { points: MapPoint[] }) {
+function FitBounds({ points }: { points: { lat: number; lng: number }[] }) {
   const map = useMap();
   useEffect(() => {
     if (!points.length) return;
@@ -146,7 +146,7 @@ export function ManifestacoesMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <FitBounds points={[...valid, ...validSecs.map(s => ({ ...s, id: s.id, numero: s.nome }))]} />
+        <FitBounds points={[...valid, ...validSecs]} />
         {validSecs.map(s => {
           const cfg = SECRETARIA_ICONES[s.icone ?? "administracao"] ?? SECRETARIA_ICONES.administracao;
           return (
