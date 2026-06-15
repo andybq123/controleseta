@@ -29,6 +29,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
   const [enderecoCoords, setEnderecoCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [enderecoTemNumero, setEnderecoTemNumero] = useState<boolean>(false);
   const geocode = useServerFn(geocodeAddress);
 
   const { data: protocoloFresh } = useQuery({
