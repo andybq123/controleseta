@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useServerFn } from "@tanstack/react-start";
 import { geocodeAddress } from "@/lib/geocode.functions";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { MapPointPicker } from "@/components/map-point-picker";
 import {
   situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
   PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass,
@@ -36,6 +37,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const [enderecoTemNumero, setEnderecoTemNumero] = useState<boolean>(false);
   const [enderecoExact, setEnderecoExact] = useState<boolean>(false);
   const [confirmImprecise, setConfirmImprecise] = useState<null | { patch: any }>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pendingPatch, setPendingPatch] = useState<any | null>(null);
   const geocode = useServerFn(geocodeAddress);
 
   const { data: protocoloFresh } = useQuery({
@@ -442,12 +445,25 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             <AlertDialogTitle>Endereço sem localização precisa</AlertDialogTitle>
             <AlertDialogDescription>
               Não foi possível localizar este endereço com o número do imóvel. Para evitar
-              um pino no meio da rua, o protocolo será salvo <strong>sem coordenadas no mapa</strong>.
-              Deseja continuar mesmo assim?
+              um pino no meio da rua, você pode <strong>selecionar manualmente o ponto no mapa</strong>
+              ou salvar o protocolo <strong>sem coordenadas</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel>Revisar endereço</AlertDialogCancel>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                const pending = confirmImprecise;
+                setConfirmImprecise(null);
+                if (pending) {
+                  setPendingPatch(pending.patch);
+                  setPickerOpen(true);
+                }
+              }}
+            >
+              Selecionar no mapa
+            </Button>
             <AlertDialogAction onClick={() => {
               const pending = confirmImprecise;
               setConfirmImprecise(null);
@@ -459,6 +475,22 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <MapPointPicker
+        open={pickerOpen}
+        onOpenChange={(v) => { setPickerOpen(v); if (!v) setPendingPatch(null); }}
+        initial={enderecoCoords ?? (protocolo?.latitude && protocolo?.longitude ? { lat: protocolo.latitude, lng: protocolo.longitude } : null)}
+        endereco={form?.endereco}
+        onConfirm={(lat, lng) => {
+          if (pendingPatch) {
+            const patch = { ...pendingPatch, latitude: lat, longitude: lng };
+            update.mutate(patch, { onSuccess: () => { setEditing(false); setPendingPatch(null); } });
+          } else {
+            setEnderecoCoords({ lat, lng });
+            setEnderecoExact(true);
+          }
+          toast.success("Localização definida manualmente.");
+        }}
+      />
     </Dialog>
   );
 }
