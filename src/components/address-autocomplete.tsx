@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useServerFn } from "@tanstack/react-start";
 import { searchAddresses, type AddressSuggestion } from "@/lib/geocode.functions";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 export function AddressAutocomplete({
   value,
@@ -22,19 +22,23 @@ export function AddressAutocomplete({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [highlight, setHighlight] = useState(-1);
+  const [refused, setRefused] = useState(false);
   const ignoreNext = useRef(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (ignoreNext.current) { ignoreNext.current = false; return; }
     const q = value.trim();
-    if (q.length < 3) { setSuggestions([]); setOpen(false); return; }
+    if (q.length < 3) { setSuggestions([]); setOpen(false); setRefused(false); return; }
+    const hasNumber = /\d{1,6}\b/.test(q);
     const t = setTimeout(async () => {
       setLoading(true);
       try {
         const r = await search({ data: { q } });
         setSuggestions(r);
-        setOpen(r.length > 0);
+        const isRefused = hasNumber && r.length === 0;
+        setRefused(isRefused);
+        setOpen(r.length > 0 || isRefused);
         setHighlight(-1);
       } finally {
         setLoading(false);
@@ -97,6 +101,18 @@ export function AddressAutocomplete({
             </li>
           ))}
         </ul>
+      )}
+      {open && suggestions.length === 0 && refused && (
+        <div className="absolute z-[1000] mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md p-3 text-xs flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Nenhum endereço encontrado com este número.</p>
+            <p className="text-muted-foreground mt-0.5">
+              Para evitar pinos no meio da rua, confira a grafia ou o número do imóvel.
+              Se preferir salvar mesmo assim, será pedida confirmação antes de gravar sem coordenadas.
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
