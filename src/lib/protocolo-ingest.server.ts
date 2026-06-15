@@ -142,7 +142,7 @@ async function extrairComIA(texto: string) {
       model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: PROTOCOLO_EXTRACT_SYSTEM },
-        { role: "user", content: texto.slice(0, 18000) },
+        { role: "user", content: (sanitizarTextoProtocolo(texto) || texto).slice(0, 18000) },
       ],
       response_format: { type: "json_object" },
     }),
