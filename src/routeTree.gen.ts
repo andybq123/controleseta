@@ -19,6 +19,7 @@ import { Route as AuthenticatedSecretariasRouteImport } from './routes/_authenti
 import { Route as AuthenticatedSaudeRouteImport } from './routes/_authenticated/saude'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authenticated/protocolos'
+import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
 import { Route as AuthenticatedEmailInboxRouteImport } from './routes/_authenticated/email-inbox'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
@@ -78,6 +79,11 @@ const AuthenticatedProtocolosRoute = AuthenticatedProtocolosRouteImport.update({
   path: '/protocolos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMapaRoute = AuthenticatedMapaRouteImport.update({
+  id: '/mapa',
+  path: '/mapa',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedEmailInboxRoute = AuthenticatedEmailInboxRouteImport.update({
   id: '/email-inbox',
   path: '/email-inbox',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
+  '/mapa': typeof AuthenticatedMapaRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/saude': typeof AuthenticatedSaudeRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
+  '/mapa': typeof AuthenticatedMapaRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
   '/saude': typeof AuthenticatedSaudeRoute
   '/secretarias': typeof AuthenticatedSecretariasRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/_authenticated/atrasados': typeof AuthenticatedAtrasadosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/email-inbox': typeof AuthenticatedEmailInboxRoute
+  '/_authenticated/mapa': typeof AuthenticatedMapaRoute
   '/_authenticated/protocolos': typeof AuthenticatedProtocolosRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/saude': typeof AuthenticatedSaudeRoute
@@ -190,6 +199,7 @@ export interface FileRouteTypes {
     | '/atrasados'
     | '/dashboard'
     | '/email-inbox'
+    | '/mapa'
     | '/protocolos'
     | '/relatorios'
     | '/saude'
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/atrasados'
     | '/dashboard'
     | '/email-inbox'
+    | '/mapa'
     | '/protocolos'
     | '/saude'
     | '/secretarias'
@@ -228,6 +239,7 @@ export interface FileRouteTypes {
     | '/_authenticated/atrasados'
     | '/_authenticated/dashboard'
     | '/_authenticated/email-inbox'
+    | '/_authenticated/mapa'
     | '/_authenticated/protocolos'
     | '/_authenticated/relatorios'
     | '/_authenticated/saude'
@@ -323,6 +335,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProtocolosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/mapa': {
+      id: '/_authenticated/mapa'
+      path: '/mapa'
+      fullPath: '/mapa'
+      preLoaderRoute: typeof AuthenticatedMapaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/email-inbox': {
       id: '/_authenticated/email-inbox'
       path: '/email-inbox'
@@ -403,6 +422,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAtrasadosRoute: typeof AuthenticatedAtrasadosRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmailInboxRoute: typeof AuthenticatedEmailInboxRoute
+  AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
   AuthenticatedProtocolosRoute: typeof AuthenticatedProtocolosRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedSaudeRoute: typeof AuthenticatedSaudeRoute
@@ -414,6 +434,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAtrasadosRoute: AuthenticatedAtrasadosRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmailInboxRoute: AuthenticatedEmailInboxRoute,
+  AuthenticatedMapaRoute: AuthenticatedMapaRoute,
   AuthenticatedProtocolosRoute: AuthenticatedProtocolosRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedSaudeRoute: AuthenticatedSaudeRoute,
