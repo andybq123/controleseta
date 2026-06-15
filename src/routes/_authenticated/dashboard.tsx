@@ -13,6 +13,8 @@ import {
   Timer, Download, MapPin, TrendingUp,
 } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
+import { ManifestacoesMap } from "@/components/manifestacoes-map";
+import { Link } from "@tanstack/react-router";
 import {
   ResponsiveContainer,
   LineChart,
