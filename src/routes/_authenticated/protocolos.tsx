@@ -23,6 +23,7 @@ import { geocodeAddress } from "@/lib/geocode.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { MapPointPicker } from "@/components/map-point-picker";
 
 export const Route = createFileRoute("/_authenticated/protocolos")({
   component: ProtocolosPage,
@@ -36,6 +37,8 @@ function ProtocolosPage() {
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todos");
   const [filtroSec, setFiltroSec] = useState<string>("todos");
   const [busca, setBusca] = useState("");
+  const [dataIni, setDataIni] = useState<string>("");
+  const [dataFim, setDataFim] = useState<string>("");
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
@@ -86,6 +89,8 @@ function ProtocolosPage() {
     if (filtroTipo !== "todos" && p.tipo !== filtroTipo) return false;
     if (filtroCategoria !== "todos" && p.categoria !== filtroCategoria) return false;
     if (filtroSec !== "todos" && p.secretaria_id !== filtroSec) return false;
+    if (dataIni && (p.data_abertura ?? "") < dataIni) return false;
+    if (dataFim && (p.data_abertura ?? "") > dataFim) return false;
     if (busca) {
       const s = busca.toLowerCase();
       const txt = `${p.numero} ${p.assunto} ${p.solicitante ?? ""}`.toLowerCase();
@@ -141,6 +146,15 @@ function ProtocolosPage() {
             {secretarias.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-1">
+          <Label className="text-xs text-muted-foreground">De</Label>
+          <Input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} className="w-[150px]" />
+          <Label className="text-xs text-muted-foreground">até</Label>
+          <Input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="w-[150px]" />
+          {(dataIni || dataFim) && (
+            <Button size="sm" variant="ghost" onClick={() => { setDataIni(""); setDataFim(""); }}>Limpar</Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-3">
