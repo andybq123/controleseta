@@ -237,6 +237,21 @@ export type Database = {
         }
         Relationships: []
       }
+      protocolo_descricoes_staging: {
+        Row: {
+          descricao: string
+          numero: string
+        }
+        Insert: {
+          descricao: string
+          numero: string
+        }
+        Update: {
+          descricao?: string
+          numero?: string
+        }
+        Relationships: []
+      }
       protocolo_historico: {
         Row: {
           acao: string
