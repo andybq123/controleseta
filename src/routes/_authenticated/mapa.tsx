@@ -23,7 +23,7 @@ function MapaPage() {
       fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
-          .select("id, numero, assunto, endereco, latitude, longitude, status, secretaria_id, secretarias(nome)")
+          .select("id, numero, assunto, endereco, latitude, longitude, status, secretaria_id, categoria, tipo, data_abertura, data_conclusao, locais(nome), secretarias(nome)")
           .not("latitude", "is", null)
           .not("longitude", "is", null)
           .range(from, to),
