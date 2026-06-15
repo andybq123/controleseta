@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useServerFn } from "@tanstack/react-start";
+import { geocodeAddress } from "@/lib/geocode.functions";
 import {
   situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
   PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass,
@@ -25,6 +27,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
+  const geocode = useServerFn(geocodeAddress);
 
   const { data: protocoloFresh } = useQuery({
     queryKey: ["protocolo", protocoloProp?.id],
@@ -86,6 +89,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         data_conclusao: protocolo.data_conclusao ?? "",
         data_prorrogacao: protocolo.data_prorrogacao ?? "",
         prorrogado: !!protocolo.prorrogado,
+        endereco: protocolo.endereco ?? "",
       });
       setEditing(false);
     }
@@ -125,7 +129,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const locaisFiltrados = locais.filter((l: any) => !form.secretaria_id || l.secretaria_id === form.secretaria_id);
 
   function handleSave() {
-    update.mutate({
+    (async () => {
+      const patch: any = {
       numero: form.numero,
       tipo: form.tipo,
       categoria: form.categoria,
@@ -140,7 +145,28 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
       data_conclusao: form.data_conclusao || null,
       data_prorrogacao: form.data_prorrogacao || null,
       prorrogado: form.prorrogado,
-    }, { onSuccess: () => setEditing(false) });
+        endereco: form.endereco || null,
+      };
+      const enderecoChanged = (form.endereco ?? "") !== (protocolo.endereco ?? "");
+      if (enderecoChanged) {
+        if (form.endereco && form.endereco.trim()) {
+          try {
+            const r = await geocode({ data: { endereco: form.endereco } });
+            patch.latitude = r.lat;
+            patch.longitude = r.lng;
+            if (r.lat == null) toast.warning("Endereço não encontrado no mapa, salvando sem coordenadas.");
+          } catch {
+            toast.warning("Falha ao geocodificar o endereço.");
+            patch.latitude = null;
+            patch.longitude = null;
+          }
+        } else {
+          patch.latitude = null;
+          patch.longitude = null;
+        }
+      }
+      update.mutate(patch, { onSuccess: () => setEditing(false) });
+    })();
   }
 
   function handleConcluir() {
@@ -322,6 +348,16 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 <Input type="date" value={form.data_conclusao ?? ""} onChange={e => setForm({ ...form, data_conclusao: e.target.value })} />
               </Field2>
             </div>
+            <Field2 label="Endereço (para mapa)">
+              <Input
+                value={form.endereco ?? ""}
+                onChange={e => setForm({ ...form, endereco: e.target.value })}
+                placeholder="Ex.: Rua Felipe Schmidt, 123 - Centro"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Brusque/SC é assumido automaticamente. A localização é atualizada ao salvar.
+              </p>
+            </Field2>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditing(false)}>Cancelar</Button>
