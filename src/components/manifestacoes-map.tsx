@@ -31,6 +31,13 @@ export type MapPoint = {
   local?: string | null;
 };
 
+function formatLocalDate(s: string) {
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return s;
+  const [, y, mo, d] = m;
+  return `${d}/${mo}/${y}`;
+}
+
 // Brusque center
 const BRUSQUE: [number, number] = [-27.0978, -48.9114];
 
