@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { PROTOCOLO_EXTRACT_SYSTEM, normalizarExtracao } from "./protocolo-extract.shared";
+import { PROTOCOLO_EXTRACT_SYSTEM, normalizarExtracao, sanitizarTextoProtocolo } from "./protocolo-extract.shared";
 
 export const extrairProtocolo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -10,6 +10,9 @@ export const extrairProtocolo = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
 
+    const textoLimpo = sanitizarTextoProtocolo(data.texto);
+    const textoFinal = textoLimpo.length >= 5 ? textoLimpo : data.texto;
+
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -17,7 +20,7 @@ export const extrairProtocolo = createServerFn({ method: "POST" })
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: PROTOCOLO_EXTRACT_SYSTEM },
-          { role: "user", content: data.texto },
+          { role: "user", content: textoFinal },
         ],
         response_format: { type: "json_object" },
       }),

@@ -120,3 +120,39 @@ export function normalizarExtracao(parsed: any): ExtracaoProtocolo {
     local_sugerido: "",
   };
 }
+
+/**
+ * Remove cabeçalhos de e-mail (Responder a:, Para: lista de e-mails, De: <email>, etc.)
+ * e isola apenas o bloco útil do protocolo (a partir de "Nova Ouvidoria recebida"
+ * até antes do rodapé "Atenção: Ao responder..." / "Acompanhar online").
+ *
+ * Isso evita que a IA confunda destinatários do e-mail (caixas internas da prefeitura)
+ * com o campo "Para:" do protocolo (ex.: "SETA - OUV - Ouvidoria Geral").
+ */
+export function sanitizarTextoProtocolo(input: string): string {
+  if (!input) return "";
+  const text = input.replace(/\r\n/g, "\n");
+
+  // 1) Tenta isolar o bloco "Nova {Ouvidoria|LAI|E-SIC|Manifestação} ... recebida"
+  const startRe = /Nova\s+(?:Ouvidoria|LAI|E-?SIC|Manifesta(?:ç|c)(?:ã|a)o)[^\n]*recebid[ao][^\n]*/i;
+  const startMatch = text.match(startRe);
+  if (startMatch && typeof startMatch.index === "number") {
+    const rest = text.slice(startMatch.index);
+    const stopRe = /(Atenção:\s*Ao responder|Ao responder este e-?mail|Acompanhar online)/i;
+    const stopIdx = rest.search(stopRe);
+    const block = stopIdx >= 0 ? rest.slice(0, stopIdx) : rest;
+    return block.trim();
+  }
+
+  // 2) Fallback: remove linhas típicas de cabeçalho de e-mail
+  const headerLineRe =
+    /^\s*(Responder a:|Reply-to:|Cc:|Bcc:|Enviado em:|Sent:|Data:|Date:|Assinado por:)/i;
+  // "De:" / "Para:" / "From:" / "To:" só são descartados quando contêm e-mail (@)
+  const headerWithEmailRe = /^\s*(De|Para|From|To):.*@.*$/i;
+
+  return text
+    .split("\n")
+    .filter((l) => !headerLineRe.test(l) && !headerWithEmailRe.test(l))
+    .join("\n")
+    .trim();
+}
