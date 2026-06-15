@@ -10,6 +10,7 @@ import { HeartPulse } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { currentMonthValue } from "@/lib/month-filter";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316", "#84cc16", "#14b8a6", "#a855f7", "#eab308"];
@@ -21,8 +22,9 @@ export const Route = createFileRoute("/_authenticated/saude")({
 function SaudePage() {
   const [busca, setBusca] = useState("");
   const [unidade, setUnidade] = useState<string>("todas");
-  const [mes, setMes] = useState<string>("all");
-  const [ano, setAno] = useState<string>(String(new Date().getFullYear()));
+  const _cur = currentMonthValue();
+  const [mes, setMes] = useState<string>(_cur.slice(5, 7));
+  const [ano, setAno] = useState<string>(_cur.slice(0, 4));
   const [dataIni, setDataIni] = useState<string>("");
   const [dataFim, setDataFim] = useState<string>("");
   const [detail, setDetail] = useState<any>(null);
