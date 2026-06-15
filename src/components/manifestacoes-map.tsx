@@ -24,6 +24,11 @@ export type MapPoint = {
   endereco?: string | null;
   status?: string | null;
   secretaria?: string | null;
+  data_abertura?: string | null;
+  data_conclusao?: string | null;
+  categoria?: string | null;
+  tipo?: string | null;
+  local?: string | null;
 };
 
 // Brusque center
