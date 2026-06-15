@@ -13,6 +13,7 @@ import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useServerFn } from "@tanstack/react-start";
 import { geocodeAddress } from "@/lib/geocode.functions";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 import {
   situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
   PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass,
@@ -27,6 +28,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [enderecoCoords, setEnderecoCoords] = useState<{ lat: number; lng: number } | null>(null);
   const geocode = useServerFn(geocodeAddress);
 
   const { data: protocoloFresh } = useQuery({
@@ -92,6 +94,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         endereco: protocolo.endereco ?? "",
       });
       setEditing(false);
+      setEnderecoCoords(null);
     }
   }, [protocolo]);
 
@@ -149,7 +152,10 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
       };
       const enderecoChanged = (form.endereco ?? "") !== (protocolo.endereco ?? "");
       if (enderecoChanged) {
-        if (form.endereco && form.endereco.trim()) {
+        if (enderecoCoords) {
+          patch.latitude = enderecoCoords.lat;
+          patch.longitude = enderecoCoords.lng;
+        } else if (form.endereco && form.endereco.trim()) {
           try {
             const r = await geocode({ data: { endereco: form.endereco } });
             patch.latitude = r.lat;
@@ -349,13 +355,14 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               </Field2>
             </div>
             <Field2 label="Endereço (para mapa)">
-              <Input
+              <AddressAutocomplete
                 value={form.endereco ?? ""}
-                onChange={e => setForm({ ...form, endereco: e.target.value })}
-                placeholder="Ex.: Rua Felipe Schmidt, 123 - Centro"
+                onChange={(v) => { setForm({ ...form, endereco: v }); setEnderecoCoords(null); }}
+                onSelect={(s) => { setForm({ ...form, endereco: s.label }); setEnderecoCoords({ lat: s.lat, lng: s.lng }); }}
+                placeholder="Digite e selecione uma rua de Brusque…"
               />
               <p className="text-[11px] text-muted-foreground">
-                Brusque/SC é assumido automaticamente. A localização é atualizada ao salvar.
+                Sugestões automáticas de ruas em Brusque/SC. A localização é atualizada ao salvar.
               </p>
             </Field2>
 

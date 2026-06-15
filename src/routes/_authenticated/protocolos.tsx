@@ -18,6 +18,7 @@ import { extrairProtocolo } from "@/lib/protocolo-extract.functions";
 import { geocodeAddress } from "@/lib/geocode.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 
 export const Route = createFileRoute("/_authenticated/protocolos")({
   component: ProtocolosPage,
@@ -226,6 +227,7 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
   const [solicitante, setSolicitante] = useState("");
   const [dataAbertura, setDataAbertura] = useState(new Date().toISOString().slice(0, 10));
   const [endereco, setEndereco] = useState("");
+  const [enderecoCoords, setEnderecoCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [textoColar, setTextoColar] = useState("");
   const [extraindo, setExtraindo] = useState(false);
   const [sugestao, setSugestao] = useState<{ secretaria?: string; local?: string } | null>(null);
@@ -276,7 +278,10 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
       const { data: { user } } = await supabase.auth.getUser();
       let lat: number | null = null;
       let lng: number | null = null;
-      if (endereco.trim()) {
+      if (enderecoCoords) {
+        lat = enderecoCoords.lat;
+        lng = enderecoCoords.lng;
+      } else if (endereco.trim()) {
         try {
           const r = await geocode({ data: { endereco } });
           lat = r.lat;
@@ -306,6 +311,7 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
       toast.success("Protocolo cadastrado");
       setOpen(false);
       setNumero(""); setAssunto(""); setDescricao(""); setSecretariaId(""); setLocalId(""); setResponsavelId(""); setSolicitante(""); setEndereco("");
+      setEnderecoCoords(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -399,13 +405,14 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
           </div>
           <div className="space-y-1.5">
             <Label>Endereço (para mapa)</Label>
-            <Input
+            <AddressAutocomplete
               value={endereco}
-              onChange={e => setEndereco(e.target.value)}
-              placeholder="Ex.: Rua Felipe Schmidt, 123 - Centro"
+              onChange={(v) => { setEndereco(v); setEnderecoCoords(null); }}
+              onSelect={(s) => { setEndereco(s.label); setEnderecoCoords({ lat: s.lat, lng: s.lng }); }}
+              placeholder="Digite e selecione uma rua de Brusque…"
             />
             <p className="text-[11px] text-muted-foreground">
-              Brusque/SC é assumido automaticamente. A localização é buscada ao salvar.
+              Sugestões automáticas de ruas em Brusque/SC.
             </p>
           </div>
           <div className="space-y-1.5">

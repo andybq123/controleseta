@@ -3,17 +3,34 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo } from "react";
 
-// Fix default marker icon paths (CDN) — Vite breaks the relative png paths
-const DefaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+// Color mapping by categoria (matches badge colors in src/lib/prazo.ts)
+const CATEGORIA_COLORS: Record<string, { fill: string; label: string }> = {
+  elogio:            { fill: "#16a34a", label: "Elogio" },              // green-600
+  reclamacao:        { fill: "#dc2626", label: "Reclamação" },          // red-600
+  pedido_informacao: { fill: "#9333ea", label: "Pedido de informação"}, // purple-600
+  denuncia:          { fill: "#000000", label: "Denúncia" },
+  solicitacao:       { fill: "#facc15", label: "Solicitação" },         // yellow-400
+  outros:            { fill: "#94a3b8", label: "Outros" },              // slate-400
+};
+
+function pinIcon(categoria?: string | null) {
+  const c = CATEGORIA_COLORS[categoria ?? "outros"] ?? CATEGORIA_COLORS.outros;
+  const stroke = c.fill === "#facc15" ? "#000" : "#fff";
+  const text = c.fill === "#facc15" ? "#000" : "#fff";
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="42" viewBox="0 0 30 42">
+      <path d="M15 1 C7 1 1 7 1 15 C1 25 15 41 15 41 C15 41 29 25 29 15 C29 7 23 1 15 1 Z"
+        fill="${c.fill}" stroke="${stroke}" stroke-width="2"/>
+      <circle cx="15" cy="15" r="5" fill="${text}" opacity="0.95"/>
+    </svg>`;
+  return L.divIcon({
+    html: svg,
+    className: "manifestacao-pin",
+    iconSize: [30, 42],
+    iconAnchor: [15, 41],
+    popupAnchor: [0, -36],
+  });
+}
 
 export type MapPoint = {
   id: string;
@@ -65,7 +82,7 @@ export function ManifestacoesMap({
     [points],
   );
   return (
-    <div className={className} style={{ height, width: "100%" }}>
+    <div className={className} style={{ height, width: "100%", isolation: "isolate", position: "relative", zIndex: 0 }}>
       <MapContainer
         center={BRUSQUE}
         zoom={13}
@@ -78,7 +95,7 @@ export function ManifestacoesMap({
         />
         <FitBounds points={valid} />
         {valid.map(p => (
-          <Marker key={p.id} position={[p.lat, p.lng]}>
+          <Marker key={p.id} position={[p.lat, p.lng]} icon={pinIcon(p.categoria)}>
             <Popup maxWidth={320}>
               <div className="space-y-1.5 min-w-[220px]">
                 <div className="flex items-center gap-2">
