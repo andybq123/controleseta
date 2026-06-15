@@ -294,6 +294,16 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               {protocolo.locais && <Field label="Local" value={`${protocolo.locais.nome}${protocolo.locais.centro_custo ? ` · ${protocolo.locais.centro_custo}` : ""}`} />}
               <Field label="Solicitante" value={protocolo.solicitante ?? "—"} />
             </div>
+            <div className="pt-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => { setPendingPatch({}); setPickerOpen(true); }}>
+                <MapPin className="h-3 w-3 mr-1" /> Ajustar ponto no mapa
+              </Button>
+              {protocolo.latitude != null && protocolo.longitude != null && (
+                <span className="ml-2 text-[11px] text-muted-foreground">
+                  Atual: {Number(protocolo.latitude).toFixed(5)}, {Number(protocolo.longitude).toFixed(5)}
+                </span>
+              )}
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
