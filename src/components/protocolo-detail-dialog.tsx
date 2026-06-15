@@ -436,6 +436,29 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           </TabsContent>
         </Tabs>
       </DialogContent>
+      <AlertDialog open={!!confirmImprecise} onOpenChange={(v) => !v && setConfirmImprecise(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Endereço sem localização precisa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Não foi possível localizar este endereço com o número do imóvel. Para evitar
+              um pino no meio da rua, o protocolo será salvo <strong>sem coordenadas no mapa</strong>.
+              Deseja continuar mesmo assim?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Revisar endereço</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              const pending = confirmImprecise;
+              setConfirmImprecise(null);
+              if (pending) {
+                const patch = { ...pending.patch, latitude: null, longitude: null };
+                update.mutate(patch, { onSuccess: () => setEditing(false) });
+              }
+            }}>Salvar sem mapa</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
