@@ -250,6 +250,7 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
   const [enderecoExact, setEnderecoExact] = useState<boolean>(false);
   const [confirmImprecise, setConfirmImprecise] = useState(false);
   const [forceSaveNoCoords, setForceSaveNoCoords] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [textoColar, setTextoColar] = useState("");
   const [extraindo, setExtraindo] = useState(false);
   const [sugestao, setSugestao] = useState<{ secretaria?: string; local?: string } | null>(null);
@@ -521,12 +522,21 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
             <AlertDialogTitle>Endereço sem localização precisa</AlertDialogTitle>
             <AlertDialogDescription>
               Não foi possível localizar este endereço com o número do imóvel. Para evitar
-              um pino no meio da rua, o protocolo será salvo <strong>sem coordenadas no mapa</strong>.
-              Deseja continuar mesmo assim?
+              um pino no meio da rua, você pode <strong>selecionar manualmente o ponto no mapa</strong>
+              ou salvar o protocolo <strong>sem coordenadas</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel>Revisar endereço</AlertDialogCancel>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setConfirmImprecise(false);
+                setPickerOpen(true);
+              }}
+            >
+              Selecionar no mapa
+            </Button>
             <AlertDialogAction onClick={() => {
               setForceSaveNoCoords(true);
               setConfirmImprecise(false);
@@ -535,6 +545,19 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <MapPointPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        initial={enderecoCoords}
+        endereco={endereco}
+        onConfirm={(lat, lng) => {
+          setEnderecoCoords({ lat, lng });
+          setEnderecoExact(true);
+          setForceSaveNoCoords(false);
+          toast.success("Localização definida manualmente.");
+          setTimeout(() => create.mutate(), 0);
+        }}
+      />
     </Dialog>
   );
 }
