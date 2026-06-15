@@ -24,6 +24,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { MapPointPicker } from "@/components/map-point-picker";
+import { currentMonthValue, monthOptionsFromDates, isInMonth } from "@/lib/month-filter";
 
 export const Route = createFileRoute("/_authenticated/protocolos")({
   component: ProtocolosPage,
@@ -39,6 +40,7 @@ function ProtocolosPage() {
   const [busca, setBusca] = useState("");
   const [dataIni, setDataIni] = useState<string>("");
   const [dataFim, setDataFim] = useState<string>("");
+  const [mes, setMes] = useState<string>(currentMonthValue());
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
@@ -89,8 +91,12 @@ function ProtocolosPage() {
     if (filtroTipo !== "todos" && p.tipo !== filtroTipo) return false;
     if (filtroCategoria !== "todos" && p.categoria !== filtroCategoria) return false;
     if (filtroSec !== "todos" && p.secretaria_id !== filtroSec) return false;
-    if (dataIni && (p.data_abertura ?? "") < dataIni) return false;
-    if (dataFim && (p.data_abertura ?? "") > dataFim) return false;
+    if (dataIni || dataFim) {
+      if (dataIni && (p.data_abertura ?? "") < dataIni) return false;
+      if (dataFim && (p.data_abertura ?? "") > dataFim) return false;
+    } else if (mes !== "all") {
+      if (!isInMonth(p.data_abertura, mes)) return false;
+    }
     if (busca) {
       const s = busca.toLowerCase();
       const txt = `${p.numero} ${p.assunto} ${p.solicitante ?? ""}`.toLowerCase();
@@ -98,6 +104,8 @@ function ProtocolosPage() {
     }
     return true;
   });
+
+  const opcoesMes = monthOptionsFromDates(protocolos.map(p => p.data_abertura));
 
   return (
     <div className="space-y-4">
@@ -146,6 +154,13 @@ function ProtocolosPage() {
             {secretarias.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={mes} onValueChange={setMes}>
+          <SelectTrigger className="w-[170px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+          <SelectContent className="max-h-[320px]">
+            <SelectItem value="all">Todos os meses</SelectItem>
+            {opcoesMes.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-1">
           <Label className="text-xs text-muted-foreground">De</Label>
           <Input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} className="w-[150px]" />
@@ -155,6 +170,9 @@ function ProtocolosPage() {
             <Button size="sm" variant="ghost" onClick={() => { setDataIni(""); setDataFim(""); }}>Limpar</Button>
           )}
         </div>
+        {(dataIni || dataFim) && (
+          <span className="text-[11px] text-muted-foreground">(período personalizado ignora o filtro de mês)</span>
+        )}
       </div>
 
       <div className="grid gap-3">
