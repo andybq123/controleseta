@@ -23,6 +23,8 @@ function SaudePage() {
   const [unidade, setUnidade] = useState<string>("todas");
   const [mes, setMes] = useState<string>("all");
   const [ano, setAno] = useState<string>(String(new Date().getFullYear()));
+  const [dataIni, setDataIni] = useState<string>("");
+  const [dataFim, setDataFim] = useState<string>("");
   const [detail, setDetail] = useState<any>(null);
 
   const { data: saudeSec } = useQuery({
@@ -57,8 +59,13 @@ function SaudePage() {
   const saude = protocolos.filter(p => {
     if (!saudeSec?.id || (p as any).secretaria_id !== saudeSec.id) return false;
     if (unidade !== "todas" && (p as any).local_id !== unidade) return false;
-    if (!p.data_abertura.startsWith(ano)) return false;
-    if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
+    if (dataIni || dataFim) {
+      if (dataIni && (p.data_abertura ?? "") < dataIni) return false;
+      if (dataFim && (p.data_abertura ?? "") > dataFim) return false;
+    } else {
+      if (!p.data_abertura.startsWith(ano)) return false;
+      if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
+    }
     if (busca) {
       const s = busca.toLowerCase();
       const txt = `${p.numero} ${p.assunto} ${p.solicitante ?? ""}`.toLowerCase();
@@ -145,6 +152,22 @@ function SaudePage() {
             {anosDisponiveis.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-1 ml-1">
+          <span className="text-xs text-muted-foreground">De</span>
+          <Input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} className="w-[150px]" />
+          <span className="text-xs text-muted-foreground">até</span>
+          <Input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="w-[150px]" />
+          {(dataIni || dataFim) && (
+            <button type="button" className="text-xs text-muted-foreground hover:text-foreground underline ml-1" onClick={() => { setDataIni(""); setDataFim(""); }}>
+              limpar
+            </button>
+          )}
+        </div>
+        {(dataIni || dataFim) && (
+          <span className="text-xs text-muted-foreground">
+            (período selecionado ignora o filtro de mês/ano)
+          </span>
+        )}
       </div>
 
       {saude.length > 0 && (

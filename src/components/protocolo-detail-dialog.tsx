@@ -14,10 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useServerFn } from "@tanstack/react-start";
 import { geocodeAddress } from "@/lib/geocode.functions";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { MapPointPicker } from "@/components/map-point-picker";
 import {
   situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
   PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass,
@@ -36,6 +38,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const [enderecoTemNumero, setEnderecoTemNumero] = useState<boolean>(false);
   const [enderecoExact, setEnderecoExact] = useState<boolean>(false);
   const [confirmImprecise, setConfirmImprecise] = useState<null | { patch: any }>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pendingPatch, setPendingPatch] = useState<any | null>(null);
   const geocode = useServerFn(geocodeAddress);
 
   const { data: protocoloFresh } = useQuery({
@@ -389,6 +393,9 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               <p className="text-[11px] text-muted-foreground">
                 Sugestões automáticas de ruas em Brusque/SC. A localização é atualizada ao salvar.
               </p>
+              <Button type="button" size="sm" variant="outline" onClick={() => { setPendingPatch(null); setPickerOpen(true); }}>
+                <MapPin className="h-3 w-3 mr-1" /> Ajustar ponto no mapa
+              </Button>
             </Field2>
 
             <DialogFooter>
@@ -442,12 +449,25 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             <AlertDialogTitle>Endereço sem localização precisa</AlertDialogTitle>
             <AlertDialogDescription>
               Não foi possível localizar este endereço com o número do imóvel. Para evitar
-              um pino no meio da rua, o protocolo será salvo <strong>sem coordenadas no mapa</strong>.
-              Deseja continuar mesmo assim?
+              um pino no meio da rua, você pode <strong>selecionar manualmente o ponto no mapa</strong>
+              ou salvar o protocolo <strong>sem coordenadas</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel>Revisar endereço</AlertDialogCancel>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                const pending = confirmImprecise;
+                setConfirmImprecise(null);
+                if (pending) {
+                  setPendingPatch(pending.patch);
+                  setPickerOpen(true);
+                }
+              }}
+            >
+              Selecionar no mapa
+            </Button>
             <AlertDialogAction onClick={() => {
               const pending = confirmImprecise;
               setConfirmImprecise(null);
@@ -459,6 +479,22 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <MapPointPicker
+        open={pickerOpen}
+        onOpenChange={(v) => { setPickerOpen(v); if (!v) setPendingPatch(null); }}
+        initial={enderecoCoords ?? (protocolo?.latitude && protocolo?.longitude ? { lat: protocolo.latitude, lng: protocolo.longitude } : null)}
+        endereco={form?.endereco}
+        onConfirm={(lat, lng) => {
+          if (pendingPatch) {
+            const patch = { ...pendingPatch, latitude: lat, longitude: lng };
+            update.mutate(patch, { onSuccess: () => { setEditing(false); setPendingPatch(null); } });
+          } else {
+            setEnderecoCoords({ lat, lng });
+            setEnderecoExact(true);
+          }
+          toast.success("Localização definida manualmente.");
+        }}
+      />
     </Dialog>
   );
 }
