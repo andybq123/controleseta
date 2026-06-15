@@ -291,8 +291,11 @@ export type Database = {
           data_conclusao: string | null
           data_prorrogacao: string | null
           descricao: string | null
+          endereco: string | null
           id: string
+          latitude: number | null
           local_id: string | null
+          longitude: number | null
           numero: string
           prorrogado: boolean
           responsavel_id: string | null
@@ -311,8 +314,11 @@ export type Database = {
           data_conclusao?: string | null
           data_prorrogacao?: string | null
           descricao?: string | null
+          endereco?: string | null
           id?: string
+          latitude?: number | null
           local_id?: string | null
+          longitude?: number | null
           numero: string
           prorrogado?: boolean
           responsavel_id?: string | null
@@ -331,8 +337,11 @@ export type Database = {
           data_conclusao?: string | null
           data_prorrogacao?: string | null
           descricao?: string | null
+          endereco?: string | null
           id?: string
+          latitude?: number | null
           local_id?: string | null
+          longitude?: number | null
           numero?: string
           prorrogado?: boolean
           responsavel_id?: string | null
