@@ -228,6 +228,7 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
   const [dataAbertura, setDataAbertura] = useState(new Date().toISOString().slice(0, 10));
   const [endereco, setEndereco] = useState("");
   const [enderecoCoords, setEnderecoCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [enderecoTemNumero, setEnderecoTemNumero] = useState<boolean>(false);
   const [textoColar, setTextoColar] = useState("");
   const [extraindo, setExtraindo] = useState(false);
   const [sugestao, setSugestao] = useState<{ secretaria?: string; local?: string } | null>(null);
