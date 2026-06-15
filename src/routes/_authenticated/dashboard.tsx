@@ -541,9 +541,8 @@ function Dashboard() {
             </div>
             <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-muted-foreground border-t pt-3">
               <Legenda dot="hsl(0 84% 60%)" label="Alta concentração" />
-              <Legenda dot="hsl(25 95% 53%)" label="Média concentração" />
+              <Legenda dot="hsl(48 96% 53%)" label="Média concentração" />
               <Legenda dot="hsl(142 71% 45%)" label="Baixa concentração" />
-              <Legenda dot="hsl(215 16% 60%)" label="Muito baixa" />
             </div>
           </CardContent>
         </Card>
