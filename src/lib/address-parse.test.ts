@@ -125,11 +125,12 @@ describe("parseSuggestion", () => {
     expect(s.houseNumber).toBeUndefined();
   });
 
-  it("falls back to display_name when no road present", () => {
-    const s = parseSuggestion(base({
-      address: {},
+  it("falls back to display_name when no road and no address fields", () => {
+    const s = parseSuggestion({
+      lat: "-27", lon: "-48",
       display_name: "Praça da Bandeira, Brusque",
-    }));
+      // no address object at all
+    });
     expect(s.label).toBe("Praça da Bandeira, Brusque");
   });
 });
