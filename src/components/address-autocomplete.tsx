@@ -89,9 +89,11 @@ export function AddressAutocomplete({
               onMouseDown={e => { e.preventDefault(); pick(s); }}
             >
               <span className="truncate">{s.label}</span>
-              {!s.houseNumber && (
+              {!s.houseNumber ? (
                 <span className="shrink-0 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 border border-amber-500/40 rounded px-1 py-0.5">sem nº</span>
-              )}
+              ) : s.exact === false ? (
+                <span className="shrink-0 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 border border-amber-500/40 rounded px-1 py-0.5">nº aprox.</span>
+              ) : null}
             </li>
           ))}
         </ul>
