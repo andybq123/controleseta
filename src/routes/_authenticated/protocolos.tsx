@@ -443,11 +443,12 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
             <Label>Endereço (para mapa)</Label>
             <AddressAutocomplete
               value={endereco}
-              onChange={(v) => { setEndereco(v); setEnderecoCoords(null); setEnderecoTemNumero(false); }}
+              onChange={(v) => { setEndereco(v); setEnderecoCoords(null); setEnderecoTemNumero(false); setEnderecoExact(false); }}
               onSelect={(s) => {
                 setEndereco(s.label);
                 setEnderecoCoords({ lat: s.lat, lng: s.lng });
                 setEnderecoTemNumero(!!s.houseNumber);
+                setEnderecoExact(s.exact !== false && !!s.houseNumber);
                 if (!s.houseNumber) {
                   toast.warning("Sugestão sem número do imóvel. Inclua o número (ex.: \"Rua X, 174\") para um pino preciso.");
                 }
@@ -497,9 +498,29 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={() => create.mutate()} disabled={!assunto || create.isPending}>Cadastrar</Button>
+          <Button onClick={handleSubmit} disabled={!assunto || create.isPending}>Cadastrar</Button>
         </DialogFooter>
       </DialogContent>
+      <AlertDialog open={confirmImprecise} onOpenChange={setConfirmImprecise}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Endereço sem localização precisa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Não foi possível localizar este endereço com o número do imóvel. Para evitar
+              um pino no meio da rua, o protocolo será salvo <strong>sem coordenadas no mapa</strong>.
+              Deseja continuar mesmo assim?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Revisar endereço</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setForceSaveNoCoords(true);
+              setConfirmImprecise(false);
+              setTimeout(() => create.mutate(), 0);
+            }}>Salvar sem mapa</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
