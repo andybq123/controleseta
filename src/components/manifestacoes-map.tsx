@@ -72,10 +72,12 @@ export function ManifestacoesMap({
   points,
   height = 400,
   className,
+  onOpenProtocolo,
 }: {
   points: MapPoint[];
   height?: number | string;
   className?: string;
+  onOpenProtocolo?: (id: string) => void;
 }) {
   const valid = useMemo(
     () => points.filter(p => typeof p.lat === "number" && typeof p.lng === "number"),
@@ -151,6 +153,15 @@ export function ManifestacoesMap({
                     </div>
                   )}
                 </div>
+                {onOpenProtocolo && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenProtocolo(p.id)}
+                    className="mt-2 w-full text-xs font-medium px-2 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 transition"
+                  >
+                    Abrir protocolo →
+                  </button>
+                )}
               </div>
             </Popup>
           </Marker>

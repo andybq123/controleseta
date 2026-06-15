@@ -541,9 +541,8 @@ function Dashboard() {
             </div>
             <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-muted-foreground border-t pt-3">
               <Legenda dot="hsl(0 84% 60%)" label="Alta concentração" />
-              <Legenda dot="hsl(25 95% 53%)" label="Média concentração" />
+              <Legenda dot="hsl(48 96% 53%)" label="Média concentração" />
               <Legenda dot="hsl(142 71% 45%)" label="Baixa concentração" />
-              <Legenda dot="hsl(215 16% 60%)" label="Muito baixa" />
             </div>
           </CardContent>
         </Card>
@@ -561,6 +560,10 @@ function Dashboard() {
         <CardContent>
           <ManifestacoesMap
             height={320}
+            onOpenProtocolo={(id) => {
+              const p = enriched.find((x: any) => x.id === id);
+              if (p) setDetail(p);
+            }}
             points={enriched
               .filter((p: any) => p.latitude != null && p.longitude != null)
               .map((p: any) => ({
@@ -677,10 +680,12 @@ function Gauge({ label, value, suffix, meta, good, max = 100, invert }: {
 
 function RegiaoRow({ pos, nome, qtd, max, onClick }: { pos: number; nome: string; qtd: number; max: number; onClick?: () => void }) {
   const ratio = qtd / max;
-  const color = ratio > 0.66 ? "hsl(0 84% 60%)" : ratio > 0.33 ? "hsl(25 95% 53%)" : ratio > 0.1 ? "hsl(142 71% 45%)" : "hsl(215 16% 60%)";
+  // 3 cores: vermelho (alta), amarelo (média), verde (baixa)
+  const color = ratio > 0.66 ? "hsl(0 84% 60%)" : ratio > 0.33 ? "hsl(48 96% 53%)" : "hsl(142 71% 45%)";
+  const textColor = ratio > 0.33 && ratio <= 0.66 ? "#000" : "#fff";
   return (
     <button type="button" onClick={onClick} className="w-full flex items-center gap-2 rounded px-1 py-0.5 hover:bg-muted/60 transition text-left">
-      <span className="h-6 w-6 rounded-full text-white text-[11px] font-bold flex items-center justify-center shrink-0" style={{ background: color }}>
+      <span className="h-6 w-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0" style={{ background: color, color: textColor }}>
         {qtd}
       </span>
       <span className="text-xs text-muted-foreground w-4 text-right">{pos}.</span>

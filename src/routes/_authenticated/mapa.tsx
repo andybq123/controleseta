@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { ManifestacoesMap, type MapPoint } from "@/components/manifestacoes-map";
 import { Map as MapIcon } from "lucide-react";
+import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 
 export const Route = createFileRoute("/_authenticated/mapa")({
   component: MapaPage,
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/_authenticated/mapa")({
 function MapaPage() {
   const [status, setStatus] = useState<string>("todos");
   const [secretariaId, setSecretariaId] = useState<string>("todas");
+  const [detail, setDetail] = useState<any | null>(null);
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos-mapa"],
@@ -106,9 +108,17 @@ function MapaPage() {
 
       <Card>
         <CardContent className="p-3">
-          <ManifestacoesMap points={points} height={600} />
+          <ManifestacoesMap
+            points={points}
+            height={600}
+            onOpenProtocolo={(id) => {
+              const p = (protocolos as any[]).find((x) => x.id === id);
+              if (p) setDetail(p);
+            }}
+          />
         </CardContent>
       </Card>
+      <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
     </div>
   );
 }
