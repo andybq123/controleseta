@@ -84,11 +84,14 @@ export function AddressAutocomplete({
           {suggestions.map((s, i) => (
             <li
               key={`${s.lat},${s.lng},${i}`}
-              className={`px-3 py-2 text-sm cursor-pointer ${i === highlight ? "bg-accent" : "hover:bg-accent"}`}
+              className={`px-3 py-2 text-sm cursor-pointer flex items-center justify-between gap-2 ${i === highlight ? "bg-accent" : "hover:bg-accent"}`}
               onMouseEnter={() => setHighlight(i)}
               onMouseDown={e => { e.preventDefault(); pick(s); }}
             >
-              {s.label}
+              <span className="truncate">{s.label}</span>
+              {!s.houseNumber && (
+                <span className="shrink-0 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 border border-amber-500/40 rounded px-1 py-0.5">sem nº</span>
+              )}
             </li>
           ))}
         </ul>

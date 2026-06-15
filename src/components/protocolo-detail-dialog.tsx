@@ -29,6 +29,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
   const [enderecoCoords, setEnderecoCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [enderecoTemNumero, setEnderecoTemNumero] = useState<boolean>(false);
   const geocode = useServerFn(geocodeAddress);
 
   const { data: protocoloFresh } = useQuery({
@@ -155,6 +156,9 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         if (enderecoCoords) {
           patch.latitude = enderecoCoords.lat;
           patch.longitude = enderecoCoords.lng;
+          if (!enderecoTemNumero) {
+            toast.warning("Endereço sem número do imóvel — o pino pode ficar impreciso no mapa.");
+          }
         } else if (form.endereco && form.endereco.trim()) {
           try {
             const r = await geocode({ data: { endereco: form.endereco } });
@@ -357,8 +361,15 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             <Field2 label="Endereço (para mapa)">
               <AddressAutocomplete
                 value={form.endereco ?? ""}
-                onChange={(v) => { setForm({ ...form, endereco: v }); setEnderecoCoords(null); }}
-                onSelect={(s) => { setForm({ ...form, endereco: s.label }); setEnderecoCoords({ lat: s.lat, lng: s.lng }); }}
+                onChange={(v) => { setForm({ ...form, endereco: v }); setEnderecoCoords(null); setEnderecoTemNumero(false); }}
+                onSelect={(s) => {
+                  setForm({ ...form, endereco: s.label });
+                  setEnderecoCoords({ lat: s.lat, lng: s.lng });
+                  setEnderecoTemNumero(!!s.houseNumber);
+                  if (!s.houseNumber) {
+                    toast.warning("Sugestão sem número do imóvel. Inclua o número (ex.: \"Rua X, 174\") para um pino preciso.");
+                  }
+                }}
                 placeholder="Digite e selecione uma rua de Brusque…"
               />
               <p className="text-[11px] text-muted-foreground">

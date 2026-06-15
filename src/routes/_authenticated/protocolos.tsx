@@ -228,6 +228,7 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
   const [dataAbertura, setDataAbertura] = useState(new Date().toISOString().slice(0, 10));
   const [endereco, setEndereco] = useState("");
   const [enderecoCoords, setEnderecoCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [enderecoTemNumero, setEnderecoTemNumero] = useState<boolean>(false);
   const [textoColar, setTextoColar] = useState("");
   const [extraindo, setExtraindo] = useState(false);
   const [sugestao, setSugestao] = useState<{ secretaria?: string; local?: string } | null>(null);
@@ -281,6 +282,9 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
       if (enderecoCoords) {
         lat = enderecoCoords.lat;
         lng = enderecoCoords.lng;
+        if (!enderecoTemNumero) {
+          toast.warning("Endereço sem número do imóvel — o pino pode ficar impreciso no mapa.");
+        }
       } else if (endereco.trim()) {
         try {
           const r = await geocode({ data: { endereco } });
@@ -407,8 +411,15 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
             <Label>Endereço (para mapa)</Label>
             <AddressAutocomplete
               value={endereco}
-              onChange={(v) => { setEndereco(v); setEnderecoCoords(null); }}
-              onSelect={(s) => { setEndereco(s.label); setEnderecoCoords({ lat: s.lat, lng: s.lng }); }}
+              onChange={(v) => { setEndereco(v); setEnderecoCoords(null); setEnderecoTemNumero(false); }}
+              onSelect={(s) => {
+                setEndereco(s.label);
+                setEnderecoCoords({ lat: s.lat, lng: s.lng });
+                setEnderecoTemNumero(!!s.houseNumber);
+                if (!s.houseNumber) {
+                  toast.warning("Sugestão sem número do imóvel. Inclua o número (ex.: \"Rua X, 174\") para um pino preciso.");
+                }
+              }}
               placeholder="Digite e selecione uma rua de Brusque…"
             />
             <p className="text-[11px] text-muted-foreground">
