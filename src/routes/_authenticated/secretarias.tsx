@@ -167,18 +167,36 @@ function NovaSecretariaDialog() {
   const [nome, setNome] = useState("");
   const [sigla, setSigla] = useState("");
   const [centroCusto, setCentroCusto] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [icone, setIcone] = useState<string>("administracao");
 
   const create = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data, error } = await supabase.from("secretarias").insert({ nome, sigla: sigla || null, centro_custo: centroCusto || null, created_by: user?.id }).select("id").single();
+      const { data, error } = await supabase.from("secretarias").insert({
+        nome,
+        sigla: sigla || null,
+        centro_custo: centroCusto || null,
+        endereco: endereco || null,
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
+        icone,
+        created_by: user?.id,
+      }).select("id").single();
       if (error) throw error;
       // cria um local default com mesmo nome/cc
       if (data) {
         await supabase.from("locais").insert({ secretaria_id: data.id, nome, centro_custo: centroCusto || null });
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["secretarias"] }); qc.invalidateQueries({ queryKey: ["locais"] }); toast.success("Secretaria criada"); setOpen(false); setNome(""); setSigla(""); setCentroCusto(""); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["secretarias"] });
+      qc.invalidateQueries({ queryKey: ["locais"] });
+      toast.success("Secretaria criada");
+      setOpen(false); setNome(""); setSigla(""); setCentroCusto("");
+      setEndereco(""); setCoords(null); setIcone("administracao");
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -191,6 +209,32 @@ function NovaSecretariaDialog() {
           <div className="space-y-1.5"><Label>Nome *</Label><Input value={nome} onChange={e => setNome(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Sigla</Label><Input value={sigla} onChange={e => setSigla(e.target.value)} placeholder="Ex: SEMSA" /></div>
           <div className="space-y-1.5"><Label>Centro de Custo</Label><Input value={centroCusto} onChange={e => setCentroCusto(e.target.value)} placeholder="Ex: 25001006004" /></div>
+          <div className="space-y-1.5">
+            <Label>Ícone no mapa</Label>
+            <Select value={icone} onValueChange={setIcone}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(SECRETARIA_ICONES).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v.emoji} {v.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Endereço da secretaria</Label>
+            <AddressAutocomplete
+              value={endereco}
+              onChange={(v) => { setEndereco(v); setCoords(null); }}
+              onSelect={(s) => { setEndereco(s.label); setCoords({ lat: s.lat, lng: s.lng }); }}
+              placeholder="Rua, número, bairro"
+            />
+            {endereco && !coords && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400">Selecione uma sugestão para gravar no mapa.</p>
+            )}
+            {coords && (
+              <p className="text-[11px] text-muted-foreground">Coordenadas: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</p>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -266,6 +310,9 @@ function EditSecretariaDialog({ secretaria, onClose }: { secretaria: any | null;
   const [nome, setNome] = useState("");
   const [sigla, setSigla] = useState("");
   const [centroCusto, setCentroCusto] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [icone, setIcone] = useState<string>("administracao");
   const open = !!secretaria;
 
   useEffect(() => {
@@ -273,12 +320,27 @@ function EditSecretariaDialog({ secretaria, onClose }: { secretaria: any | null;
       setNome(secretaria.nome ?? "");
       setSigla(secretaria.sigla ?? "");
       setCentroCusto(secretaria.centro_custo ?? "");
+      setEndereco(secretaria.endereco ?? "");
+      setCoords(
+        secretaria.latitude != null && secretaria.longitude != null
+          ? { lat: secretaria.latitude, lng: secretaria.longitude }
+          : null,
+      );
+      setIcone(secretaria.icone ?? "administracao");
     }
   }, [secretaria]);
 
   const update = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("secretarias").update({ nome, sigla: sigla || null, centro_custo: centroCusto || null }).eq("id", secretaria.id);
+      const { error } = await supabase.from("secretarias").update({
+        nome,
+        sigla: sigla || null,
+        centro_custo: centroCusto || null,
+        endereco: endereco || null,
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
+        icone,
+      }).eq("id", secretaria.id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["secretarias"] }); toast.success("Secretaria atualizada"); onClose(); },
@@ -293,6 +355,32 @@ function EditSecretariaDialog({ secretaria, onClose }: { secretaria: any | null;
           <div className="space-y-1.5"><Label>Nome *</Label><Input value={nome} onChange={e => setNome(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Sigla</Label><Input value={sigla} onChange={e => setSigla(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Centro de Custo</Label><Input value={centroCusto} onChange={e => setCentroCusto(e.target.value)} /></div>
+          <div className="space-y-1.5">
+            <Label>Ícone no mapa</Label>
+            <Select value={icone} onValueChange={setIcone}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(SECRETARIA_ICONES).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v.emoji} {v.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Endereço da secretaria</Label>
+            <AddressAutocomplete
+              value={endereco}
+              onChange={(v) => { setEndereco(v); setCoords(null); }}
+              onSelect={(s) => { setEndereco(s.label); setCoords({ lat: s.lat, lng: s.lng }); }}
+              placeholder="Rua, número, bairro"
+            />
+            {endereco && !coords && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400">Selecione uma sugestão para gravar no mapa.</p>
+            )}
+            {coords && (
+              <p className="text-[11px] text-muted-foreground">Coordenadas: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</p>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
