@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useServerFn } from "@tanstack/react-start";
 import { geocodeAddress } from "@/lib/geocode.functions";
@@ -392,6 +393,9 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               <p className="text-[11px] text-muted-foreground">
                 Sugestões automáticas de ruas em Brusque/SC. A localização é atualizada ao salvar.
               </p>
+              <Button type="button" size="sm" variant="outline" onClick={() => { setPendingPatch(null); setPickerOpen(true); }}>
+                <MapPin className="h-3 w-3 mr-1" /> Ajustar ponto no mapa
+              </Button>
             </Field2>
 
             <DialogFooter>
