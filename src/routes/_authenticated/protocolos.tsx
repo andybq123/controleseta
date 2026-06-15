@@ -398,6 +398,17 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
             <Input value={solicitante} onChange={e => setSolicitante(e.target.value)} />
           </div>
           <div className="space-y-1.5">
+            <Label>Endereço (para mapa)</Label>
+            <Input
+              value={endereco}
+              onChange={e => setEndereco(e.target.value)}
+              placeholder="Ex.: Rua Felipe Schmidt, 123 - Centro"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Brusque/SC é assumido automaticamente. A localização é buscada ao salvar.
+            </p>
+          </div>
+          <div className="space-y-1.5">
             <Label>Secretaria</Label>
             <Select value={secretariaId} onValueChange={v => {
               setSecretariaId(v);
