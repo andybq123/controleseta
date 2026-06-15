@@ -10,6 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type TipoProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { Plus, Calendar, RotateCw, CheckCircle2, Trash2, Sparkles, Eye } from "lucide-react";
 import { toast } from "sonner";
@@ -229,6 +233,9 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
   const [endereco, setEndereco] = useState("");
   const [enderecoCoords, setEnderecoCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [enderecoTemNumero, setEnderecoTemNumero] = useState<boolean>(false);
+  const [enderecoExact, setEnderecoExact] = useState<boolean>(false);
+  const [confirmImprecise, setConfirmImprecise] = useState(false);
+  const [forceSaveNoCoords, setForceSaveNoCoords] = useState(false);
   const [textoColar, setTextoColar] = useState("");
   const [extraindo, setExtraindo] = useState(false);
   const [sugestao, setSugestao] = useState<{ secretaria?: string; local?: string } | null>(null);
@@ -279,18 +286,18 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
       const { data: { user } } = await supabase.auth.getUser();
       let lat: number | null = null;
       let lng: number | null = null;
-      if (enderecoCoords) {
+      if (enderecoCoords && enderecoExact) {
         lat = enderecoCoords.lat;
         lng = enderecoCoords.lng;
-        if (!enderecoTemNumero) {
-          toast.warning("Endereço sem número do imóvel — o pino pode ficar impreciso no mapa.");
-        }
+      } else if (forceSaveNoCoords) {
+        // user confirmed saving without coordinates
+        lat = null;
+        lng = null;
       } else if (endereco.trim()) {
         try {
           const r = await geocode({ data: { endereco } });
           lat = r.lat;
           lng = r.lng;
-          if (lat == null) toast.warning("Endereço não encontrado no mapa, salvando sem coordenadas.");
         } catch {
           toast.warning("Falha ao geocodificar o endereço.");
         }
@@ -316,9 +323,34 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
       setOpen(false);
       setNumero(""); setAssunto(""); setDescricao(""); setSecretariaId(""); setLocalId(""); setResponsavelId(""); setSolicitante(""); setEndereco("");
       setEnderecoCoords(null);
+      setEnderecoExact(false);
+      setEnderecoTemNumero(false);
+      setForceSaveNoCoords(false);
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  async function handleSubmit() {
+    // Address provided but no precise coords yet → require explicit confirmation.
+    if (endereco.trim() && !(enderecoCoords && enderecoExact)) {
+      // Try a server lookup first to see if Nominatim has an exact match anyway.
+      try {
+        const r = await geocode({ data: { endereco } });
+        if (r.lat != null && r.exact) {
+          // exact match found server-side → accept and save directly
+          setEnderecoCoords({ lat: r.lat, lng: r.lng! });
+          setEnderecoExact(true);
+          create.mutate();
+          return;
+        }
+      } catch {
+        // ignore, fall through to confirmation
+      }
+      setConfirmImprecise(true);
+      return;
+    }
+    create.mutate();
+  }
 
   const previewPrazo = calcularPrazo({ tipo, data_abertura: dataAbertura, prorrogado: false });
 
@@ -411,11 +443,12 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
             <Label>Endereço (para mapa)</Label>
             <AddressAutocomplete
               value={endereco}
-              onChange={(v) => { setEndereco(v); setEnderecoCoords(null); setEnderecoTemNumero(false); }}
+              onChange={(v) => { setEndereco(v); setEnderecoCoords(null); setEnderecoTemNumero(false); setEnderecoExact(false); }}
               onSelect={(s) => {
                 setEndereco(s.label);
                 setEnderecoCoords({ lat: s.lat, lng: s.lng });
                 setEnderecoTemNumero(!!s.houseNumber);
+                setEnderecoExact(s.exact !== false && !!s.houseNumber);
                 if (!s.houseNumber) {
                   toast.warning("Sugestão sem número do imóvel. Inclua o número (ex.: \"Rua X, 174\") para um pino preciso.");
                 }
@@ -465,9 +498,29 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={() => create.mutate()} disabled={!assunto || create.isPending}>Cadastrar</Button>
+          <Button onClick={handleSubmit} disabled={!assunto || create.isPending}>Cadastrar</Button>
         </DialogFooter>
       </DialogContent>
+      <AlertDialog open={confirmImprecise} onOpenChange={setConfirmImprecise}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Endereço sem localização precisa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Não foi possível localizar este endereço com o número do imóvel. Para evitar
+              um pino no meio da rua, o protocolo será salvo <strong>sem coordenadas no mapa</strong>.
+              Deseja continuar mesmo assim?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Revisar endereço</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setForceSaveNoCoords(true);
+              setConfirmImprecise(false);
+              setTimeout(() => create.mutate(), 0);
+            }}>Salvar sem mapa</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

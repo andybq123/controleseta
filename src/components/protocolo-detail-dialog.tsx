@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +34,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const [form, setForm] = useState<any>({});
   const [enderecoCoords, setEnderecoCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [enderecoTemNumero, setEnderecoTemNumero] = useState<boolean>(false);
+  const [enderecoExact, setEnderecoExact] = useState<boolean>(false);
+  const [confirmImprecise, setConfirmImprecise] = useState<null | { patch: any }>(null);
   const geocode = useServerFn(geocodeAddress);
 
   const { data: protocoloFresh } = useQuery({
@@ -133,7 +139,10 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const locaisFiltrados = locais.filter((l: any) => !form.secretaria_id || l.secretaria_id === form.secretaria_id);
 
   function handleSave() {
-    (async () => {
+    void runSave(false);
+  }
+
+  async function runSave(forceNoCoords: boolean) {
       const patch: any = {
       numero: form.numero,
       tipo: form.tipo,
@@ -153,18 +162,23 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
       };
       const enderecoChanged = (form.endereco ?? "") !== (protocolo.endereco ?? "");
       if (enderecoChanged) {
-        if (enderecoCoords) {
+        if (enderecoCoords && enderecoExact) {
           patch.latitude = enderecoCoords.lat;
           patch.longitude = enderecoCoords.lng;
-          if (!enderecoTemNumero) {
-            toast.warning("Endereço sem número do imóvel — o pino pode ficar impreciso no mapa.");
-          }
+        } else if (forceNoCoords) {
+          patch.latitude = null;
+          patch.longitude = null;
         } else if (form.endereco && form.endereco.trim()) {
           try {
             const r = await geocode({ data: { endereco: form.endereco } });
-            patch.latitude = r.lat;
-            patch.longitude = r.lng;
-            if (r.lat == null) toast.warning("Endereço não encontrado no mapa, salvando sem coordenadas.");
+            if (r.lat != null && r.exact) {
+              patch.latitude = r.lat;
+              patch.longitude = r.lng;
+            } else {
+              // Refused: street centroid or no result → ask the user to confirm.
+              setConfirmImprecise({ patch });
+              return;
+            }
           } catch {
             toast.warning("Falha ao geocodificar o endereço.");
             patch.latitude = null;
@@ -176,7 +190,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         }
       }
       update.mutate(patch, { onSuccess: () => setEditing(false) });
-    })();
   }
 
   function handleConcluir() {
@@ -361,11 +374,12 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             <Field2 label="Endereço (para mapa)">
               <AddressAutocomplete
                 value={form.endereco ?? ""}
-                onChange={(v) => { setForm({ ...form, endereco: v }); setEnderecoCoords(null); setEnderecoTemNumero(false); }}
+                onChange={(v) => { setForm({ ...form, endereco: v }); setEnderecoCoords(null); setEnderecoTemNumero(false); setEnderecoExact(false); }}
                 onSelect={(s) => {
                   setForm({ ...form, endereco: s.label });
                   setEnderecoCoords({ lat: s.lat, lng: s.lng });
                   setEnderecoTemNumero(!!s.houseNumber);
+                  setEnderecoExact(s.exact !== false && !!s.houseNumber);
                   if (!s.houseNumber) {
                     toast.warning("Sugestão sem número do imóvel. Inclua o número (ex.: \"Rua X, 174\") para um pino preciso.");
                   }
@@ -422,6 +436,29 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           </TabsContent>
         </Tabs>
       </DialogContent>
+      <AlertDialog open={!!confirmImprecise} onOpenChange={(v) => !v && setConfirmImprecise(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Endereço sem localização precisa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Não foi possível localizar este endereço com o número do imóvel. Para evitar
+              um pino no meio da rua, o protocolo será salvo <strong>sem coordenadas no mapa</strong>.
+              Deseja continuar mesmo assim?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Revisar endereço</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              const pending = confirmImprecise;
+              setConfirmImprecise(null);
+              if (pending) {
+                const patch = { ...pending.patch, latitude: null, longitude: null };
+                update.mutate(patch, { onSuccess: () => setEditing(false) });
+              }
+            }}>Salvar sem mapa</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
