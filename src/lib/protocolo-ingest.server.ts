@@ -1,4 +1,4 @@
-import { PROTOCOLO_EXTRACT_SYSTEM, normalizarExtracao } from "@/lib/protocolo-extract.shared";
+import { PROTOCOLO_EXTRACT_SYSTEM, normalizarExtracao, sanitizarTextoProtocolo } from "@/lib/protocolo-extract.shared";
 import { gerarNumeroProtocolo } from "@/lib/prazo";
 
 function norm(s: string): string {
