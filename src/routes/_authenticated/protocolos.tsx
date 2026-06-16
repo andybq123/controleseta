@@ -44,14 +44,28 @@ function ProtocolosPage() {
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
-    queryFn: () =>
-      fetchAllPaginated((from, to) =>
+    queryFn: async () => {
+      const rows = await fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
           .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
           .order("data_abertura", { ascending: false })
           .range(from, to),
-      ),
+      );
+      const parseNum = (n: string | null | undefined): [number, number] => {
+        if (!n) return [0, 0];
+        const [seqRaw, yearRaw] = String(n).split("/");
+        const seq = parseInt(String(seqRaw ?? "").replace(/\D/g, ""), 10) || 0;
+        const year = parseInt(String(yearRaw ?? "").replace(/\D/g, ""), 10) || 0;
+        return [year, seq];
+      };
+      return [...rows].sort((a: any, b: any) => {
+        const [ay, as] = parseNum(a.numero);
+        const [by, bs] = parseNum(b.numero);
+        if (by !== ay) return by - ay;
+        return bs - as;
+      });
+    },
   });
 
   const { data: secretarias = [] } = useQuery({
