@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, FileText, Building2, LogOut, AlertTriangle, BarChart3, Mail, Users, HeartPulse, Map as MapIcon } from "lucide-react";
+import { LayoutDashboard, FileText, Building2, LogOut, AlertTriangle, BarChart3, Mail, Users, HeartPulse, Map as MapIcon, Archive } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/notification-bell";
 import brusqueLogo from "@/assets/brusque-brasao.png";
@@ -52,6 +52,7 @@ function AuthLayout() {
     { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
     { to: "/secretarias", label: "Secretarias", icon: Building2 },
     { to: "/email-inbox", label: "E-mails", icon: Mail },
+    { to: "/protocolos-antigos", label: "Protocolos Antigos", icon: Archive },
     ...(isAdmin ? [{ to: "/users", label: "Usuários", icon: Users }] : []),
   ]) as { to: string; label: string; icon: any }[];
 
