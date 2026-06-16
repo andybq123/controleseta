@@ -14,7 +14,8 @@ type Record = {
   comentario?: string | null;
 };
 
-const ALL = ouvidorias as Record[];
+// Remove manifestações de junho/2026 dos protocolos antigos (duplicavam dados atuais).
+const ALL = (ouvidorias as Record[]).filter((r) => !r.data?.startsWith("2026-06"));
 
 export const Route = createFileRoute("/_authenticated/protocolos-antigos/")({
   head: () => ({
