@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import ouvidorias from "@/data/ouvidorias.json";
+import atrasadasOficiais from "@/data/ouvidorias-atrasadas.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
 import {
   ResponsiveContainer,
@@ -28,6 +29,15 @@ type Record = {
 
 // Remove manifestações de junho/2026 dos protocolos antigos (duplicavam dados atuais).
 const ALL = (ouvidorias as Record[]).filter((r) => !r.data?.startsWith("2026-06"));
+
+// Conjunto oficial de atrasadas extraído das abas "Ouvidorias atrasadas" das planilhas (Brusque + Saúde).
+const ATRASADAS_SET = new Set<string>(
+  (atrasadasOficiais as { source: string; numero: number }[]).map(
+    (r) => `${r.source}|${r.numero}`
+  )
+);
+const isAtrasada = (r: Pick<Record, "source" | "numero">) =>
+  ATRASADAS_SET.has(`${r.source}|${r.numero}`);
 
 export const Route = createFileRoute("/_authenticated/protocolos-antigos/")({
   head: () => ({
@@ -100,8 +110,8 @@ function Dashboard() {
     let rows = scoped.filter((r) => {
       if (setor !== "Todos" && r.setor !== setor) return false;
       if (situacao !== "Todos" && r.situacao !== situacao) return false;
-      if (quick === "atrasadas" && r.situacao === "Em dia") return false;
-      if (quick === "emDia" && r.situacao !== "Em dia") return false;
+      if (quick === "atrasadas" && !isAtrasada(r)) return false;
+      if (quick === "emDia" && isAtrasada(r)) return false;
       if (from && r.data < from) return false;
       if (to && r.data > to) return false;
       if (ql) {
@@ -128,7 +138,7 @@ function Dashboard() {
 
   const kpis = useMemo(() => {
     const total = scoped.length;
-    const atrasadas = scoped.filter((r) => r.situacao !== "Em dia").length;
+    const atrasadas = scoped.filter((r) => isAtrasada(r)).length;
     const emDia = total - atrasadas;
     const setoresUnicos = new Set(scoped.map((r) => r.setor ?? "—")).size;
     return { total, atrasadas, emDia, setoresUnicos };
@@ -140,7 +150,7 @@ function Dashboard() {
       const k = r.setor ?? "—";
       const cur = m.get(k) ?? { total: 0, atrasadas: 0 };
       cur.total++;
-      if (r.situacao !== "Em dia") cur.atrasadas++;
+      if (isAtrasada(r)) cur.atrasadas++;
       m.set(k, cur);
     });
     return Array.from(m.entries())
@@ -154,8 +164,8 @@ function Dashboard() {
       const k = r.data.slice(0, 7);
       const cur = m.get(k) ?? { total: 0, emDia: 0, atrasadas: 0 };
       cur.total++;
-      if (r.situacao === "Em dia") cur.emDia++;
-      else cur.atrasadas++;
+      if (isAtrasada(r)) cur.atrasadas++;
+      else cur.emDia++;
       m.set(k, cur);
     });
     return Array.from(m.entries()).sort();
@@ -419,7 +429,11 @@ function Dashboard() {
                     <span className="font-medium text-indigo-600">#{r.numero}</span>
                   </td>
                   <td className="px-3 py-2">
-                    <span className={`rounded px-2 py-0.5 text-xs font-medium ${r.situacao === "Em dia" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{r.situacao}</span>
+                    {isAtrasada(r) ? (
+                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">Atrasada</span>
+                    ) : (
+                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700">Em dia</span>
+                    )}
                   </td>
                 </tr>
               ))}
