@@ -15,6 +15,7 @@ import {
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestacoes-map";
 import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import ouvidoriasData from "@/data/ouvidorias.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
 import { useEffect } from "react";
@@ -52,6 +53,7 @@ const CAT_COLORS: Record<CategoriaProtocolo, string> = {
 };
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [drill, setDrill] = useState<{ title: string; items: any[] } | null>(null);
   const [detail, setDetail] = useState<any | null>(null);
   const [mes, setMes] = useState<string>(currentMonthValue());
@@ -675,7 +677,19 @@ function Dashboard() {
       <DrillDialog
         data={drill}
         onOpenChange={(v) => !v && setDrill(null)}
-        onSelect={(p) => { setDetail(p); setDrill(null); }}
+        onSelect={(p) => {
+          if (p._antigo) {
+            const [, source, numero] = String(p.id).split("-");
+            setDrill(null);
+            navigate({
+              to: "/protocolos-antigos/$source/$numero",
+              params: { source, numero },
+            });
+            return;
+          }
+          setDetail(p);
+          setDrill(null);
+        }}
       />
       <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
     </div>
