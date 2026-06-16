@@ -337,25 +337,41 @@ function Dashboard() {
       </section>
 
       <section>
-        <Card title="Volume por mês" subtitle="Passe o mouse para ver o detalhamento"
+        <Card title="Volume por mês" subtitle="Manifestações mensais — em dia vs atrasadas"
           legend={<><LegendItem color="bg-emerald-500" label="Em dia" /><LegendItem color="bg-red-500" label="Atrasadas" /></>}>
-          <div className="flex h-56 items-end gap-1 pt-6">
-            {byMonth.map(([m, v]) => {
-              const h = (v.total / maxMonth) * 100;
-              const atrShare = v.total ? (v.atrasadas / v.total) * 100 : 0;
-              const tip = `Período: ${fmtMonth(m)}\nTotal: ${v.total}\nEm dia: ${v.emDia}\nAtrasadas: ${v.atrasadas} (${atrShare.toFixed(0)}%)`;
-              return (
-                <div key={m} className="group relative flex flex-1 flex-col items-center gap-1">
-                  <div className="relative flex w-full flex-col-reverse overflow-hidden rounded-t transition-opacity hover:opacity-90" style={{ height: `${h}%` }} title={tip}>
-                    <div className="w-full bg-emerald-500" style={{ height: `${100 - atrShare}%` }} />
-                    <div className="w-full bg-red-500" style={{ height: `${atrShare}%` }} />
-                  </div>
-                  <div className="pointer-events-none absolute -top-1 left-1/2 z-10 hidden -translate-x-1/2 -translate-y-full whitespace-pre rounded bg-slate-900 px-2 py-1 text-[10px] text-white shadow-lg group-hover:block">{tip}</div>
-                  <span className="rotate-45 text-[10px] text-slate-500">{fmtMonth(m)}</span>
-                </div>
-              );
-            })}
-            {byMonth.length === 0 && <p className="text-sm text-slate-400">Sem dados.</p>}
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={byMonth.map(([m, v]) => ({
+                  mes: fmtMonth(m),
+                  emDia: v.emDia,
+                  atrasadas: v.atrasadas,
+                  total: v.total,
+                }))}
+                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgb(226 232 240)" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="rgb(100 116 139)" />
+                <YAxis tick={{ fontSize: 11 }} stroke="rgb(100 116 139)" allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{
+                    background: "rgb(15 23 42)",
+                    border: "none",
+                    borderRadius: "0.5rem",
+                    fontSize: 12,
+                    color: "#fff",
+                  }}
+                  formatter={(value: number, name: string) => [value, name === "emDia" ? "Em dia" : "Atrasadas"]}
+                  labelFormatter={(label: string) => `Mês: ${label}`}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 12 }}
+                  formatter={(value: string) => (value === "emDia" ? "Em dia" : "Atrasadas")}
+                />
+                <Bar dataKey="emDia" stackId="a" fill="#10b981" radius={[0, 0, 4, 4]} />
+                <Bar dataKey="atrasadas" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </Card>
       </section>
