@@ -2,6 +2,18 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import ouvidorias from "@/data/ouvidorias.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+  Cell,
+} from "recharts";
+
 
 
 type Record = {
