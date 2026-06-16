@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import ouvidorias from "@/data/ouvidorias.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
@@ -33,6 +33,7 @@ export const Route = createFileRoute("/_authenticated/protocolos-antigos/")({
 type Tab = "Saúde" | "Outros" | "Todos";
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("Todos");
   const [setor, setSetor] = useState<string>("Todos");
   const [situacao, setSituacao] = useState<string>("Todos");
@@ -367,11 +368,18 @@ function Dashboard() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.slice(0, limit).map((r, i) => (
-                <tr key={i} className="cursor-pointer hover:bg-slate-50">
+                <tr
+                  key={i}
+                  onClick={() =>
+                    navigate({
+                      to: "/protocolos-antigos/$source/$numero",
+                      params: { source: r.source, numero: String(r.numero) },
+                    })
+                  }
+                  className="cursor-pointer hover:bg-slate-50"
+                >
                   <td className="px-3 py-2 tabular-nums text-slate-700">
-                    <Link to="/protocolos-antigos/$source/$numero" params={{ source: r.source, numero: String(r.numero) }} className="block">
-                      {new Date(r.data).toLocaleDateString("pt-BR")}
-                    </Link>
+                    {new Date(r.data).toLocaleDateString("pt-BR")}
                   </td>
                   <td className="px-3 py-2">
                     <span className={`rounded px-2 py-0.5 text-xs font-medium ${r.source === "Saúde" ? "bg-emerald-50 text-emerald-700" : "bg-indigo-50 text-indigo-700"}`}>{r.source}</span>
@@ -379,9 +387,7 @@ function Dashboard() {
                   <td className="px-3 py-2 text-slate-700">{r.setor ?? "—"}</td>
                   <td className="px-3 py-2 text-slate-500">{r.responsavel ?? "—"}</td>
                   <td className="px-3 py-2 tabular-nums">
-                    <Link to="/protocolos-antigos/$source/$numero" params={{ source: r.source, numero: String(r.numero) }} className="font-medium text-indigo-600 hover:underline">
-                      #{r.numero}
-                    </Link>
+                    <span className="font-medium text-indigo-600">#{r.numero}</span>
                   </td>
                   <td className="px-3 py-2">
                     <span className={`rounded px-2 py-0.5 text-xs font-medium ${r.situacao === "Em dia" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{r.situacao}</span>
