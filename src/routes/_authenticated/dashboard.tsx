@@ -14,8 +14,7 @@ import {
 } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestacoes-map";
-import { Link } from "@tanstack/react-router";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import ouvidoriasData from "@/data/ouvidorias.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
 import { useEffect } from "react";
