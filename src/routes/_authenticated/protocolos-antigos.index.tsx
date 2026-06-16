@@ -16,7 +16,7 @@ type Record = {
 
 const ALL = ouvidorias as Record[];
 
-export const Route = createFileRoute("/_authenticated/protocolos-antigos")({
+export const Route = createFileRoute("/_authenticated/protocolos-antigos/")({
   head: () => ({
     meta: [
       { title: "Protocolos Antigos — Ouvidorias" },
