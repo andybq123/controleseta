@@ -120,7 +120,7 @@ function Dashboard() {
           ? { nome: saudeSec?.nome ?? "Saúde", sigla: saudeSec?.sigla ?? "SMS" }
           : { nome: r.source, sigla: r.source.slice(0, 6) },
         responsaveis: r.responsavel ? { nome: r.responsavel } : null,
-        locais: null,
+        locais: r.setor ? { nome: r.setor, centro_custo: null } : null,
         latitude: null,
         longitude: null,
         _antigo: true,
