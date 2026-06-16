@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestaco
 import { Link, useNavigate } from "@tanstack/react-router";
 import ouvidoriasData from "@/data/ouvidorias.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
-import { useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { currentMonthValue, monthOptionsFromDates, isInMonth, formatMonthLabel } from "@/lib/month-filter";
 import {
