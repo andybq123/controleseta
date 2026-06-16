@@ -17,6 +17,7 @@ import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestaco
 import { Link, useNavigate } from "@tanstack/react-router";
 import ouvidoriasData from "@/data/ouvidorias.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
+import { inferCategoriaFromTexto } from "@/lib/inferCategoria";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { currentMonthValue, monthOptionsFromDates, isInMonth, formatMonthLabel } from "@/lib/month-filter";
 import {
@@ -98,17 +99,18 @@ function Dashboard() {
     const saudeSec = (secretarias as any[]).find(s => /sa[uú]de/i.test(s.nome));
     const ANTIGOS = (ouvidoriasData as Array<{
       source: string; setor: string | null; responsavel: string | null;
-      data: string; numero: number; situacao: string;
+      data: string; numero: number; situacao: string; comentario?: string | null;
     }>).filter((r) => !r.data?.startsWith("2026-06"));
     return ANTIGOS.map(r => {
       const o = ov[`${r.source}|${r.numero}`];
       const situacaoStr = o?.situacao || r.situacao;
       const vencido = situacaoStr !== "Em dia";
+      const categoria = inferCategoriaFromTexto(`${r.comentario ?? ""} ${r.setor ?? ""}`);
       return {
         id: `antigo-${r.source}-${r.numero}`,
         numero: String(r.numero),
         tipo: "ouvidoria",
-        categoria: "outros",
+        categoria,
         status: "em_andamento",
         assunto: r.setor ?? "Protocolo antigo",
         data_abertura: r.data,
