@@ -96,10 +96,10 @@ function Dashboard() {
   const antigosEnriched = useMemo(() => {
     const ov = getAllOverrides();
     const saudeSec = (secretarias as any[]).find(s => /sa[uú]de/i.test(s.nome));
-    const ANTIGOS = ouvidoriasData as Array<{
+    const ANTIGOS = (ouvidoriasData as Array<{
       source: string; setor: string | null; responsavel: string | null;
       data: string; numero: number; situacao: string;
-    }>;
+    }>).filter((r) => !r.data?.startsWith("2026-06"));
     return ANTIGOS.map(r => {
       const o = ov[`${r.source}|${r.numero}`];
       const situacaoStr = o?.situacao || r.situacao;
