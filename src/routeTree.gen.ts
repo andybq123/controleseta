@@ -18,13 +18,13 @@ import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSecretariasRouteImport } from './routes/_authenticated/secretarias'
 import { Route as AuthenticatedSaudeRouteImport } from './routes/_authenticated/saude'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
-import { Route as AuthenticatedProtocolosAntigosRouteImport } from './routes/_authenticated/protocolos-antigos'
 import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authenticated/protocolos'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
 import { Route as AuthenticatedEmailInboxRouteImport } from './routes/_authenticated/email-inbox'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
+import { Route as AuthenticatedProtocolosAntigosIndexRouteImport } from './routes/_authenticated/protocolos-antigos.index'
 import { Route as ApiPublicGmailSyncRouteImport } from './routes/api/public/gmail-sync'
 import { Route as ApiPublicEmailSyncRouteImport } from './routes/api/public/email-sync'
 import { Route as ApiPublicInboundEmailTokenRouteImport } from './routes/api/public/inbound-email.$token'
@@ -76,12 +76,6 @@ const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   path: '/relatorios',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedProtocolosAntigosRoute =
-  AuthenticatedProtocolosAntigosRouteImport.update({
-    id: '/protocolos-antigos',
-    path: '/protocolos-antigos',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedProtocolosRoute = AuthenticatedProtocolosRouteImport.update({
   id: '/protocolos',
   path: '/protocolos',
@@ -113,6 +107,12 @@ const AuthenticatedRelatoriosIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedRelatoriosRoute,
   } as any)
+const AuthenticatedProtocolosAntigosIndexRoute =
+  AuthenticatedProtocolosAntigosIndexRouteImport.update({
+    id: '/protocolos-antigos/',
+    path: '/protocolos-antigos/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicGmailSyncRoute = ApiPublicGmailSyncRouteImport.update({
   id: '/api/public/gmail-sync',
   path: '/api/public/gmail-sync',
@@ -137,9 +137,9 @@ const AuthenticatedRelatoriosSecretariaIdRoute =
   } as any)
 const AuthenticatedProtocolosAntigosSourceNumeroRoute =
   AuthenticatedProtocolosAntigosSourceNumeroRouteImport.update({
-    id: '/$source/$numero',
-    path: '/$source/$numero',
-    getParentRoute: () => AuthenticatedProtocolosAntigosRoute,
+    id: '/protocolos-antigos/$source/$numero',
+    path: '/protocolos-antigos/$source/$numero',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -152,13 +152,13 @@ export interface FileRoutesByFullPath {
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
-  '/protocolos-antigos': typeof AuthenticatedProtocolosAntigosRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/saude': typeof AuthenticatedSaudeRoute
   '/secretarias': typeof AuthenticatedSecretariasRoute
   '/users': typeof AuthenticatedUsersRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
+  '/protocolos-antigos/': typeof AuthenticatedProtocolosAntigosIndexRoute
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/protocolos-antigos/$source/$numero': typeof AuthenticatedProtocolosAntigosSourceNumeroRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
@@ -174,12 +174,12 @@ export interface FileRoutesByTo {
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
-  '/protocolos-antigos': typeof AuthenticatedProtocolosAntigosRouteWithChildren
   '/saude': typeof AuthenticatedSaudeRoute
   '/secretarias': typeof AuthenticatedSecretariasRoute
   '/users': typeof AuthenticatedUsersRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
+  '/protocolos-antigos': typeof AuthenticatedProtocolosAntigosIndexRoute
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/protocolos-antigos/$source/$numero': typeof AuthenticatedProtocolosAntigosSourceNumeroRoute
   '/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
@@ -197,13 +197,13 @@ export interface FileRoutesById {
   '/_authenticated/email-inbox': typeof AuthenticatedEmailInboxRoute
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
   '/_authenticated/protocolos': typeof AuthenticatedProtocolosRoute
-  '/_authenticated/protocolos-antigos': typeof AuthenticatedProtocolosAntigosRouteWithChildren
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/saude': typeof AuthenticatedSaudeRoute
   '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
+  '/_authenticated/protocolos-antigos/': typeof AuthenticatedProtocolosAntigosIndexRoute
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/protocolos-antigos/$source/$numero': typeof AuthenticatedProtocolosAntigosSourceNumeroRoute
   '/_authenticated/relatorios/secretaria/$id': typeof AuthenticatedRelatoriosSecretariaIdRoute
@@ -221,13 +221,13 @@ export interface FileRouteTypes {
     | '/email-inbox'
     | '/mapa'
     | '/protocolos'
-    | '/protocolos-antigos'
     | '/relatorios'
     | '/saude'
     | '/secretarias'
     | '/users'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
+    | '/protocolos-antigos/'
     | '/relatorios/'
     | '/protocolos-antigos/$source/$numero'
     | '/relatorios/secretaria/$id'
@@ -243,12 +243,12 @@ export interface FileRouteTypes {
     | '/email-inbox'
     | '/mapa'
     | '/protocolos'
-    | '/protocolos-antigos'
     | '/saude'
     | '/secretarias'
     | '/users'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
+    | '/protocolos-antigos'
     | '/relatorios'
     | '/protocolos-antigos/$source/$numero'
     | '/relatorios/secretaria/$id'
@@ -265,13 +265,13 @@ export interface FileRouteTypes {
     | '/_authenticated/email-inbox'
     | '/_authenticated/mapa'
     | '/_authenticated/protocolos'
-    | '/_authenticated/protocolos-antigos'
     | '/_authenticated/relatorios'
     | '/_authenticated/saude'
     | '/_authenticated/secretarias'
     | '/_authenticated/users'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
+    | '/_authenticated/protocolos-antigos/'
     | '/_authenticated/relatorios/'
     | '/_authenticated/protocolos-antigos/$source/$numero'
     | '/_authenticated/relatorios/secretaria/$id'
@@ -354,13 +354,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/protocolos-antigos': {
-      id: '/_authenticated/protocolos-antigos'
-      path: '/protocolos-antigos'
-      fullPath: '/protocolos-antigos'
-      preLoaderRoute: typeof AuthenticatedProtocolosAntigosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/protocolos': {
       id: '/_authenticated/protocolos'
       path: '/protocolos'
@@ -403,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosIndexRouteImport
       parentRoute: typeof AuthenticatedRelatoriosRoute
     }
+    '/_authenticated/protocolos-antigos/': {
+      id: '/_authenticated/protocolos-antigos/'
+      path: '/protocolos-antigos'
+      fullPath: '/protocolos-antigos/'
+      preLoaderRoute: typeof AuthenticatedProtocolosAntigosIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/gmail-sync': {
       id: '/api/public/gmail-sync'
       path: '/api/public/gmail-sync'
@@ -433,28 +433,13 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/protocolos-antigos/$source/$numero': {
       id: '/_authenticated/protocolos-antigos/$source/$numero'
-      path: '/$source/$numero'
+      path: '/protocolos-antigos/$source/$numero'
       fullPath: '/protocolos-antigos/$source/$numero'
       preLoaderRoute: typeof AuthenticatedProtocolosAntigosSourceNumeroRouteImport
-      parentRoute: typeof AuthenticatedProtocolosAntigosRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
-
-interface AuthenticatedProtocolosAntigosRouteChildren {
-  AuthenticatedProtocolosAntigosSourceNumeroRoute: typeof AuthenticatedProtocolosAntigosSourceNumeroRoute
-}
-
-const AuthenticatedProtocolosAntigosRouteChildren: AuthenticatedProtocolosAntigosRouteChildren =
-  {
-    AuthenticatedProtocolosAntigosSourceNumeroRoute:
-      AuthenticatedProtocolosAntigosSourceNumeroRoute,
-  }
-
-const AuthenticatedProtocolosAntigosRouteWithChildren =
-  AuthenticatedProtocolosAntigosRoute._addFileChildren(
-    AuthenticatedProtocolosAntigosRouteChildren,
-  )
 
 interface AuthenticatedRelatoriosRouteChildren {
   AuthenticatedRelatoriosIndexRoute: typeof AuthenticatedRelatoriosIndexRoute
@@ -479,11 +464,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEmailInboxRoute: typeof AuthenticatedEmailInboxRoute
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
   AuthenticatedProtocolosRoute: typeof AuthenticatedProtocolosRoute
-  AuthenticatedProtocolosAntigosRoute: typeof AuthenticatedProtocolosAntigosRouteWithChildren
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedSaudeRoute: typeof AuthenticatedSaudeRoute
   AuthenticatedSecretariasRoute: typeof AuthenticatedSecretariasRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedProtocolosAntigosIndexRoute: typeof AuthenticatedProtocolosAntigosIndexRoute
+  AuthenticatedProtocolosAntigosSourceNumeroRoute: typeof AuthenticatedProtocolosAntigosSourceNumeroRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -492,12 +478,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEmailInboxRoute: AuthenticatedEmailInboxRoute,
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
   AuthenticatedProtocolosRoute: AuthenticatedProtocolosRoute,
-  AuthenticatedProtocolosAntigosRoute:
-    AuthenticatedProtocolosAntigosRouteWithChildren,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedSaudeRoute: AuthenticatedSaudeRoute,
   AuthenticatedSecretariasRoute: AuthenticatedSecretariasRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedProtocolosAntigosIndexRoute:
+    AuthenticatedProtocolosAntigosIndexRoute,
+  AuthenticatedProtocolosAntigosSourceNumeroRoute:
+    AuthenticatedProtocolosAntigosSourceNumeroRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
