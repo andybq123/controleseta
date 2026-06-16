@@ -8,6 +8,14 @@ export const sincronizarGmail = createServerFn({ method: "POST" })
     return await sincronizarGmailContas();
   });
 
+export const ressincronizarGmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { dias?: number }) => ({ dias: Math.min(Math.max(d?.dias ?? 30, 1), 90) }))
+  .handler(async ({ data }) => {
+    const { ressincronizarGmailContas } = await import("@/lib/protocolo-ingest.server");
+    return await ressincronizarGmailContas(data.dias);
+  });
+
 export const sincronizarImap = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {

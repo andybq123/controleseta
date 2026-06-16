@@ -372,6 +372,14 @@ function header(headers: any[], name: string): string {
 }
 
 export async function sincronizarGmailContas(): Promise<{ contas: number; novos: number; erros: number; detalhes: any[] }> {
+  return await sincronizarGmailContasComJanela("newer_than:2d", 20, 1);
+}
+
+export async function ressincronizarGmailContas(dias = 30): Promise<{ contas: number; novos: number; erros: number; detalhes: any[] }> {
+  return await sincronizarGmailContasComJanela(`newer_than:${dias}d`, 100, 20);
+}
+
+async function sincronizarGmailContasComJanela(q: string, pageSize: number, maxPages: number): Promise<{ contas: number; novos: number; erros: number; detalhes: any[] }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   const { data: contas } = await supabaseAdmin
@@ -386,15 +394,22 @@ export async function sincronizarGmailContas(): Promise<{ contas: number; novos:
   for (const conta of contas ?? []) {
     let contaNovos = 0, contaErros = 0, contaProc = 0;
     try {
-      // Lista as últimas 20 mensagens da INBOX (não-lidas têm prioridade)
-      const listRes = await fetch(`${GMAIL_GATEWAY}/users/me/messages?maxResults=20&q=in:inbox newer_than:2d`, {
-        headers: gmailHeaders(),
-      });
-      if (!listRes.ok) throw new Error(`Gmail list ${listRes.status}: ${(await listRes.text()).slice(0, 200)}`);
-      const listJson = await listRes.json();
-      const msgs: { id: string }[] = listJson.messages ?? [];
+      const todasMsgs: { id: string }[] = [];
+      let pageToken: string | undefined;
+      let pagesRead = 0;
+      do {
+        const qStr = encodeURIComponent(`in:inbox ${q}`);
+        const url = `${GMAIL_GATEWAY}/users/me/messages?maxResults=${pageSize}&q=${qStr}${pageToken ? `&pageToken=${pageToken}` : ""}`;
+        const listRes = await fetch(url, { headers: gmailHeaders() });
+        if (!listRes.ok) throw new Error(`Gmail list ${listRes.status}: ${(await listRes.text()).slice(0, 200)}`);
+        const listJson = await listRes.json();
+        const msgs: { id: string }[] = listJson.messages ?? [];
+        todasMsgs.push(...msgs);
+        pageToken = listJson.nextPageToken;
+        pagesRead++;
+      } while (pageToken && pagesRead < maxPages);
 
-      for (const m of msgs) {
+      for (const m of todasMsgs) {
         // Dedup rápido
         const { data: existe } = await supabaseAdmin.from("email_inbox_log")
           .select("id").eq("account_id", conta.id).eq("external_id", m.id).maybeSingle();

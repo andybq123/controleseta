@@ -15,7 +15,7 @@ import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, Clock, RefreshCw } from 
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { sincronizarGmail } from "@/lib/gmail-sync.functions";
+import { sincronizarGmail, ressincronizarGmail } from "@/lib/gmail-sync.functions";
 
 const SYNC_INTERVAL_MIN = 3;
 
@@ -43,7 +43,9 @@ export const Route = createFileRoute("/_authenticated/email-inbox")({
 function EmailInboxPage() {
   const qc = useQueryClient();
   const sincronizar = useServerFn(sincronizarGmail);
+  const ressincronizar = useServerFn(ressincronizarGmail);
   const [sincronizando, setSincronizando] = useState(false);
+  const [ressincronizando, setRessincronizando] = useState(false);
   useTick(1000);
 
   async function rodarSync() {
@@ -57,6 +59,21 @@ function EmailInboxPage() {
       toast.error(e?.message ?? "Falha ao sincronizar");
     } finally {
       setSincronizando(false);
+    }
+  }
+
+  async function rodarRessync() {
+    if (!confirm("Ressincronizar os últimos 30 dias de e-mails? E-mails já processados não serão duplicados.")) return;
+    setRessincronizando(true);
+    try {
+      const r = await ressincronizar({ data: { dias: 30 } }) as any;
+      toast.success(`Ressincronização: ${r?.novos ?? 0} novo(s), ${r?.erros ?? 0} erro(s) em ${r?.contas ?? 0} conta(s)`);
+      qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] });
+      qc.invalidateQueries({ queryKey: ["email-inbox-log"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao ressincronizar");
+    } finally {
+      setRessincronizando(false);
     }
   }
 
@@ -133,6 +150,10 @@ function EmailInboxPage() {
           <p className="text-sm text-muted-foreground">Encaminhe e-mails para um endereço único e o sistema cria a ouvidoria automaticamente.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={rodarRessync} disabled={ressincronizando || sincronizando}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${ressincronizando ? "animate-spin" : ""}`} />
+            Ressincronizar 30 dias
+          </Button>
           <Button variant="outline" onClick={rodarSync} disabled={sincronizando}>
             <RefreshCw className={`h-4 w-4 mr-1 ${sincronizando ? "animate-spin" : ""}`} />
             Sincronizar agora
