@@ -1,0 +1,35 @@
+import type { CategoriaProtocolo } from "@/lib/prazo";
+
+/**
+ * Inferência heurística da categoria de uma manifestação antiga a partir
+ * do texto livre (comentário/assunto). A planilha original possuía a coluna
+ * "tipo de manifestação", mas ela não foi preservada no JSON. Esta função
+ * tenta recuperar essa informação pelo texto.
+ *
+ * Ordem importa: padrões mais específicos primeiro.
+ */
+export function inferCategoriaFromTexto(texto: string | null | undefined): CategoriaProtocolo {
+  const t = (texto ?? "").toLowerCase();
+  if (!t.trim()) return "outros";
+
+  // Elogio
+  if (/\belogio|parab[eé]ns|agradec|cumpriment/.test(t)) return "elogio";
+
+  // Denúncia
+  if (/\bden[uú]nci|maus[- ]tratos|ilegal|clandestin|irregular|abandonad[oa]s?\b|perturba(ç|c)[aã]o do sossego|som alto|barulho excessivo|invas[aã]o|fraude|corrup(ç|c)/.test(t))
+    return "denuncia";
+
+  // Reclamação
+  if (/\breclama|insatisf|descontent|demora|p[eé]ssim|p[eé]ssima|prec[aá]ri|abandonad|n[aã]o (foi|fui|fomos) atend|sem retorno|sem resposta|m[aá] qualidade|atendimento ruim/.test(t))
+    return "reclamacao";
+
+  // Pedido de informação
+  if (/\b(gostaria de saber|pedido de informa|solicita(ç|c)[aã]o de informa|esclarec|informa(ç|c)[oõ]es sobre|consulta|d[uú]vida|tirar d[uú]vida)/.test(t))
+    return "pedido_informacao";
+
+  // Solicitação (verbos de pedido / serviços)
+  if (/\bsolicit|requer|pede(\b|m)|pedido|vistoria|fiscaliza|manuten(ç|c)[aã]o|reparo|conserto|poda|capina|ro(ç|c)ada|tapa[- ]?buraco|coleta|recolhiment|remo(ç|c)[aã]o|instala(ç|c)[aã]o|providenci/.test(t))
+    return "solicitacao";
+
+  return "outros";
+}
