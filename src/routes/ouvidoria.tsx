@@ -39,7 +39,9 @@ function OuvidoriaPublicaPage() {
   const [assuntoEspecifico, setAssuntoEspecifico] = useState("");
   const [descricao, setDescricao] = useState("");
   const [nome, setNome] = useState("");
-  const [contato, setContato] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [email, setEmail] = useState("");
   const [endereco, setEndereco] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -63,13 +65,25 @@ function OuvidoriaPublicaPage() {
       if (!assuntoEspecifico) throw new Error("Selecione o assunto específico.");
       if (!descricao.trim()) throw new Error("Descreva sua manifestação.");
       if (sigilo !== "anonimo" && !nome.trim()) throw new Error("Informe seu nome.");
-      if (sigilo === "sigiloso" && !contato.trim()) throw new Error("Informe um contato para retorno sigiloso.");
+      if (sigilo === "publico") {
+        if (!cpf.trim()) throw new Error("Informe seu CPF.");
+        if (!telefone.trim() && !email.trim()) throw new Error("Informe telefone ou e-mail para contato.");
+      }
+      if (sigilo === "sigiloso" && !telefone.trim() && !email.trim()) {
+        throw new Error("Informe telefone ou e-mail para retorno sigiloso.");
+      }
 
       const numero = gerarNumeroProtocolo("ouvidoria");
+      const contatoPartes = [
+        cpf.trim() ? `CPF: ${cpf.trim()}` : null,
+        telefone.trim() ? `Tel: ${telefone.trim()}` : null,
+        email.trim() ? `Email: ${email.trim()}` : null,
+      ].filter(Boolean);
+      const contatoStr = contatoPartes.join(" | ");
       const solicitante =
         sigilo === "anonimo"
           ? "Anônimo"
-          : nome.trim() + (sigilo === "publico" && contato.trim() ? ` <${contato.trim()}>` : "");
+          : nome.trim() + (sigilo === "publico" && (email.trim() || telefone.trim()) ? ` <${email.trim() || telefone.trim()}>` : "");
 
       const assuntoTexto = assuntoEspecifico === grupoAssunto ? assuntoEspecifico : `${grupoAssunto} — ${assuntoEspecifico}`;
 
@@ -84,7 +98,7 @@ function OuvidoriaPublicaPage() {
         local_id: localId || null,
         solicitante,
         sigilo,
-        contato_solicitante: sigilo === "anonimo" ? null : (contato.trim() || null),
+        contato_solicitante: sigilo === "anonimo" ? null : (contatoStr || null),
         endereco: endereco.trim() || null,
         latitude: coords?.lat ?? null,
         longitude: coords?.lng ?? null,
@@ -158,7 +172,9 @@ function OuvidoriaPublicaPage() {
     setAssuntoEspecifico("");
     setDescricao("");
     setNome("");
-    setContato("");
+    setCpf("");
+    setTelefone("");
+    setEmail("");
     setEndereco("");
     setCoords(null);
   }
@@ -220,6 +236,62 @@ function OuvidoriaPublicaPage() {
             </RadioGroup>
           </CardContent>
         </Card>
+
+        {sigilo !== "anonimo" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Seus dados</CardTitle>
+              <CardDescription>
+                {sigilo === "sigiloso"
+                  ? "Seus dados ficarão sob sigilo da ouvidoria e não serão divulgados ao setor envolvido."
+                  : "Seus dados serão usados para retorno e podem ser visualizados pelo setor responsável."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="grid gap-2">
+                <Label>Nome completo *</Label>
+                <Input maxLength={120} value={nome} onChange={e => setNome(e.target.value)} />
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-2">
+                  <Label>CPF {sigilo === "publico" ? "*" : ""}</Label>
+                  <Input
+                    maxLength={14}
+                    value={cpf}
+                    onChange={e => setCpf(e.target.value)}
+                    placeholder="000.000.000-00"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Telefone *</Label>
+                  <Input
+                    maxLength={20}
+                    value={telefone}
+                    onChange={e => setTelefone(e.target.value)}
+                    placeholder="(47) 99999-9999"
+                    inputMode="tel"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>E-mail *</Label>
+                  <Input
+                    type="email"
+                    maxLength={120}
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {sigilo === "publico"
+                  ? "CPF é obrigatório. Informe telefone e/ou e-mail (pelo menos um) para contato."
+                  : "Informe telefone e/ou e-mail (pelo menos um) para retorno sigiloso."}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -338,29 +410,6 @@ function OuvidoriaPublicaPage() {
             </div>
           </CardContent>
         </Card>
-
-        {sigilo !== "anonimo" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Seus dados</CardTitle>
-              <CardDescription>
-                {sigilo === "sigiloso"
-                  ? "Seus dados ficarão sob sigilo da ouvidoria e não serão divulgados ao setor envolvido."
-                  : "Seus dados serão usados para retorno e podem ser visualizados pelo setor responsável."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>Nome completo *</Label>
-                <Input maxLength={120} value={nome} onChange={e => setNome(e.target.value)} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Contato {sigilo === "sigiloso" ? "*" : ""} (e-mail ou telefone)</Label>
-                <Input maxLength={120} value={contato} onChange={e => setContato(e.target.value)} placeholder="email@exemplo.com ou (47) 99999-9999" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <div className="flex justify-end gap-3 pb-10">
           <Button
