@@ -381,7 +381,7 @@ function OuvidoriaPublicaPage() {
         endereco={endereco}
         onConfirm={(lat, lng) => setCoords({ lat, lng })}
         protocoloContext={{
-          assunto,
+          assunto: assuntoEspecifico || grupoAssunto || "",
           descricao,
           endereco,
           secretaria: secretarias.find(s => s.id === secretariaId)?.nome,
