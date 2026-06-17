@@ -8,12 +8,21 @@ type Suggestion = {
   place_name: string;
   text: string;
   center: [number, number]; // [lng, lat]
+  address?: string;
+  place_type?: string[];
 };
 
 type Props = {
   value: string;
   onChange: (v: string) => void;
-  onSelect?: (s: { endereco: string; lat: number; lng: number }) => void;
+  onSelect?: (s: {
+    endereco: string;
+    label: string;
+    lat: number;
+    lng: number;
+    houseNumber?: string;
+    exact: boolean;
+  }) => void;
   placeholder?: string;
 };
 
@@ -54,6 +63,8 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder }: 
           place_name: f.place_name,
           text: f.text,
           center: f.center,
+          address: f.address,
+          place_type: f.place_type,
         }));
         setSuggestions(feats);
         setOpen(feats.length > 0);
@@ -81,7 +92,14 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder }: 
     onChange(s.place_name);
     setOpen(false);
     setSuggestions([]);
-    onSelect?.({ endereco: s.place_name, lng: s.center[0], lat: s.center[1] });
+    onSelect?.({
+      endereco: s.place_name,
+      label: s.place_name,
+      lng: s.center[0],
+      lat: s.center[1],
+      houseNumber: s.address,
+      exact: (s.place_type ?? []).includes("address"),
+    });
   }
 
   return (
