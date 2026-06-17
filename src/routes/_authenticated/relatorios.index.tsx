@@ -15,6 +15,7 @@ import autoTable from "jspdf-autotable";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { useServerFn } from "@tanstack/react-start";
 import { gerarRelatorioIA } from "@/lib/relatorio-ia.functions";
+import { buildProtocolosAntigos, isAntigo, isAntigoAtrasada } from "@/lib/protocolos-antigos-merge";
 import { useMutation } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Loader2, Copy } from "lucide-react";
