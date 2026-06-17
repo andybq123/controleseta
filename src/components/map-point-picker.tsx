@@ -30,7 +30,7 @@ export function MapPointPicker({
   onOpenChange: (v: boolean) => void;
   initial?: { lat: number; lng: number } | null;
   endereco?: string;
-  onConfirm: (lat: number, lng: number) => void;
+  onConfirm: (lat: number, lng: number, endereco?: string) => void;
   protocoloContext?: {
     assunto?: string;
     descricao?: string;
@@ -47,6 +47,8 @@ export function MapPointPicker({
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInfo, setAiInfo] = useState<{ label?: string; confianca?: string; justificativa?: string } | null>(null);
+  const [reverseAddr, setReverseAddr] = useState<string | null>(null);
+  const [reverseLoading, setReverseLoading] = useState(false);
   const sugerirIA = useServerFn(sugerirLocalizacaoIA);
 
   const hasContext = !!protocoloContext && Object.values(protocoloContext).some((v) => (v ?? "").toString().trim().length > 0);
@@ -76,8 +78,36 @@ export function MapPointPicker({
     if (open) {
       setPt(initial ?? null);
       setAiInfo(null);
+      setReverseAddr(null);
     }
   }, [open, initial]);
+
+  // Reverse-geocode the selected point to get a street name
+  useEffect(() => {
+    if (!pt) {
+      setReverseAddr(null);
+      return;
+    }
+    let cancelled = false;
+    setReverseLoading(true);
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${pt.lng},${pt.lat}.json?access_token=${MAPBOX_TOKEN}&language=pt&country=br&types=address,street,place,locality,neighborhood,poi&limit=1`;
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const feat = data?.features?.[0];
+        setReverseAddr(feat?.place_name ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setReverseAddr(null);
+      })
+      .finally(() => {
+        if (!cancelled) setReverseLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pt]);
 
   // init / teardown map with dialog lifecycle
   useEffect(() => {
@@ -196,9 +226,19 @@ export function MapPointPicker({
           </div>
         )}
         {pt && (
-          <p className="text-xs text-muted-foreground">
-            Coordenadas: {pt.lat.toFixed(6)}, {pt.lng.toFixed(6)}
-          </p>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>Coordenadas: {pt.lat.toFixed(6)}, {pt.lng.toFixed(6)}</div>
+            <div className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              {reverseLoading ? (
+                <span className="italic">Identificando endereço…</span>
+              ) : reverseAddr ? (
+                <span><strong>Endereço:</strong> {reverseAddr}</span>
+              ) : (
+                <span className="italic">Endereço não identificado</span>
+              )}
+            </div>
+          </div>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
@@ -206,7 +246,7 @@ export function MapPointPicker({
             disabled={!pt}
             onClick={() => {
               if (pt) {
-                onConfirm(pt.lat, pt.lng);
+                onConfirm(pt.lat, pt.lng, reverseAddr ?? undefined);
                 onOpenChange(false);
               }
             }}
