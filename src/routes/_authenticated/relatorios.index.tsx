@@ -558,7 +558,16 @@ function RelatoriosPage() {
                     const total = comparativoMensal[c.value].reduce((a, b) => a + b, 0);
                     return (
                       <tr key={c.value} className="border-b">
-                        <td className="py-2 px-2 font-medium">{c.label}</td>
+                        <td className="py-2 px-2 font-medium">
+                          <span className="inline-flex items-center gap-2">
+                            <span
+                              className="inline-block h-2.5 w-2.5 rounded-sm"
+                              style={{ background: CAT_COLORS[c.value].base }}
+                              aria-hidden
+                            />
+                            {c.label}
+                          </span>
+                        </td>
                         {comparativoMensal[c.value].map((v, i) => (
                           <td key={i} className="py-2 px-2 text-center text-xs tabular-nums">{v || "—"}</td>
                         ))}
