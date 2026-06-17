@@ -323,59 +323,42 @@ function OuvidoriaPublicaPage() {
               </Select>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>Área / Tema *</Label>
+              <Select
+                value={grupoAssunto || "none"}
+                onValueChange={(v) => {
+                  setGrupoAssunto(v === "none" ? "" : v);
+                  setAssuntoEspecifico("");
+                  setLocalId("");
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  {ASSUNTOS_OUVIDORIA.map((a) => (
+                    <SelectItem key={a.grupo} value={a.grupo}>{a.grupo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isSaude && (
               <div className="grid gap-2">
-                <Label>Secretaria / Setor</Label>
-                <Select value={secretariaId || "none"} onValueChange={(v) => { setSecretariaId(v === "none" ? "" : v); setLocalId(""); }}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <Label>Unidade de Saúde (UBS)</Label>
+                <Select value={localId || "none"} onValueChange={(v) => setLocalId(v === "none" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={ubsLocais.length ? "Selecione a UBS" : "Nenhuma UBS cadastrada"} />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Não sei / Não se aplica</SelectItem>
-                    {secretarias.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.nome}{s.sigla ? ` (${s.sigla})` : ""}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Local / Unidade</Label>
-                <Select value={localId || "none"} onValueChange={(v) => setLocalId(v === "none" ? "" : v)} disabled={!secretariaId}>
-                  <SelectTrigger><SelectValue placeholder={secretariaId ? "Selecione" : "Escolha a secretaria primeiro"} /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">—</SelectItem>
-                    {locaisFiltrados.map(l => (
+                    <SelectItem value="none">— Não se aplica</SelectItem>
+                    {ubsLocais.map((l) => (
                       <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>Área / Tema *</Label>
-                <Select value={grupoAssunto || "none"} onValueChange={(v) => { setGrupoAssunto(v === "none" ? "" : v); setAssuntoEspecifico(""); }}>
-                  <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">—</SelectItem>
-                    {ASSUNTOS_OUVIDORIA.map((a) => (
-                      <SelectItem key={a.grupo} value={a.grupo}>{a.grupo}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Assunto específico *</Label>
-                <Select value={assuntoEspecifico || "none"} onValueChange={(v) => setAssuntoEspecifico(v === "none" ? "" : v)} disabled={!grupoAssunto}>
-                  <SelectTrigger><SelectValue placeholder={grupoAssunto ? "Selecione" : "Escolha a área primeiro"} /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">—</SelectItem>
-                    {itensDoGrupo.map((item) => (
-                      <SelectItem key={item} value={item}>{item}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            )}
             <div className="grid gap-2">
               <Label>Descrição detalhada *</Label>
               <Textarea
