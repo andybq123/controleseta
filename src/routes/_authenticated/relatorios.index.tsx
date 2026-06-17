@@ -195,14 +195,14 @@ function RelatoriosPage() {
     return arr;
   }, [filtrados, ano]);
 
-  // Cores semânticas por categoria (alinhadas aos badges)
-  const CAT_COLORS: Record<string, string> = {
-    elogio: "#16a34a",
-    reclamacao: "#dc2626",
-    pedido_informacao: "#9333ea",
-    denuncia: "#111827",
-    solicitacao: "#eab308",
-    outros: "#94a3b8",
+  // Cores semânticas por categoria (alinhadas aos badges em prazo.ts)
+  const CAT_COLORS: Record<string, { base: string; light: string }> = {
+    elogio:            { base: "#16a34a", light: "#4ade80" }, // green-600 → green-400
+    reclamacao:        { base: "#dc2626", light: "#f87171" }, // red-600 → red-400
+    pedido_informacao: { base: "#9333ea", light: "#c084fc" }, // purple-600 → purple-400
+    denuncia:          { base: "#0a0a0a", light: "#404040" }, // black → neutral-700
+    solicitacao:       { base: "#facc15", light: "#fde047" }, // yellow-400 → yellow-300
+    outros:            { base: "#64748b", light: "#94a3b8" }, // slate-500 → slate-400
   };
 
   const monthlyChartData = MESES.map((m, i) => {
@@ -482,6 +482,14 @@ function RelatoriosPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={monthlyChartData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <defs>
+                      {CATEGORIAS.map(c => (
+                        <linearGradient key={c.value} id={`grad-${c.value}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={CAT_COLORS[c.value].light} stopOpacity={0.95} />
+                          <stop offset="100%" stopColor={CAT_COLORS[c.value].base} stopOpacity={1} />
+                        </linearGradient>
+                      ))}
+                    </defs>
                     <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
                     <RTooltip
@@ -510,7 +518,9 @@ function RelatoriosPage() {
                         key={c.value}
                         dataKey={c.value}
                         stackId="cat"
-                        fill={CAT_COLORS[c.value]}
+                        fill={`url(#grad-${c.value})`}
+                        stroke={CAT_COLORS[c.value].base}
+                        strokeWidth={0.5}
                         radius={idx === CATEGORIAS.length - 1 ? [4, 4, 0, 0] : 0}
                         maxBarSize={48}
                       />
@@ -548,7 +558,16 @@ function RelatoriosPage() {
                     const total = comparativoMensal[c.value].reduce((a, b) => a + b, 0);
                     return (
                       <tr key={c.value} className="border-b">
-                        <td className="py-2 px-2 font-medium">{c.label}</td>
+                        <td className="py-2 px-2 font-medium">
+                          <span className="inline-flex items-center gap-2">
+                            <span
+                              className="inline-block h-2.5 w-2.5 rounded-sm"
+                              style={{ background: CAT_COLORS[c.value].base }}
+                              aria-hidden
+                            />
+                            {c.label}
+                          </span>
+                        </td>
                         {comparativoMensal[c.value].map((v, i) => (
                           <td key={i} className="py-2 px-2 text-center text-xs tabular-nums">{v || "—"}</td>
                         ))}
