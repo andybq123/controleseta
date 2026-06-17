@@ -74,7 +74,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, onResolve, plac
         setLoading(true);
         const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
           q + ", Brusque, SC"
-        )}.json?access_token=${MAPBOX_TOKEN}&country=br&language=pt&autocomplete=true&limit=6&bbox=${BRUSQUE_BBOX}&proximity=${BRUSQUE_PROX}&types=address,street,place,locality,neighborhood,poi`;
+        )}.json?access_token=${MAPBOX_TOKEN}&country=br&language=pt&autocomplete=true&limit=6&bbox=${BRUSQUE_BBOX}&proximity=${BRUSQUE_PROX}&types=address,place,locality,neighborhood`;
         const res = await fetch(url);
         if (!res.ok) throw new Error("Falha ao buscar endereços");
         const data = await res.json();
