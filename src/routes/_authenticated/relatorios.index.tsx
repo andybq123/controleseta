@@ -72,12 +72,20 @@ function RelatoriosPage() {
     queryFn: async () => (await supabase.from("locais").select("id, nome, secretaria_id").order("nome")).data ?? [],
   });
 
+  // Mescla protocolos antigos (planilhas históricas) ao dataset dos relatórios.
+  const protocolosComAntigos = useMemo(() => {
+    const antigos = buildProtocolosAntigos(
+      (secretarias as any[]).map((s) => ({ id: s.id, nome: s.nome })),
+    );
+    return [...(protocolos as any[]), ...antigos];
+  }, [protocolos, secretarias]);
+
   const anosDisponiveis = useMemo(() => {
     const set = new Set<string>();
-    protocolos.forEach(p => set.add(p.data_abertura.slice(0, 4)));
+    protocolosComAntigos.forEach(p => set.add(p.data_abertura.slice(0, 4)));
     set.add(String(currentYear));
     return Array.from(set).sort().reverse();
-  }, [protocolos, currentYear]);
+  }, [protocolosComAntigos, currentYear]);
 
   const matchesFilter = (p: any) => {
     if (fCategoria !== "all" && p.categoria !== fCategoria) return false;
@@ -93,7 +101,7 @@ function RelatoriosPage() {
     return true;
   };
 
-  const filtrados = protocolos.filter(matchesFilter);
+  const filtrados = protocolosComAntigos.filter(matchesFilter);
   const doAno = filtrados.filter(p => {
     if (!p.data_abertura.startsWith(ano)) return false;
     if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
@@ -169,7 +177,7 @@ function RelatoriosPage() {
     return filtrados
       .filter(p => p.status !== "concluido")
       .map(p => ({ ...p, _s: situacaoProtocolo(p as any) }))
-      .filter(p => p._s.situacao === "vencido")
+      .filter(p => (isAntigo(p) ? isAntigoAtrasada(p) : p._s.situacao === "vencido"))
       .sort((a, b) => a._s.dias - b._s.dias);
   }, [filtrados]);
 
@@ -306,6 +314,7 @@ function RelatoriosPage() {
   const abertosAno = totalAno - concluidosAno;
   const vencidosAno = doAno.filter(p => {
     if (p.status === "concluido") return false;
+    if (isAntigo(p)) return isAntigoAtrasada(p);
     return situacaoProtocolo(p as any).situacao === "vencido";
   }).length;
 
