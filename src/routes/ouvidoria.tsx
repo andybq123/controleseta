@@ -15,6 +15,7 @@ import { CATEGORIAS, gerarNumeroProtocolo, type CategoriaProtocolo } from "@/lib
 import { ASSUNTOS_OUVIDORIA } from "@/lib/assuntos-ouvidoria";
 import { MapPin, CheckCircle2, ShieldAlert, Eye, EyeOff, UserX, Send, Copy } from "lucide-react";
 import { toast } from "sonner";
+import brusqueBrasao from "@/assets/brusque-brasao.png";
 
 export const Route = createFileRoute("/ouvidoria")({
   ssr: false,
@@ -187,13 +188,38 @@ function OuvidoriaPublicaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-background">
-      <header className="border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto max-w-3xl px-4 py-6">
-          <h1 className="text-3xl font-bold tracking-tight">Ouvidoria Municipal</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Canal oficial para registrar elogios, reclamações, denúncias, sugestões e pedidos de informação.
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-background to-red-50 dark:from-emerald-950/20 dark:via-background dark:to-red-950/20 relative">
+      {enviar.isPending && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
+          <div className="relative">
+            <div className="h-16 w-16 rounded-full border-4 border-emerald-600/20 border-t-emerald-600 animate-spin" />
+            <img src={brusqueBrasao} alt="" className="absolute inset-0 m-auto h-8 w-8 object-contain" />
+          </div>
+          <div className="text-center">
+            <p className="font-semibold text-foreground">Enviando sua manifestação…</p>
+            <p className="text-xs text-muted-foreground mt-1">Aguarde, estamos protocolando seu registro.</p>
+          </div>
+        </div>
+      )}
+      <div className="h-1.5 w-full bg-gradient-to-r from-emerald-600 via-white to-red-600" />
+      <header className="border-b bg-background/90 backdrop-blur shadow-sm">
+        <div className="mx-auto max-w-3xl px-4 py-5 flex items-center gap-4">
+          <img
+            src={brusqueBrasao}
+            alt="Brasão de Brusque - SC"
+            className="h-16 w-16 object-contain shrink-0 drop-shadow-sm"
+            width={64}
+            height={64}
+          />
+          <div className="min-w-0">
+            <p className="text-[11px] uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-semibold">
+              Prefeitura Municipal de Brusque · SC
+            </p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Ouvidoria Municipal</h1>
+            <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+              Canal oficial para elogios, reclamações, denúncias, sugestões e pedidos de informação.
+            </p>
+          </div>
         </div>
       </header>
 
@@ -419,12 +445,28 @@ function OuvidoriaPublicaPage() {
             size="lg"
             onClick={() => enviar.mutate()}
             disabled={enviar.isPending}
+            className="bg-emerald-700 hover:bg-emerald-800 text-white shadow-md"
           >
-            <Send className="h-4 w-4 mr-2" />
-            {enviar.isPending ? "Enviando…" : "Enviar manifestação"}
+            {enviar.isPending ? (
+              <>
+                <span className="mr-2 inline-block h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                Enviando…
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Enviar manifestação
+              </>
+            )}
           </Button>
         </div>
       </main>
+
+      <footer className="border-t bg-background/60">
+        <div className="mx-auto max-w-3xl px-4 py-4 text-center text-[11px] text-muted-foreground">
+          Prefeitura Municipal de Brusque — Santa Catarina
+        </div>
+      </footer>
 
       <MapPointPicker
         open={pickerOpen}
