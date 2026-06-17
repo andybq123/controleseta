@@ -59,7 +59,8 @@ function OuvidoriaPublicaPage() {
 
   const enviar = useMutation({
     mutationFn: async () => {
-      if (!assunto.trim()) throw new Error("Informe o assunto.");
+      if (!grupoAssunto) throw new Error("Selecione a área/assunto.");
+      if (!assuntoEspecifico) throw new Error("Selecione o assunto específico.");
       if (!descricao.trim()) throw new Error("Descreva sua manifestação.");
       if (sigilo !== "anonimo" && !nome.trim()) throw new Error("Informe seu nome.");
       if (sigilo === "sigiloso" && !contato.trim()) throw new Error("Informe um contato para retorno sigiloso.");
@@ -70,12 +71,14 @@ function OuvidoriaPublicaPage() {
           ? "Anônimo"
           : nome.trim() + (sigilo === "publico" && contato.trim() ? ` <${contato.trim()}>` : "");
 
+      const assuntoTexto = assuntoEspecifico === grupoAssunto ? assuntoEspecifico : `${grupoAssunto} — ${assuntoEspecifico}`;
+
       const payload = {
         numero,
         tipo: "ouvidoria" as const,
         categoria,
         status: "aberto" as const,
-        assunto: assunto.trim(),
+        assunto: assuntoTexto,
         descricao: descricao.trim(),
         secretaria_id: secretariaId || null,
         local_id: localId || null,
