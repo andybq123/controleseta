@@ -30,7 +30,7 @@ export function MapPointPicker({
   onOpenChange: (v: boolean) => void;
   initial?: { lat: number; lng: number } | null;
   endereco?: string;
-  onConfirm: (lat: number, lng: number) => void;
+  onConfirm: (lat: number, lng: number, endereco?: string) => void;
   protocoloContext?: {
     assunto?: string;
     descricao?: string;
