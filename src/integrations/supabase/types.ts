@@ -293,6 +293,7 @@ export type Database = {
           data_prorrogacao: string | null
           descricao: string | null
           endereco: string | null
+          hash_consulta: string | null
           id: string
           latitude: number | null
           local_id: string | null
@@ -319,6 +320,7 @@ export type Database = {
           data_prorrogacao?: string | null
           descricao?: string | null
           endereco?: string | null
+          hash_consulta?: string | null
           id?: string
           latitude?: number | null
           local_id?: string | null
@@ -345,6 +347,7 @@ export type Database = {
           data_prorrogacao?: string | null
           descricao?: string | null
           endereco?: string | null
+          hash_consulta?: string | null
           id?: string
           latitude?: number | null
           local_id?: string | null
@@ -493,6 +496,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consultar_protocolo_publico: {
+        Args: { p_hash: string; p_numero: string }
+        Returns: {
+          assunto: string
+          categoria: Database["public"]["Enums"]["protocolo_categoria"]
+          contato_solicitante: string
+          created_at: string
+          data_abertura: string
+          data_conclusao: string
+          data_prorrogacao: string
+          descricao: string
+          endereco: string
+          id: string
+          latitude: number
+          local_nome: string
+          longitude: number
+          numero: string
+          origem: string
+          prorrogado: boolean
+          secretaria_nome: string
+          sigilo: string
+          solicitante: string
+          status: Database["public"]["Enums"]["protocolo_status"]
+          tipo: Database["public"]["Enums"]["protocolo_tipo"]
+          updated_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
