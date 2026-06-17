@@ -355,29 +355,6 @@ function OuvidoriaPublicaPage() {
           </CardContent>
         </Card>
 
-        {sigilo !== "anonimo" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Seus dados</CardTitle>
-              <CardDescription>
-                {sigilo === "sigiloso"
-                  ? "Seus dados ficarão sob sigilo da ouvidoria e não serão divulgados ao setor envolvido."
-                  : "Seus dados serão usados para retorno e podem ser visualizados pelo setor responsável."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>Nome completo *</Label>
-                <Input maxLength={120} value={nome} onChange={e => setNome(e.target.value)} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Contato {sigilo === "sigiloso" ? "*" : ""} (e-mail ou telefone)</Label>
-                <Input maxLength={120} value={contato} onChange={e => setContato(e.target.value)} placeholder="email@exemplo.com ou (47) 99999-9999" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         <div className="flex justify-end gap-3 pb-10">
           <Button
             size="lg"
