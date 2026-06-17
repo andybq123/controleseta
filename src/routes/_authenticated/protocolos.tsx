@@ -214,6 +214,16 @@ function ProtocolosPage() {
                       <Badge variant="outline" className={`text-[10px] border ${situacaoClasses[s.situacao]}`}>
                         {situacaoLabel[s.situacao]} · {s.dias < 0 ? `${Math.abs(s.dias)}d atrasado` : `${s.dias}d`}
                       </Badge>
+                      {(p as any).origem && (
+                        <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/30 text-primary">
+                          {(p as any).origem}
+                        </Badge>
+                      )}
+                      {(p as any).sigilo && (p as any).sigilo !== "publico" && (
+                        <Badge variant="outline" className="text-[10px] bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300">
+                          {(p as any).sigilo === "anonimo" ? "Anônimo" : "Sigiloso"}
+                        </Badge>
+                      )}
                     </div>
                     <h3 className="font-semibold mt-2">{p.assunto}</h3>
                     {p.descricao && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{p.descricao}</p>}

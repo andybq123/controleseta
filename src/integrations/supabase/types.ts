@@ -285,6 +285,7 @@ export type Database = {
         Row: {
           assunto: string
           categoria: Database["public"]["Enums"]["protocolo_categoria"]
+          contato_solicitante: string | null
           created_at: string
           created_by: string | null
           data_abertura: string
@@ -297,9 +298,11 @@ export type Database = {
           local_id: string | null
           longitude: number | null
           numero: string
+          origem: string | null
           prorrogado: boolean
           responsavel_id: string | null
           secretaria_id: string | null
+          sigilo: string
           solicitante: string | null
           status: Database["public"]["Enums"]["protocolo_status"]
           tipo: Database["public"]["Enums"]["protocolo_tipo"]
@@ -308,6 +311,7 @@ export type Database = {
         Insert: {
           assunto: string
           categoria?: Database["public"]["Enums"]["protocolo_categoria"]
+          contato_solicitante?: string | null
           created_at?: string
           created_by?: string | null
           data_abertura?: string
@@ -320,9 +324,11 @@ export type Database = {
           local_id?: string | null
           longitude?: number | null
           numero: string
+          origem?: string | null
           prorrogado?: boolean
           responsavel_id?: string | null
           secretaria_id?: string | null
+          sigilo?: string
           solicitante?: string | null
           status?: Database["public"]["Enums"]["protocolo_status"]
           tipo: Database["public"]["Enums"]["protocolo_tipo"]
@@ -331,6 +337,7 @@ export type Database = {
         Update: {
           assunto?: string
           categoria?: Database["public"]["Enums"]["protocolo_categoria"]
+          contato_solicitante?: string | null
           created_at?: string
           created_by?: string | null
           data_abertura?: string
@@ -343,9 +350,11 @@ export type Database = {
           local_id?: string | null
           longitude?: number | null
           numero?: string
+          origem?: string | null
           prorrogado?: boolean
           responsavel_id?: string | null
           secretaria_id?: string | null
+          sigilo?: string
           solicitante?: string | null
           status?: Database["public"]["Enums"]["protocolo_status"]
           tipo?: Database["public"]["Enums"]["protocolo_tipo"]
