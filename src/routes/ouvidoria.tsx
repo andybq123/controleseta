@@ -13,9 +13,11 @@ import { MapPointPicker } from "@/components/map-point-picker";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { CATEGORIAS, gerarNumeroProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { ASSUNTOS_OUVIDORIA } from "@/lib/assuntos-ouvidoria";
-import { MapPin, CheckCircle2, ShieldAlert, Eye, EyeOff, UserX, Send, Copy } from "lucide-react";
+import { MapPin, CheckCircle2, ShieldAlert, Eye, EyeOff, UserX, Send, Copy, Download, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import brusqueBrasao from "@/assets/brusque-brasao.png";
+import { gerarHashConsulta, gerarProtocoloPdf, type ProtocoloPdfData } from "@/lib/protocolo-pdf";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/ouvidoria")({
   ssr: false,
@@ -47,7 +49,7 @@ function OuvidoriaPublicaPage() {
   const [endereco, setEndereco] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [sucesso, setSucesso] = useState<{ numero: string; id: string } | null>(null);
+  const [sucesso, setSucesso] = useState<{ numero: string; hash: string; pdf: ProtocoloPdfData } | null>(null);
 
   const itensDoGrupo = ASSUNTOS_OUVIDORIA.find((a) => a.grupo === grupoAssunto)?.itens ?? [];
 
@@ -84,6 +86,7 @@ function OuvidoriaPublicaPage() {
       }
 
       const numero = gerarNumeroProtocolo("ouvidoria");
+      const hash = gerarHashConsulta();
       const contatoPartes = [
         cpf.trim() ? `CPF: ${cpf.trim()}` : null,
         telefone.trim() ? `Tel: ${telefone.trim()}` : null,
@@ -117,20 +120,43 @@ function OuvidoriaPublicaPage() {
         origem: "Site - Ouvidoria Pública",
         data_abertura: new Date().toISOString().slice(0, 10),
         created_by: null,
+        hash_consulta: hash,
       };
 
       const { error } = await supabase.from("protocolos").insert(payload);
       if (error) throw error;
-      return { numero, id: null as string | null };
+      const pdfData: ProtocoloPdfData = {
+        numero,
+        hash,
+        categoria: CATEGORIAS.find((c) => c.value === categoria)?.label ?? categoria,
+        assunto: assuntoTexto,
+        descricao: descricao.trim(),
+        solicitante,
+        sigilo,
+        contato: contatoStr || null,
+        endereco: endereco.trim() || null,
+        secretaria: isSaude ? saudeSecretaria?.nome ?? null : null,
+        local: isSaude ? locais.find((l) => l.id === localId)?.nome ?? null : null,
+        data_abertura: payload.data_abertura,
+        status: "Aberto",
+        origem: payload.origem,
+      };
+      return { numero, hash, pdf: pdfData };
     },
     onSuccess: (d) => {
-      setSucesso({ numero: d.numero, id: d.id ?? "" });
+      setSucesso({ numero: d.numero, hash: d.hash, pdf: d.pdf });
       toast.success("Manifestação registrada com sucesso!");
     },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao registrar manifestação."),
   });
 
   if (sucesso) {
+    const baixarPdf = () => gerarProtocoloPdf(sucesso.pdf).save(`ouvidoria-${sucesso.numero}.pdf`);
+    const imprimirPdf = () => {
+      const doc = gerarProtocoloPdf(sucesso.pdf);
+      doc.autoPrint();
+      window.open(doc.output("bloburl"), "_blank");
+    };
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-background flex items-center justify-center p-4">
         <Card className="w-full max-w-lg border-2">
@@ -159,8 +185,39 @@ function OuvidoriaPublicaPage() {
                 <Copy className="h-3 w-3 mr-1" /> Copiar
               </Button>
             </div>
+            <div className="rounded-lg border-2 border-dashed border-amber-400/60 bg-amber-50 dark:bg-amber-950/20 p-4 text-center">
+              <p className="text-xs uppercase tracking-wider text-amber-700 dark:text-amber-400">Código de consulta</p>
+              <p className="font-mono text-xl font-bold text-amber-900 dark:text-amber-200 mt-1 tracking-wider">{sucesso.hash}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  navigator.clipboard.writeText(sucesso.hash);
+                  toast.success("Código copiado!");
+                }}
+              >
+                <Copy className="h-3 w-3 mr-1" /> Copiar código
+              </Button>
+              <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-2">
+                ⚠️ Guarde este código. Ele é exigido para consultar sua manifestação.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={baixarPdf}>
+                <Download className="h-4 w-4 mr-1" /> Baixar PDF
+              </Button>
+              <Button variant="outline" onClick={imprimirPdf}>
+                <Printer className="h-4 w-4 mr-1" /> Imprimir
+              </Button>
+            </div>
+            <Button asChild variant="secondary" className="w-full">
+              <Link to="/consulta" search={{ numero: sucesso.numero, hash: sucesso.hash }}>
+                <Search className="h-4 w-4 mr-1" /> Consultar minha manifestação
+              </Link>
+            </Button>
             <p className="text-xs text-center text-muted-foreground">
-              Guarde este número para acompanhar o andamento da sua manifestação.
+              Guarde o número do protocolo e o código de consulta para acompanhar o andamento.
             </p>
             <Button className="w-full" onClick={() => { setSucesso(null); resetForm(); }}>
               Registrar outra manifestação
@@ -219,6 +276,13 @@ function OuvidoriaPublicaPage() {
             <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
               Canal oficial para elogios, reclamações, denúncias, sugestões e pedidos de informação.
             </p>
+          </div>
+          <div className="ml-auto hidden sm:block">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/consulta">
+                <Search className="h-4 w-4 mr-1" /> Consultar protocolo
+              </Link>
+            </Button>
           </div>
         </div>
       </header>

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OuvidoriaRouteImport } from './routes/ouvidoria'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as ConsultaRouteImport } from './routes/consulta'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -45,6 +46,11 @@ const OuvidoriaRoute = OuvidoriaRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsultaRoute = ConsultaRouteImport.update({
+  id: '/consulta',
+  path: '/consulta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -151,6 +157,7 @@ const AuthenticatedProtocolosAntigosSourceNumeroRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/consulta': typeof ConsultaRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/ouvidoria': typeof OuvidoriaRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/consulta': typeof ConsultaRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/ouvidoria': typeof OuvidoriaRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/consulta': typeof ConsultaRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/ouvidoria': typeof OuvidoriaRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/consulta'
     | '/forgot-password'
     | '/ouvidoria'
     | '/reset-password'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/consulta'
     | '/forgot-password'
     | '/ouvidoria'
     | '/reset-password'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/consulta'
     | '/forgot-password'
     | '/ouvidoria'
     | '/reset-password'
@@ -294,6 +306,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ConsultaRoute: typeof ConsultaRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   OuvidoriaRoute: typeof OuvidoriaRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -323,6 +336,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consulta': {
+      id: '/consulta'
+      path: '/consulta'
+      fullPath: '/consulta'
+      preLoaderRoute: typeof ConsultaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -515,6 +535,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ConsultaRoute: ConsultaRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   OuvidoriaRoute: OuvidoriaRoute,
   ResetPasswordRoute: ResetPasswordRoute,
