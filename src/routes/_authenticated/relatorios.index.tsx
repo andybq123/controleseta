@@ -482,6 +482,14 @@ function RelatoriosPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={monthlyChartData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <defs>
+                      {CATEGORIAS.map(c => (
+                        <linearGradient key={c.value} id={`grad-${c.value}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={CAT_COLORS[c.value].light} stopOpacity={0.95} />
+                          <stop offset="100%" stopColor={CAT_COLORS[c.value].base} stopOpacity={1} />
+                        </linearGradient>
+                      ))}
+                    </defs>
                     <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
                     <RTooltip
@@ -510,7 +518,9 @@ function RelatoriosPage() {
                         key={c.value}
                         dataKey={c.value}
                         stackId="cat"
-                        fill={CAT_COLORS[c.value]}
+                        fill={`url(#grad-${c.value})`}
+                        stroke={CAT_COLORS[c.value].base}
+                        strokeWidth={0.5}
                         radius={idx === CATEGORIAS.length - 1 ? [4, 4, 0, 0] : 0}
                         maxBarSize={48}
                       />
