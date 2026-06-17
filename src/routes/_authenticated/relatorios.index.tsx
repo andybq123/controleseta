@@ -195,14 +195,14 @@ function RelatoriosPage() {
     return arr;
   }, [filtrados, ano]);
 
-  // Cores semânticas por categoria (alinhadas aos badges)
-  const CAT_COLORS: Record<string, string> = {
-    elogio: "#16a34a",
-    reclamacao: "#dc2626",
-    pedido_informacao: "#9333ea",
-    denuncia: "#111827",
-    solicitacao: "#eab308",
-    outros: "#94a3b8",
+  // Cores semânticas por categoria (alinhadas aos badges em prazo.ts)
+  const CAT_COLORS: Record<string, { base: string; light: string }> = {
+    elogio:            { base: "#16a34a", light: "#4ade80" }, // green-600 → green-400
+    reclamacao:        { base: "#dc2626", light: "#f87171" }, // red-600 → red-400
+    pedido_informacao: { base: "#9333ea", light: "#c084fc" }, // purple-600 → purple-400
+    denuncia:          { base: "#0a0a0a", light: "#404040" }, // black → neutral-700
+    solicitacao:       { base: "#facc15", light: "#fde047" }, // yellow-400 → yellow-300
+    outros:            { base: "#64748b", light: "#94a3b8" }, // slate-500 → slate-400
   };
 
   const monthlyChartData = MESES.map((m, i) => {
