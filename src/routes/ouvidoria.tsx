@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { MapPointPicker } from "@/components/map-point-picker";
 import { CATEGORIAS, gerarNumeroProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
+import { ASSUNTOS_OUVIDORIA } from "@/lib/assuntos-ouvidoria";
 import { MapPin, CheckCircle2, ShieldAlert, Eye, EyeOff, UserX, Send, Copy } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,7 +35,8 @@ function OuvidoriaPublicaPage() {
   const [categoria, setCategoria] = useState<CategoriaProtocolo>("reclamacao");
   const [secretariaId, setSecretariaId] = useState<string>("");
   const [localId, setLocalId] = useState<string>("");
-  const [assunto, setAssunto] = useState("");
+  const [grupoAssunto, setGrupoAssunto] = useState("");
+  const [assuntoEspecifico, setAssuntoEspecifico] = useState("");
   const [descricao, setDescricao] = useState("");
   const [nome, setNome] = useState("");
   const [contato, setContato] = useState("");
@@ -42,6 +44,8 @@ function OuvidoriaPublicaPage() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [sucesso, setSucesso] = useState<{ numero: string; id: string } | null>(null);
+
+  const itensDoGrupo = ASSUNTOS_OUVIDORIA.find((a) => a.grupo === grupoAssunto)?.itens ?? [];
 
   const { data: secretarias = [] } = useQuery({
     queryKey: ["pub-secretarias"],
@@ -55,7 +59,8 @@ function OuvidoriaPublicaPage() {
 
   const enviar = useMutation({
     mutationFn: async () => {
-      if (!assunto.trim()) throw new Error("Informe o assunto.");
+      if (!grupoAssunto) throw new Error("Selecione a área/assunto.");
+      if (!assuntoEspecifico) throw new Error("Selecione o assunto específico.");
       if (!descricao.trim()) throw new Error("Descreva sua manifestação.");
       if (sigilo !== "anonimo" && !nome.trim()) throw new Error("Informe seu nome.");
       if (sigilo === "sigiloso" && !contato.trim()) throw new Error("Informe um contato para retorno sigiloso.");
@@ -66,12 +71,14 @@ function OuvidoriaPublicaPage() {
           ? "Anônimo"
           : nome.trim() + (sigilo === "publico" && contato.trim() ? ` <${contato.trim()}>` : "");
 
+      const assuntoTexto = assuntoEspecifico === grupoAssunto ? assuntoEspecifico : `${grupoAssunto} — ${assuntoEspecifico}`;
+
       const payload = {
         numero,
         tipo: "ouvidoria" as const,
         categoria,
         status: "aberto" as const,
-        assunto: assunto.trim(),
+        assunto: assuntoTexto,
         descricao: descricao.trim(),
         secretaria_id: secretariaId || null,
         local_id: localId || null,
@@ -147,7 +154,8 @@ function OuvidoriaPublicaPage() {
     setCategoria("reclamacao");
     setSecretariaId("");
     setLocalId("");
-    setAssunto("");
+    setGrupoAssunto("");
+    setAssuntoEspecifico("");
     setDescricao("");
     setNome("");
     setContato("");
@@ -257,14 +265,31 @@ function OuvidoriaPublicaPage() {
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label>Assunto *</Label>
-              <Input
-                maxLength={150}
-                value={assunto}
-                onChange={e => setAssunto(e.target.value)}
-                placeholder="Resumo curto da manifestação"
-              />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Área / Tema *</Label>
+                <Select value={grupoAssunto || "none"} onValueChange={(v) => { setGrupoAssunto(v === "none" ? "" : v); setAssuntoEspecifico(""); }}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {ASSUNTOS_OUVIDORIA.map((a) => (
+                      <SelectItem key={a.grupo} value={a.grupo}>{a.grupo}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Assunto específico *</Label>
+                <Select value={assuntoEspecifico || "none"} onValueChange={(v) => setAssuntoEspecifico(v === "none" ? "" : v)} disabled={!grupoAssunto}>
+                  <SelectTrigger><SelectValue placeholder={grupoAssunto ? "Selecione" : "Escolha a área primeiro"} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {itensDoGrupo.map((item) => (
+                      <SelectItem key={item} value={item}>{item}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid gap-2">
               <Label>Descrição detalhada *</Label>
@@ -356,7 +381,7 @@ function OuvidoriaPublicaPage() {
         endereco={endereco}
         onConfirm={(lat, lng) => setCoords({ lat, lng })}
         protocoloContext={{
-          assunto,
+          assunto: assuntoEspecifico || grupoAssunto || "",
           descricao,
           endereco,
           secretaria: secretarias.find(s => s.id === secretariaId)?.nome,
