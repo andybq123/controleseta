@@ -154,7 +154,8 @@ function OuvidoriaPublicaPage() {
     setCategoria("reclamacao");
     setSecretariaId("");
     setLocalId("");
-    setAssunto("");
+    setGrupoAssunto("");
+    setAssuntoEspecifico("");
     setDescricao("");
     setNome("");
     setContato("");
