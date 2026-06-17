@@ -264,7 +264,7 @@ function OuvidoriaPublicaPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Telefone {sigilo !== "anonimo" ? "*" : ""}</Label>
+                  <Label>Telefone *</Label>
                   <Input
                     maxLength={20}
                     value={telefone}
@@ -274,7 +274,7 @@ function OuvidoriaPublicaPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>E-mail {sigilo !== "anonimo" ? "*" : ""}</Label>
+                  <Label>E-mail *</Label>
                   <Input
                     type="email"
                     maxLength={120}
