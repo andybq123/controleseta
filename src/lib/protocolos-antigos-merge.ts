@@ -31,6 +31,23 @@ const norm = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+function inferCategoria(
+  comentario: string | null | undefined,
+  setor: string | null | undefined,
+): "elogio" | "reclamacao" | "pedido_informacao" | "denuncia" | "solicitacao" | "outros" {
+  const txt = norm(`${comentario ?? ""} ${setor ?? ""}`);
+  if (!txt) return "solicitacao";
+  if (/\b(elogio|elogia|parabens|agradec)/.test(txt)) return "elogio";
+  if (/\b(denunci|infrac|irregular|clandestin|ilegal)/.test(txt)) return "denuncia";
+  if (/\b(lai|acesso a informacao|pedido de informacao|informacao sobre|solicito informacao|informa[cç][aã]o)\b/.test(txt))
+    return "pedido_informacao";
+  if (/\b(reclama|insatisf|descontent|protesto|queixa|mau atendimento|pessimo|nao funciona|falta de)/.test(txt))
+    return "reclamacao";
+  if (/\b(solicit|requer|pede|peco|solicito|necessit|gostaria|providenci|vistoria|fiscaliz|conserto|reparo|poda|coleta|limpeza|manuten)/.test(txt))
+    return "solicitacao";
+  return "outros";
+}
+
 function matchSecretariaId(
   source: string,
   setor: string | null,
@@ -61,6 +78,7 @@ export function buildProtocolosAntigos(
     const secretariaObj = secretaria_id
       ? secretarias.find((s) => s.id === secretaria_id) ?? null
       : null;
+    const categoria = inferCategoria(r.comentario, r.setor);
     return {
       id: `antigo:${r.source}:${r.numero}`,
       numero: String(r.numero),
@@ -68,7 +86,7 @@ export function buildProtocolosAntigos(
       descricao: r.comentario ?? null,
       solicitante: null,
       tipo: "ouvidoria" as const,
-      categoria: "outros" as const,
+      categoria,
       status: "aberto" as const,
       data_abertura: r.data,
       prorrogado: false,
