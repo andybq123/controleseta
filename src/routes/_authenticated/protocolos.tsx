@@ -582,6 +582,15 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
         onOpenChange={setPickerOpen}
         initial={enderecoCoords}
         endereco={endereco}
+        protocoloContext={{
+          assunto,
+          descricao,
+          endereco,
+          solicitante,
+          secretaria: secretarias.find((s: any) => s.id === secretariaId)?.nome,
+          local: locais.find((l: any) => l.id === localId)?.nome,
+          categoria,
+        }}
         onConfirm={(lat, lng) => {
           setEnderecoCoords({ lat, lng });
           setEnderecoExact(true);

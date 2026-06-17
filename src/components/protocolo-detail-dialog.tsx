@@ -496,6 +496,15 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         onOpenChange={(v) => { setPickerOpen(v); if (!v) setPendingPatch(null); }}
         initial={enderecoCoords ?? (protocolo?.latitude && protocolo?.longitude ? { lat: protocolo.latitude, lng: protocolo.longitude } : null)}
         endereco={form?.endereco}
+        protocoloContext={{
+          assunto: form?.assunto,
+          descricao: form?.descricao,
+          endereco: form?.endereco,
+          solicitante: form?.solicitante,
+          secretaria: secretarias.find((s: any) => s.id === form?.secretaria_id)?.nome,
+          local: locais.find((l: any) => l.id === form?.local_id)?.nome,
+          categoria: form?.categoria,
+        }}
         onConfirm={(lat, lng) => {
           if (pendingPatch) {
             const patch = { ...pendingPatch, latitude: lat, longitude: lng };

@@ -4,7 +4,10 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { MAPBOX_TOKEN, MAPBOX_STYLE } from "@/lib/mapbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react";
+import { MapPin, Sparkles, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { sugerirLocalizacaoIA } from "@/lib/location-ia.functions";
+import { toast } from "sonner";
 
 // [lng, lat]
 const BRUSQUE: [number, number] = [-48.9114, -27.0978];
@@ -21,20 +24,59 @@ export function MapPointPicker({
   initial,
   endereco,
   onConfirm,
+  protocoloContext,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initial?: { lat: number; lng: number } | null;
   endereco?: string;
   onConfirm: (lat: number, lng: number) => void;
+  protocoloContext?: {
+    assunto?: string;
+    descricao?: string;
+    endereco?: string;
+    solicitante?: string;
+    secretaria?: string;
+    local?: string;
+    categoria?: string;
+  };
 }) {
   const [pt, setPt] = useState<{ lat: number; lng: number } | null>(initial ?? null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiInfo, setAiInfo] = useState<{ label?: string; confianca?: string; justificativa?: string } | null>(null);
+  const sugerirIA = useServerFn(sugerirLocalizacaoIA);
+
+  const hasContext = !!protocoloContext && Object.values(protocoloContext).some((v) => (v ?? "").toString().trim().length > 0);
+
+  async function handleSugerirIA() {
+    if (!protocoloContext) return;
+    setAiLoading(true);
+    setAiInfo(null);
+    try {
+      const r = await sugerirIA({ data: protocoloContext });
+      if (r.lat != null && r.lng != null) {
+        setPt({ lat: r.lat, lng: r.lng });
+        setAiInfo({ label: r.label ?? r.query, confianca: r.confianca, justificativa: r.justificativa });
+        toast.success("Localização aproximada sugerida pela IA. Ajuste se necessário.");
+      } else {
+        setAiInfo({ confianca: r.confianca, justificativa: r.justificativa || "Não foi possível sugerir uma localização." });
+        toast.warning(r.justificativa || "Sem dados suficientes para sugerir uma localização.");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao consultar a IA.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   useEffect(() => {
-    if (open) setPt(initial ?? null);
+    if (open) {
+      setPt(initial ?? null);
+      setAiInfo(null);
+    }
   }, [open, initial]);
 
   // init / teardown map with dialog lifecycle
@@ -127,6 +169,32 @@ export function MapPointPicker({
             style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "hidden", cursor: "crosshair" }}
           />
         </div>
+        {hasContext && (
+          <div className="flex items-start gap-2 rounded-md border border-dashed p-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleSugerirIA}
+              disabled={aiLoading}
+              className="shrink-0"
+            >
+              {aiLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+              Sugerir com IA
+            </Button>
+            <div className="text-xs text-muted-foreground leading-snug">
+              {aiInfo ? (
+                <>
+                  {aiInfo.label && <div><strong>Sugestão:</strong> {aiInfo.label}</div>}
+                  {aiInfo.confianca && <div>Confiança: <strong>{aiInfo.confianca}</strong></div>}
+                  {aiInfo.justificativa && <div className="italic">{aiInfo.justificativa}</div>}
+                </>
+              ) : (
+                <>A IA usará assunto, descrição, endereço e secretaria do protocolo para tentar localizar o ponto aproximado.</>
+              )}
+            </div>
+          </div>
+        )}
         {pt && (
           <p className="text-xs text-muted-foreground">
             Coordenadas: {pt.lat.toFixed(6)}, {pt.lng.toFixed(6)}
