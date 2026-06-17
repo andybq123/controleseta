@@ -118,16 +118,12 @@ function OuvidoriaPublicaPage() {
         created_by: null,
       };
 
-      const { data, error } = await supabase
-        .from("protocolos")
-        .insert(payload)
-        .select("id,numero")
-        .single();
+      const { error } = await supabase.from("protocolos").insert(payload);
       if (error) throw error;
-      return data;
+      return { numero, id: null as string | null };
     },
     onSuccess: (d) => {
-      setSucesso({ numero: d.numero, id: d.id });
+      setSucesso({ numero: d.numero, id: d.id ?? "" });
       toast.success("Manifestação registrada com sucesso!");
     },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao registrar manifestação."),
