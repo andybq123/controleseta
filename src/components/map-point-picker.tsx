@@ -90,7 +90,7 @@ export function MapPointPicker({
     }
     let cancelled = false;
     setReverseLoading(true);
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${pt.lng},${pt.lat}.json?access_token=${MAPBOX_TOKEN}&language=pt&country=br&types=address,street,place,locality,neighborhood,poi&limit=1`;
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${pt.lng},${pt.lat}.json?access_token=${MAPBOX_TOKEN}&language=pt&country=br&types=address,place,locality,neighborhood&limit=1`;
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
