@@ -39,7 +39,9 @@ function OuvidoriaPublicaPage() {
   const [assuntoEspecifico, setAssuntoEspecifico] = useState("");
   const [descricao, setDescricao] = useState("");
   const [nome, setNome] = useState("");
-  const [contato, setContato] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [email, setEmail] = useState("");
   const [endereco, setEndereco] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -63,13 +65,25 @@ function OuvidoriaPublicaPage() {
       if (!assuntoEspecifico) throw new Error("Selecione o assunto específico.");
       if (!descricao.trim()) throw new Error("Descreva sua manifestação.");
       if (sigilo !== "anonimo" && !nome.trim()) throw new Error("Informe seu nome.");
-      if (sigilo === "sigiloso" && !contato.trim()) throw new Error("Informe um contato para retorno sigiloso.");
+      if (sigilo === "publico") {
+        if (!cpf.trim()) throw new Error("Informe seu CPF.");
+        if (!telefone.trim() && !email.trim()) throw new Error("Informe telefone ou e-mail para contato.");
+      }
+      if (sigilo === "sigiloso" && !telefone.trim() && !email.trim()) {
+        throw new Error("Informe telefone ou e-mail para retorno sigiloso.");
+      }
 
       const numero = gerarNumeroProtocolo("ouvidoria");
+      const contatoPartes = [
+        cpf.trim() ? `CPF: ${cpf.trim()}` : null,
+        telefone.trim() ? `Tel: ${telefone.trim()}` : null,
+        email.trim() ? `Email: ${email.trim()}` : null,
+      ].filter(Boolean);
+      const contatoStr = contatoPartes.join(" | ");
       const solicitante =
         sigilo === "anonimo"
           ? "Anônimo"
-          : nome.trim() + (sigilo === "publico" && contato.trim() ? ` <${contato.trim()}>` : "");
+          : nome.trim() + (sigilo === "publico" && (email.trim() || telefone.trim()) ? ` <${email.trim() || telefone.trim()}>` : "");
 
       const assuntoTexto = assuntoEspecifico === grupoAssunto ? assuntoEspecifico : `${grupoAssunto} — ${assuntoEspecifico}`;
 
@@ -84,7 +98,7 @@ function OuvidoriaPublicaPage() {
         local_id: localId || null,
         solicitante,
         sigilo,
-        contato_solicitante: sigilo === "anonimo" ? null : (contato.trim() || null),
+        contato_solicitante: sigilo === "anonimo" ? null : (contatoStr || null),
         endereco: endereco.trim() || null,
         latitude: coords?.lat ?? null,
         longitude: coords?.lng ?? null,
@@ -158,7 +172,9 @@ function OuvidoriaPublicaPage() {
     setAssuntoEspecifico("");
     setDescricao("");
     setNome("");
-    setContato("");
+    setCpf("");
+    setTelefone("");
+    setEmail("");
     setEndereco("");
     setCoords(null);
   }
