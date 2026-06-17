@@ -23,6 +23,14 @@ type Props = {
     houseNumber?: string;
     exact: boolean;
   }) => void;
+  onResolve?: (s: {
+    endereco: string;
+    label: string;
+    lat: number;
+    lng: number;
+    houseNumber?: string;
+    exact: boolean;
+  }) => void;
   placeholder?: string;
 };
 
@@ -30,7 +38,18 @@ type Props = {
 const BRUSQUE_BBOX = "-49.10,-27.30,-48.70,-26.90";
 const BRUSQUE_PROX = "-48.9197,-27.0978";
 
-export function AddressAutocomplete({ value, onChange, onSelect, placeholder }: Props) {
+function toAddressResult(s: Suggestion) {
+  return {
+    endereco: s.place_name,
+    label: s.place_name,
+    lng: s.center[0],
+    lat: s.center[1],
+    houseNumber: s.address,
+    exact: (s.place_type ?? []).includes("address"),
+  };
+}
+
+export function AddressAutocomplete({ value, onChange, onSelect, onResolve, placeholder }: Props) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,6 +76,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder }: 
           q + ", Brusque, SC"
         )}.json?access_token=${MAPBOX_TOKEN}&country=br&language=pt&autocomplete=true&limit=6&bbox=${BRUSQUE_BBOX}&proximity=${BRUSQUE_PROX}&types=address,street,place,locality,neighborhood,poi`;
         const res = await fetch(url);
+        if (!res.ok) throw new Error("Falha ao buscar endereços");
         const data = await res.json();
         const feats: Suggestion[] = (data.features ?? []).map((f: any) => ({
           id: f.id,
@@ -68,8 +88,10 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder }: 
         }));
         setSuggestions(feats);
         setOpen(feats.length > 0);
+        if (feats[0]) onResolve?.(toAddressResult(feats[0]));
       } catch {
         setSuggestions([]);
+        setOpen(false);
       } finally {
         setLoading(false);
       }
@@ -92,14 +114,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder }: 
     onChange(s.place_name);
     setOpen(false);
     setSuggestions([]);
-    onSelect?.({
-      endereco: s.place_name,
-      label: s.place_name,
-      lng: s.center[0],
-      lat: s.center[1],
-      houseNumber: s.address,
-      exact: (s.place_type ?? []).includes("address"),
-    });
+    onSelect?.(toAddressResult(s));
   }
 
   return (
