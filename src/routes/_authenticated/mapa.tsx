@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { ManifestacoesMap, type MapPoint, type SecretariaPoint } from "@/components/manifestacoes-map";
-import { Map as MapIcon } from "lucide-react";
+import { Map as MapIcon, Sparkles, Loader2 } from "lucide-react";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
+import { geocodarProtocolosPendentes } from "@/lib/geocode-bulk.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/mapa")({
   component: MapaPage,
@@ -18,6 +22,9 @@ function MapaPage() {
   const [status, setStatus] = useState<string>("todos");
   const [secretariaId, setSecretariaId] = useState<string>("todas");
   const [detail, setDetail] = useState<any | null>(null);
+  const [loadingGeo, setLoadingGeo] = useState(false);
+  const qc = useQueryClient();
+  const geocodar = useServerFn(geocodarProtocolosPendentes);
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos-mapa"],
@@ -68,15 +75,54 @@ function MapaPage() {
       }));
   }, [secretarias, secretariaId]);
 
+  const { data: pendentesCount } = useQuery({
+    queryKey: ["protocolos-sem-coords"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("protocolos")
+        .select("id", { count: "exact", head: true })
+        .is("latitude", null);
+      return count ?? 0;
+    },
+  });
+
+  const handleGeocodar = async () => {
+    setLoadingGeo(true);
+    try {
+      const r = await geocodar({ data: { limit: 15 } });
+      toast.success(
+        `${r.geocodificados} protocolo(s) localizados. ${r.semDados} sem dados suficientes. ${r.restantes} restantes.`,
+      );
+      if (r.erros.length) {
+        console.warn("Erros de geocodificação:", r.erros);
+      }
+      await qc.invalidateQueries({ queryKey: ["protocolos-mapa"] });
+      await qc.invalidateQueries({ queryKey: ["protocolos-sem-coords"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao geocodificar protocolos");
+    } finally {
+      setLoadingGeo(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <MapIcon className="h-6 w-6 text-primary" /> Mapa de Manifestações
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Distribuição geográfica dos protocolos com endereço cadastrado em Brusque.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <MapIcon className="h-6 w-6 text-primary" /> Mapa de Manifestações
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Distribuição geográfica dos protocolos com endereço cadastrado em Brusque.
+            {typeof pendentesCount === "number" && pendentesCount > 0 && (
+              <> <strong>{pendentesCount}</strong> protocolo(s) ainda sem coordenadas.</>
+            )}
+          </p>
+        </div>
+        <Button onClick={handleGeocodar} disabled={loadingGeo || pendentesCount === 0} size="sm">
+          {loadingGeo ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+          Mapear próximos 15 com IA
+        </Button>
       </div>
 
       <Card>
