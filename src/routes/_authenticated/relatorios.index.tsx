@@ -10,6 +10,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORIAS, type CategoriaProtocolo, situacaoProtocolo, formatDate, categoriaLabel, PRAZOS, type TipoProtocolo } from "@/lib/prazo";
 import { Download, BarChart3, ChevronRight, FileText, Search, X } from "lucide-react";
 import * as XLSX from "xlsx";
+import {
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ComposedChart,
+  ResponsiveContainer,
+  Tooltip as RTooltip,
+  Legend,
+} from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { fetchAllPaginated } from "@/lib/fetch-all";
@@ -171,6 +182,37 @@ function RelatoriosPage() {
     CATEGORIAS.reduce((sum, c) => sum + comparativoMensal[c.value][i], 0)
   );
   const maxMes = Math.max(1, ...totalMes);
+
+  // Total mês do ano anterior (mesmos filtros, ignora seletor de mês)
+  const totalMesAnoAnterior = useMemo(() => {
+    const anoAnt = String(parseInt(ano, 10) - 1);
+    const arr = Array(12).fill(0);
+    filtrados.forEach(p => {
+      if (!p.data_abertura.startsWith(anoAnt)) return;
+      const m = parseInt(p.data_abertura.slice(5, 7), 10) - 1;
+      arr[m]++;
+    });
+    return arr;
+  }, [filtrados, ano]);
+
+  // Cores semânticas por categoria (alinhadas aos badges)
+  const CAT_COLORS: Record<string, string> = {
+    elogio: "#16a34a",
+    reclamacao: "#dc2626",
+    pedido_informacao: "#9333ea",
+    denuncia: "#111827",
+    solicitacao: "#eab308",
+    outros: "#94a3b8",
+  };
+
+  const monthlyChartData = MESES.map((m, i) => {
+    const row: Record<string, any> = { mes: m, total: totalMes[i], anoAnterior: totalMesAnoAnterior[i] };
+    CATEGORIAS.forEach(c => { row[c.value] = comparativoMensal[c.value][i]; });
+    return row;
+  });
+
+  const anoAnt = String(parseInt(ano, 10) - 1);
+  const temAnoAnterior = totalMesAnoAnterior.some(v => v > 0);
 
   // Atrasadas com dias de atraso (todos os anos, não filtra por ano)
   const atrasadas = useMemo(() => {
@@ -419,16 +461,73 @@ function RelatoriosPage() {
           </div>
 
           <Card>
-            <CardHeader><CardTitle className="text-base">Total por mês</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base">Total por mês — {ano}</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Barras empilhadas por categoria
+                    {temAnoAnterior && <> · linha pontilhada = total de {anoAnt}</>}
+                  </p>
+                </div>
+                <div className="flex gap-4 text-xs">
+                  <div><span className="text-muted-foreground">Total: </span><span className="font-semibold">{totalMes.reduce((a,b)=>a+b,0)}</span></div>
+                  <div><span className="text-muted-foreground">Média/mês: </span><span className="font-semibold">{(totalMes.reduce((a,b)=>a+b,0)/12).toFixed(1)}</span></div>
+                  <div><span className="text-muted-foreground">Pico: </span><span className="font-semibold">{maxMes}</span></div>
+                </div>
+              </div>
+            </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-12 gap-1 items-end h-32">
-                {totalMes.map((v, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1">
-                    <div className="text-[10px] text-muted-foreground">{v}</div>
-                    <div className="w-full bg-primary/80 rounded-t" style={{ height: `${(v / maxMes) * 100}%`, minHeight: v > 0 ? "4px" : "0" }} />
-                    <div className="text-[10px] text-muted-foreground">{MESES[i]}</div>
-                  </div>
-                ))}
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={monthlyChartData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                    <RTooltip
+                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                      contentStyle={{
+                        background: "hsl(var(--popover))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                      formatter={(value: any, name: any) => {
+                        if (name === "anoAnterior") return [value, `Total ${anoAnt}`];
+                        const cat = CATEGORIAS.find(c => c.value === name);
+                        return [value, cat?.label ?? name];
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                      formatter={(value) => {
+                        if (value === "anoAnterior") return `Total ${anoAnt}`;
+                        return CATEGORIAS.find(c => c.value === value)?.label ?? value;
+                      }}
+                    />
+                    {CATEGORIAS.map((c, idx) => (
+                      <Bar
+                        key={c.value}
+                        dataKey={c.value}
+                        stackId="cat"
+                        fill={CAT_COLORS[c.value]}
+                        radius={idx === CATEGORIAS.length - 1 ? [4, 4, 0, 0] : 0}
+                        maxBarSize={48}
+                      />
+                    ))}
+                    {temAnoAnterior && (
+                      <Line
+                        type="monotone"
+                        dataKey="anoAnterior"
+                        stroke="hsl(var(--muted-foreground))"
+                        strokeWidth={2}
+                        strokeDasharray="4 4"
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    )}
+                  </ComposedChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
