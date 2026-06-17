@@ -39,38 +39,51 @@ export function MapPointPicker({
 
   // init / teardown map with dialog lifecycle
   useEffect(() => {
-    if (!open || !containerRef.current) return;
+  if (!open) return;
     mapboxgl.accessToken = MAPBOX_TOKEN;
-    const center: [number, number] = initial
-      ? [initial.lng, initial.lat]
-      : BRUSQUE;
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: MAPBOX_STYLE,
-      center,
-      zoom: initial ? 16 : 13,
-    });
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
-    map.on("load", () => {
-      map.getCanvas().style.cursor = "crosshair";
-    });
-    map.on("click", (e) => {
-      const { lng, lat } = e.lngLat;
-      setPt({ lat, lng });
-    });
-    mapRef.current = map;
-    // ensure correct size after dialog mount/animation
-    const t1 = setTimeout(() => map.resize(), 50);
-    const t2 = setTimeout(() => map.resize(), 250);
-    const t3 = setTimeout(() => map.resize(), 500);
+    let map: mapboxgl.Map | null = null;
+    let cancelled = false;
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+
+    const init = () => {
+      if (cancelled) return;
+      const el = containerRef.current;
+      if (!el || el.clientWidth === 0 || el.clientHeight === 0) {
+        // dialog still animating / not laid out — retry next frame
+        timeouts.push(setTimeout(init, 30));
+        return;
+      }
+      const center: [number, number] = initial ? [initial.lng, initial.lat] : BRUSQUE;
+      map = new mapboxgl.Map({
+        container: el,
+        style: MAPBOX_STYLE,
+        center,
+        zoom: initial ? 16 : 13,
+      });
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+      map.on("load", () => {
+        map?.getCanvas() && (map.getCanvas().style.cursor = "crosshair");
+        map?.resize();
+      });
+      map.on("click", (e) => {
+        const { lng, lat } = e.lngLat;
+        setPt({ lat, lng });
+      });
+      mapRef.current = map;
+      timeouts.push(setTimeout(() => map?.resize(), 100));
+      timeouts.push(setTimeout(() => map?.resize(), 350));
+    };
+
+    init();
+
     return () => {
-      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
+      cancelled = true;
+      timeouts.forEach(clearTimeout);
       markerRef.current?.remove();
       markerRef.current = null;
-      map.remove();
+      map?.remove();
       mapRef.current = null;
     };
-    // we intentionally only depend on `open` — `initial` only matters at first open
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
