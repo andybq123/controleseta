@@ -51,20 +51,28 @@ export function MapPointPicker({
       zoom: initial ? 16 : 13,
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+    map.on("load", () => {
+      map.getCanvas().style.cursor = "crosshair";
+    });
     map.on("click", (e) => {
       const { lng, lat } = e.lngLat;
       setPt({ lat, lng });
     });
     mapRef.current = map;
-    // ensure correct size after dialog mount
-    setTimeout(() => map.resize(), 50);
+    // ensure correct size after dialog mount/animation
+    const t1 = setTimeout(() => map.resize(), 50);
+    const t2 = setTimeout(() => map.resize(), 250);
+    const t3 = setTimeout(() => map.resize(), 500);
     return () => {
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
       markerRef.current?.remove();
       markerRef.current = null;
       map.remove();
       mapRef.current = null;
     };
-  }, [open, initial]);
+    // we intentionally only depend on `open` — `initial` only matters at first open
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // sync marker
   useEffect(() => {
@@ -75,16 +83,18 @@ export function MapPointPicker({
       markerRef.current = null;
       return;
     }
-    const el = document.createElement("div");
-    el.innerHTML = PIN_HTML;
     if (markerRef.current) {
       markerRef.current.setLngLat([pt.lng, pt.lat]);
     } else {
+      const el = document.createElement("div");
+      el.innerHTML = PIN_HTML;
+      // make sure the marker does NOT swallow clicks meant for the map
+      el.style.pointerEvents = "none";
       markerRef.current = new mapboxgl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([pt.lng, pt.lat])
         .addTo(map);
     }
-    map.flyTo({ center: [pt.lng, pt.lat], zoom: Math.max(map.getZoom(), 16), duration: 400 });
+    map.easeTo({ center: [pt.lng, pt.lat], duration: 300 });
   }, [pt]);
 
   return (
@@ -98,8 +108,11 @@ export function MapPointPicker({
             {endereco ? <>Clique no mapa para marcar a localização exata de <strong>{endereco}</strong>.</> : "Clique no mapa para marcar a localização exata."}
           </DialogDescription>
         </DialogHeader>
-        <div style={{ height: 420, width: "100%" }}>
-          <div ref={containerRef} style={{ height: "100%", width: "100%", borderRadius: 8, overflow: "hidden" }} />
+        <div style={{ height: 420, width: "100%", position: "relative" }}>
+          <div
+            ref={containerRef}
+            style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "hidden", cursor: "crosshair" }}
+          />
         </div>
         {pt && (
           <p className="text-xs text-muted-foreground">
