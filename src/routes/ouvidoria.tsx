@@ -381,7 +381,13 @@ function OuvidoriaPublicaPage() {
               <Label>Endereço</Label>
               <AddressAutocomplete
                 value={endereco}
-                onChange={setEndereco}
+                onChange={(v) => {
+                  setEndereco(v);
+                  setCoords(null);
+                }}
+                onResolve={(s) => {
+                  if (endereco.trim().length >= 3) setCoords({ lat: s.lat, lng: s.lng });
+                }}
                 onSelect={(s) => {
                   setEndereco(s.endereco);
                   setCoords({ lat: s.lat, lng: s.lng });
