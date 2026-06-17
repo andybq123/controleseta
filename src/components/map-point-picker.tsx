@@ -226,9 +226,19 @@ export function MapPointPicker({
           </div>
         )}
         {pt && (
-          <p className="text-xs text-muted-foreground">
-            Coordenadas: {pt.lat.toFixed(6)}, {pt.lng.toFixed(6)}
-          </p>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>Coordenadas: {pt.lat.toFixed(6)}, {pt.lng.toFixed(6)}</div>
+            <div className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              {reverseLoading ? (
+                <span className="italic">Identificando endereço…</span>
+              ) : reverseAddr ? (
+                <span><strong>Endereço:</strong> {reverseAddr}</span>
+              ) : (
+                <span className="italic">Endereço não identificado</span>
+              )}
+            </div>
+          </div>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
@@ -236,7 +246,7 @@ export function MapPointPicker({
             disabled={!pt}
             onClick={() => {
               if (pt) {
-                onConfirm(pt.lat, pt.lng);
+                onConfirm(pt.lat, pt.lng, reverseAddr ?? undefined);
                 onOpenChange(false);
               }
             }}
