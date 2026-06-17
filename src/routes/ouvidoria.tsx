@@ -429,7 +429,10 @@ function OuvidoriaPublicaPage() {
         onOpenChange={setPickerOpen}
         initial={coords}
         endereco={endereco}
-        onConfirm={(lat, lng) => setCoords({ lat, lng })}
+        onConfirm={(lat, lng, addr) => {
+          setCoords({ lat, lng });
+          if (addr && addr.trim().length > 0) setEndereco(addr);
+        }}
         protocoloContext={{
           assunto: grupoAssunto || "",
           descricao,
