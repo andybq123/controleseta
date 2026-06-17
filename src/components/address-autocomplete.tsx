@@ -1,118 +1,139 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { useServerFn } from "@tanstack/react-start";
-import { searchAddresses, type AddressSuggestion } from "@/lib/geocode.functions";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { MAPBOX_TOKEN } from "@/lib/mapbox";
+import { MapPin, Loader2 } from "lucide-react";
 
-export function AddressAutocomplete({
-  value,
-  onChange,
-  onSelect,
-  placeholder,
-  id,
-}: {
+type Suggestion = {
+  id: string;
+  place_name: string;
+  text: string;
+  center: [number, number]; // [lng, lat]
+  address?: string;
+  place_type?: string[];
+};
+
+type Props = {
   value: string;
   onChange: (v: string) => void;
-  onSelect?: (s: AddressSuggestion) => void;
+  onSelect?: (s: {
+    endereco: string;
+    label: string;
+    lat: number;
+    lng: number;
+    houseNumber?: string;
+    exact: boolean;
+  }) => void;
   placeholder?: string;
-  id?: string;
-}) {
-  const search = useServerFn(searchAddresses);
-  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+};
+
+// Brusque-SC bounding box and center for proximity bias
+const BRUSQUE_BBOX = "-49.10,-27.30,-48.70,-26.90";
+const BRUSQUE_PROX = "-48.9197,-27.0978";
+
+export function AddressAutocomplete({ value, onChange, onSelect, placeholder }: Props) {
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [highlight, setHighlight] = useState(-1);
-  const [refused, setRefused] = useState(false);
-  const ignoreNext = useRef(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const skipNextFetch = useRef(false);
 
   useEffect(() => {
-    if (ignoreNext.current) { ignoreNext.current = false; return; }
+    if (skipNextFetch.current) {
+      skipNextFetch.current = false;
+      return;
+    }
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
     const q = value.trim();
-    if (q.length < 3) { setSuggestions([]); setOpen(false); setRefused(false); return; }
-    const hasNumber = /\d{1,6}\b/.test(q);
-    const t = setTimeout(async () => {
-      setLoading(true);
+    if (q.length < 3) {
+      setSuggestions([]);
+      setOpen(false);
+      return;
+    }
+    debounceRef.current = window.setTimeout(async () => {
       try {
-        const r = await search({ data: { q } });
-        setSuggestions(r);
-        const isRefused = hasNumber && r.length === 0;
-        setRefused(isRefused);
-        setOpen(r.length > 0 || isRefused);
-        setHighlight(-1);
+        setLoading(true);
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          q + ", Brusque, SC"
+        )}.json?access_token=${MAPBOX_TOKEN}&country=br&language=pt&autocomplete=true&limit=6&bbox=${BRUSQUE_BBOX}&proximity=${BRUSQUE_PROX}&types=address,street,place,locality,neighborhood,poi`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const feats: Suggestion[] = (data.features ?? []).map((f: any) => ({
+          id: f.id,
+          place_name: f.place_name,
+          text: f.text,
+          center: f.center,
+          address: f.address,
+          place_type: f.place_type,
+        }));
+        setSuggestions(feats);
+        setOpen(feats.length > 0);
+      } catch {
+        setSuggestions([]);
       } finally {
         setLoading(false);
       }
-    }, 350);
-    return () => clearTimeout(t);
-  }, [value, search]);
+    }, 300);
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [value]);
 
   useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    function onDocClick(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  function pick(s: AddressSuggestion) {
-    ignoreNext.current = true;
-    onChange(s.label);
-    onSelect?.(s);
+  function pick(s: Suggestion) {
+    skipNextFetch.current = true;
+    onChange(s.place_name);
     setOpen(false);
     setSuggestions([]);
+    onSelect?.({
+      endereco: s.place_name,
+      label: s.place_name,
+      lng: s.center[0],
+      lat: s.center[1],
+      houseNumber: s.address,
+      exact: (s.place_type ?? []).includes("address"),
+    });
   }
 
   return (
-    <div ref={wrapRef} className="relative">
-      <Input
-        id={id}
-        value={value}
-        placeholder={placeholder}
-        onChange={e => onChange(e.target.value)}
-        onFocus={() => suggestions.length && setOpen(true)}
-        onKeyDown={e => {
-          if (!open) return;
-          if (e.key === "ArrowDown") { e.preventDefault(); setHighlight(h => Math.min(h + 1, suggestions.length - 1)); }
-          else if (e.key === "ArrowUp") { e.preventDefault(); setHighlight(h => Math.max(h - 1, 0)); }
-          else if (e.key === "Enter" && highlight >= 0) { e.preventDefault(); pick(suggestions[highlight]); }
-          else if (e.key === "Escape") setOpen(false);
-        }}
-        autoComplete="off"
-      />
-      {loading && (
-        <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-      )}
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => suggestions.length > 0 && setOpen(true)}
+          placeholder={placeholder ?? "Comece a digitar a rua…"}
+          autoComplete="off"
+        />
+        {loading && (
+          <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        )}
+      </div>
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-[1000] mt-1 w-full max-h-64 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
-          {suggestions.map((s, i) => (
-            <li
-              key={`${s.lat},${s.lng},${i}`}
-              className={`px-3 py-2 text-sm cursor-pointer flex items-center justify-between gap-2 ${i === highlight ? "bg-accent" : "hover:bg-accent"}`}
-              onMouseEnter={() => setHighlight(i)}
-              onMouseDown={e => { e.preventDefault(); pick(s); }}
-            >
-              <span className="truncate">{s.label}</span>
-              {!s.houseNumber ? (
-                <span className="shrink-0 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 border border-amber-500/40 rounded px-1 py-0.5">sem nº</span>
-              ) : s.exact === false ? (
-                <span className="shrink-0 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 border border-amber-500/40 rounded px-1 py-0.5">nº aprox.</span>
-              ) : null}
+        <ul className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-md border bg-popover shadow-lg">
+          {suggestions.map((s) => (
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => pick(s)}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-start gap-2"
+              >
+                <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                <span>
+                  <span className="font-medium">{s.text}</span>
+                  <span className="block text-xs text-muted-foreground">{s.place_name}</span>
+                </span>
+              </button>
             </li>
           ))}
         </ul>
-      )}
-      {open && suggestions.length === 0 && refused && (
-        <div className="absolute z-[1000] mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md p-3 text-xs flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">Nenhum endereço encontrado com este número.</p>
-            <p className="text-muted-foreground mt-0.5">
-              Para evitar pinos no meio da rua, confira a grafia ou o número do imóvel.
-              Se preferir salvar mesmo assim, será pedida confirmação antes de gravar sem coordenadas.
-            </p>
-          </div>
-        </div>
       )}
     </div>
   );
