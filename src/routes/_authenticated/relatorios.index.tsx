@@ -564,17 +564,7 @@ function RelatoriosPage() {
                     <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
                     <RTooltip
                       cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
-                      contentStyle={{
-                        background: "hsl(var(--popover))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                      formatter={(value: any, name: any) => {
-                        if (name === "anoAnterior") return [value, `Total ${anoAnt}`];
-                        const cat = CATEGORIAS.find(c => c.value === name);
-                        return [value, cat?.label ?? name];
-                      }}
+                      content={<MonthlyTooltip />}
                     />
                     <Legend
                       wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
