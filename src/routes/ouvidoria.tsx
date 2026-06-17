@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { MapPointPicker } from "@/components/map-point-picker";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { CATEGORIAS, gerarNumeroProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { ASSUNTOS_OUVIDORIA } from "@/lib/assuntos-ouvidoria";
 import { MapPin, CheckCircle2, ShieldAlert, Eye, EyeOff, UserX, Send, Copy } from "lucide-react";
@@ -389,11 +390,18 @@ function OuvidoriaPublicaPage() {
           <CardContent className="grid gap-3">
             <div className="grid gap-2">
               <Label>Endereço</Label>
-              <Input
+              <AddressAutocomplete
                 value={endereco}
-                onChange={e => setEndereco(e.target.value)}
-                placeholder="Rua, número, bairro"
+                onChange={setEndereco}
+                onSelect={(s) => {
+                  setEndereco(s.endereco);
+                  setCoords({ lat: s.lat, lng: s.lng });
+                }}
+                placeholder="Comece a digitar a rua em Brusque…"
               />
+              <p className="text-[11px] text-muted-foreground">
+                Sugestões automáticas de ruas e locais de Brusque-SC.
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>
