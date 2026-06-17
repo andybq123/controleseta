@@ -58,12 +58,22 @@ function OuvidoriaPublicaPage() {
     queryKey: ["pub-locais"],
     queryFn: async () => (await supabase.from("locais").select("id,nome,secretaria_id").order("nome")).data ?? [],
   });
-  const locaisFiltrados = locais.filter(l => !secretariaId || l.secretaria_id === secretariaId);
+
+  const isSaude = grupoAssunto === "Saúde";
+  const saudeSecretaria = secretarias.find(
+    (s) => /sa[uú]de/i.test(s.nome) || (s.sigla && /sms|semsa|sesau/i.test(s.sigla)),
+  );
+  const ubsLocais = saudeSecretaria
+    ? locais.filter(
+        (l) =>
+          l.secretaria_id === saudeSecretaria.id &&
+          /ubs|posto|sa[uú]de|unidade/i.test(l.nome),
+      )
+    : [];
 
   const enviar = useMutation({
     mutationFn: async () => {
       if (!grupoAssunto) throw new Error("Selecione a área/assunto.");
-      if (!assuntoEspecifico) throw new Error("Selecione o assunto específico.");
       if (!descricao.trim()) throw new Error("Descreva sua manifestação.");
       if (sigilo !== "anonimo" && !nome.trim()) throw new Error("Informe seu nome.");
       if (sigilo === "publico") {
@@ -86,7 +96,9 @@ function OuvidoriaPublicaPage() {
           ? "Anônimo"
           : nome.trim() + (sigilo === "publico" && (email.trim() || telefone.trim()) ? ` <${email.trim() || telefone.trim()}>` : "");
 
-      const assuntoTexto = assuntoEspecifico === grupoAssunto ? assuntoEspecifico : `${grupoAssunto} — ${assuntoEspecifico}`;
+      const assuntoTexto = grupoAssunto;
+      const secretariaParaSalvar = isSaude ? saudeSecretaria?.id ?? null : null;
+      const localParaSalvar = isSaude ? (localId || null) : null;
 
       const payload = {
         numero,
@@ -95,8 +107,8 @@ function OuvidoriaPublicaPage() {
         status: "aberto" as const,
         assunto: assuntoTexto,
         descricao: descricao.trim(),
-        secretaria_id: secretariaId || null,
-        local_id: localId || null,
+        secretaria_id: secretariaParaSalvar,
+        local_id: localParaSalvar,
         solicitante,
         sigilo,
         contato_solicitante: sigilo === "anonimo" ? null : (contatoStr || null),
