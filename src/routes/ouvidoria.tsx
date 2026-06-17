@@ -35,7 +35,8 @@ function OuvidoriaPublicaPage() {
   const [categoria, setCategoria] = useState<CategoriaProtocolo>("reclamacao");
   const [secretariaId, setSecretariaId] = useState<string>("");
   const [localId, setLocalId] = useState<string>("");
-  const [assunto, setAssunto] = useState("");
+  const [grupoAssunto, setGrupoAssunto] = useState("");
+  const [assuntoEspecifico, setAssuntoEspecifico] = useState("");
   const [descricao, setDescricao] = useState("");
   const [nome, setNome] = useState("");
   const [contato, setContato] = useState("");
@@ -43,6 +44,8 @@ function OuvidoriaPublicaPage() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [sucesso, setSucesso] = useState<{ numero: string; id: string } | null>(null);
+
+  const itensDoGrupo = ASSUNTOS_OUVIDORIA.find((a) => a.grupo === grupoAssunto)?.itens ?? [];
 
   const { data: secretarias = [] } = useQuery({
     queryKey: ["pub-secretarias"],
