@@ -47,6 +47,8 @@ export function MapPointPicker({
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInfo, setAiInfo] = useState<{ label?: string; confianca?: string; justificativa?: string } | null>(null);
+  const [reverseAddr, setReverseAddr] = useState<string | null>(null);
+  const [reverseLoading, setReverseLoading] = useState(false);
   const sugerirIA = useServerFn(sugerirLocalizacaoIA);
 
   const hasContext = !!protocoloContext && Object.values(protocoloContext).some((v) => (v ?? "").toString().trim().length > 0);
@@ -76,8 +78,36 @@ export function MapPointPicker({
     if (open) {
       setPt(initial ?? null);
       setAiInfo(null);
+      setReverseAddr(null);
     }
   }, [open, initial]);
+
+  // Reverse-geocode the selected point to get a street name
+  useEffect(() => {
+    if (!pt) {
+      setReverseAddr(null);
+      return;
+    }
+    let cancelled = false;
+    setReverseLoading(true);
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${pt.lng},${pt.lat}.json?access_token=${MAPBOX_TOKEN}&language=pt&country=br&types=address,street,place,locality,neighborhood,poi&limit=1`;
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const feat = data?.features?.[0];
+        setReverseAddr(feat?.place_name ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setReverseAddr(null);
+      })
+      .finally(() => {
+        if (!cancelled) setReverseLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pt]);
 
   // init / teardown map with dialog lifecycle
   useEffect(() => {
