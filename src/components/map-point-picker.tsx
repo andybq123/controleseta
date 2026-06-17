@@ -154,7 +154,7 @@ export function MapPointPicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-primary" /> Selecionar ponto no mapa
@@ -163,17 +163,17 @@ export function MapPointPicker({
             {endereco ? <>Clique no mapa para marcar a localização exata de <strong>{endereco}</strong>.</> : "Clique no mapa para marcar a localização exata."}
           </DialogDescription>
         </DialogHeader>
-        <div style={{ height: 420, width: "100%", position: "relative" }}>
+        <div style={{ height: 360, width: "100%", position: "relative" }}>
           <div
             ref={containerRef}
             style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "hidden", cursor: "crosshair" }}
           />
         </div>
         {hasContext && (
-          <div className="flex items-start gap-2 rounded-md border border-dashed p-2">
+          <div className="flex items-start gap-2 rounded-md border border-dashed p-2 bg-muted/30">
             <Button
               type="button"
-              variant="secondary"
+              variant="default"
               size="sm"
               onClick={handleSugerirIA}
               disabled={aiLoading}
