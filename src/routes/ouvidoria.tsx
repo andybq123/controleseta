@@ -265,14 +265,31 @@ function OuvidoriaPublicaPage() {
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label>Assunto *</Label>
-              <Input
-                maxLength={150}
-                value={assunto}
-                onChange={e => setAssunto(e.target.value)}
-                placeholder="Resumo curto da manifestação"
-              />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Área / Tema *</Label>
+                <Select value={grupoAssunto || "none"} onValueChange={(v) => { setGrupoAssunto(v === "none" ? "" : v); setAssuntoEspecifico(""); }}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {ASSUNTOS_OUVIDORIA.map((a) => (
+                      <SelectItem key={a.grupo} value={a.grupo}>{a.grupo}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Assunto específico *</Label>
+                <Select value={assuntoEspecifico || "none"} onValueChange={(v) => setAssuntoEspecifico(v === "none" ? "" : v)} disabled={!grupoAssunto}>
+                  <SelectTrigger><SelectValue placeholder={grupoAssunto ? "Selecione" : "Escolha a área primeiro"} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {itensDoGrupo.map((item) => (
+                      <SelectItem key={item} value={item}>{item}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid gap-2">
               <Label>Descrição detalhada *</Label>
