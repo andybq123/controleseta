@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { MapPointPicker } from "@/components/map-point-picker";
 import { CATEGORIAS, gerarNumeroProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
+import { ASSUNTOS_OUVIDORIA } from "@/lib/assuntos-ouvidoria";
 import { MapPin, CheckCircle2, ShieldAlert, Eye, EyeOff, UserX, Send, Copy } from "lucide-react";
 import { toast } from "sonner";
 
