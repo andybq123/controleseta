@@ -65,9 +65,7 @@ function OuvidoriaPublicaPage() {
   );
   const ubsLocais = saudeSecretaria
     ? locais.filter(
-        (l) =>
-          l.secretaria_id === saudeSecretaria.id &&
-          /ubs|posto|sa[uú]de|unidade/i.test(l.nome),
+        (l) => l.secretaria_id === saudeSecretaria.id,
       )
     : [];
 
