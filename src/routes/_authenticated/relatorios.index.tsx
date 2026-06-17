@@ -205,6 +205,76 @@ function RelatoriosPage() {
     outros:            { base: "#64748b", light: "#94a3b8" }, // slate-500 → slate-400
   };
 
+  const MonthlyTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || payload.length === 0) return null;
+
+    const monthIndex = MESES.indexOf(label);
+    const monthName = MESES_FULL[monthIndex] ?? label;
+
+    const barItems = payload.filter((p: any) => p.dataKey !== "anoAnterior" && (p.value ?? 0) > 0);
+    const lineItem = payload.find((p: any) => p.dataKey === "anoAnterior");
+    const totalAtual = barItems.reduce((sum: number, p: any) => sum + (p.value ?? 0), 0);
+
+    return (
+      <div className="rounded-xl border bg-popover p-3 shadow-lg min-w-[220px]">
+        <div className="flex items-center justify-between gap-3 mb-2 pb-2 border-b">
+          <span className="font-semibold text-sm">{monthName}</span>
+          <span className="text-xs text-muted-foreground">{label}</span>
+        </div>
+
+        <div className="space-y-1.5">
+          {barItems.map((item: any) => {
+            const cat = CATEGORIAS.find(c => c.value === item.dataKey);
+            const pct = totalAtual > 0 ? ((item.value / totalAtual) * 100).toFixed(0) : "0";
+            const color = CAT_COLORS[item.dataKey]?.base ?? "#64748b";
+            return (
+              <div key={item.dataKey} className="flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="inline-block h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: color }} />
+                  <span className="truncate">{cat?.label ?? item.dataKey}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-semibold">{item.value}</span>
+                  <span className="text-muted-foreground w-8 text-right">{pct}%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-2 pt-2 border-t flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">Total no mês</span>
+          <span className="font-bold text-sm">{totalAtual}</span>
+        </div>
+
+        {lineItem && (
+          <div className="mt-1.5 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-muted-foreground" />
+              <span className="text-muted-foreground">Ano anterior</span>
+            </div>
+            <span className="font-medium text-muted-foreground">{lineItem.value}</span>
+          </div>
+        )}
+
+        {totalAtual > 0 && lineItem && lineItem.value > 0 && (
+          <div className="mt-2 pt-2 border-t text-xs">
+            <div className="flex items-center gap-1.5">
+              {totalAtual > lineItem.value ? (
+                <span className="text-green-600 font-medium">▲ {((totalAtual - lineItem.value) / lineItem.value * 100).toFixed(1)}%</span>
+              ) : totalAtual < lineItem.value ? (
+                <span className="text-red-500 font-medium">▼ {((lineItem.value - totalAtual) / lineItem.value * 100).toFixed(1)}%</span>
+              ) : (
+                <span className="text-muted-foreground font-medium">= 0%</span>
+              )}
+              <span className="text-muted-foreground">vs ano anterior</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const monthlyChartData = MESES.map((m, i) => {
     const row: Record<string, any> = { mes: m, total: totalMes[i], anoAnterior: totalMesAnoAnterior[i] };
     CATEGORIAS.forEach(c => { row[c.value] = comparativoMensal[c.value][i]; });
@@ -494,17 +564,7 @@ function RelatoriosPage() {
                     <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
                     <RTooltip
                       cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
-                      contentStyle={{
-                        background: "hsl(var(--popover))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                      formatter={(value: any, name: any) => {
-                        if (name === "anoAnterior") return [value, `Total ${anoAnt}`];
-                        const cat = CATEGORIAS.find(c => c.value === name);
-                        return [value, cat?.label ?? name];
-                      }}
+                      content={<MonthlyTooltip />}
                     />
                     <Legend
                       wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
