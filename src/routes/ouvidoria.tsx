@@ -237,6 +237,62 @@ function OuvidoriaPublicaPage() {
           </CardContent>
         </Card>
 
+        {sigilo !== "anonimo" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Seus dados</CardTitle>
+              <CardDescription>
+                {sigilo === "sigiloso"
+                  ? "Seus dados ficarão sob sigilo da ouvidoria e não serão divulgados ao setor envolvido."
+                  : "Seus dados serão usados para retorno e podem ser visualizados pelo setor responsável."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="grid gap-2">
+                <Label>Nome completo *</Label>
+                <Input maxLength={120} value={nome} onChange={e => setNome(e.target.value)} />
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-2">
+                  <Label>CPF {sigilo === "publico" ? "*" : ""}</Label>
+                  <Input
+                    maxLength={14}
+                    value={cpf}
+                    onChange={e => setCpf(e.target.value)}
+                    placeholder="000.000.000-00"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Telefone {sigilo !== "anonimo" ? "*" : ""}</Label>
+                  <Input
+                    maxLength={20}
+                    value={telefone}
+                    onChange={e => setTelefone(e.target.value)}
+                    placeholder="(47) 99999-9999"
+                    inputMode="tel"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>E-mail {sigilo !== "anonimo" ? "*" : ""}</Label>
+                  <Input
+                    type="email"
+                    maxLength={120}
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {sigilo === "publico"
+                  ? "CPF é obrigatório. Informe telefone e/ou e-mail (pelo menos um) para contato."
+                  : "Informe telefone e/ou e-mail (pelo menos um) para retorno sigiloso."}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Sobre a manifestação</CardTitle>
