@@ -1,0 +1,4 @@
+ALTER TABLE public.protocolos
+  ADD COLUMN IF NOT EXISTS ip_solicitante TEXT,
+  ADD COLUMN IF NOT EXISTS lat_solicitante DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS lng_solicitante DOUBLE PRECISION;

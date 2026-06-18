@@ -295,7 +295,10 @@ export type Database = {
           endereco: string | null
           hash_consulta: string | null
           id: string
+          ip_solicitante: string | null
+          lat_solicitante: number | null
           latitude: number | null
+          lng_solicitante: number | null
           local_id: string | null
           longitude: number | null
           numero: string
@@ -322,7 +325,10 @@ export type Database = {
           endereco?: string | null
           hash_consulta?: string | null
           id?: string
+          ip_solicitante?: string | null
+          lat_solicitante?: number | null
           latitude?: number | null
+          lng_solicitante?: number | null
           local_id?: string | null
           longitude?: number | null
           numero: string
@@ -349,7 +355,10 @@ export type Database = {
           endereco?: string | null
           hash_consulta?: string | null
           id?: string
+          ip_solicitante?: string | null
+          lat_solicitante?: number | null
           latitude?: number | null
+          lng_solicitante?: number | null
           local_id?: string | null
           longitude?: number | null
           numero?: string

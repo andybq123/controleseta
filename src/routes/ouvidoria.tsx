@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,29 @@ function OuvidoriaPublicaPage() {
   const [endereco, setEndereco] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [ipSolicitante, setIpSolicitante] = useState<string | null>(null);
+  const [geoSolicitante, setGeoSolicitante] = useState<{ lat: number; lng: number } | null>(null);
   const [sucesso, setSucesso] = useState<{ numero: string; hash: string; pdf: ProtocoloPdfData } | null>(null);
+
+  // Coleta IP público e geolocalização do navegador (silenciosamente).
+  useEffect(() => {
+    let cancelado = false;
+    fetch("https://api.ipify.org?format=json")
+      .then((r) => r.json())
+      .then((j) => { if (!cancelado && j?.ip) setIpSolicitante(String(j.ip)); })
+      .catch(() => {});
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (cancelado) return;
+          setGeoSolicitante({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        () => {},
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 },
+      );
+    }
+    return () => { cancelado = true; };
+  }, []);
 
   const itensDoGrupo = ASSUNTOS_OUVIDORIA.find((a) => a.grupo === grupoAssunto)?.itens ?? [];
 
@@ -121,6 +143,9 @@ function OuvidoriaPublicaPage() {
         data_abertura: new Date().toISOString().slice(0, 10),
         created_by: null,
         hash_consulta: hash,
+        ip_solicitante: ipSolicitante,
+        lat_solicitante: geoSolicitante?.lat ?? null,
+        lng_solicitante: geoSolicitante?.lng ?? null,
       };
 
       // Roda em paralelo com um delay mínimo de 3s para dar sensação de processamento.
