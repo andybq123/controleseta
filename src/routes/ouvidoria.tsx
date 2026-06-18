@@ -13,7 +13,7 @@ import { MapPointPicker } from "@/components/map-point-picker";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { CATEGORIAS, gerarNumeroProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { ASSUNTOS_OUVIDORIA } from "@/lib/assuntos-ouvidoria";
-import { MapPin, CheckCircle2, ShieldAlert, Eye, EyeOff, UserX, Send, Copy, Download, Printer, Search } from "lucide-react";
+import { MapPin, CheckCircle2, ShieldAlert, Eye, EyeOff, UserX, Send, Copy, Download, Printer, Search, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import brusqueBrasao from "@/assets/brusque-brasao.png";
 import { gerarHashConsulta, gerarProtocoloPdf, type ProtocoloPdfData } from "@/lib/protocolo-pdf";
