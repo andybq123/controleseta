@@ -11,6 +11,7 @@ import { situacaoProtocolo, CATEGORIAS, type CategoriaProtocolo } from "@/lib/pr
 import {
   AlertTriangle, CheckCircle2, Clock, FileText, Smile,
   Timer, Download, MapPin, TrendingUp, Lightbulb, Building, ShieldCheck, Activity,
+  ArrowUpRight, ArrowDownRight, Users, ThumbsUp, ThumbsDown, AlertCircle, BarChart3,
 } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
