@@ -758,26 +758,6 @@ function Dashboard() {
         </Card>
       </div>
 
-      {insights.length > 0 && (
-        <Card className="border-l-4 border-l-primary/60">
-          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-amber-500" /> Insights Automáticos
-              </CardTitle>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Análise inteligente do período selecionado
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {insights.map((ins, i) => <InsightCard key={i} {...ins} />)}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
         <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2">
