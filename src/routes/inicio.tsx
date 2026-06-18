@@ -71,7 +71,7 @@ function LandingPage() {
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-background to-red-50 py-16 sm:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-background to-red-50 py-16 sm:py-24 dark:from-emerald-950/30 dark:via-background dark:to-red-950/20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brusque-green/20 bg-brusque-green-light/50 px-4 py-1.5 text-sm font-medium text-brusque-green">
@@ -316,7 +316,7 @@ function LandingPage() {
       </section>
 
       {/* Sigilo options */}
-      <section className="bg-gradient-to-br from-emerald-50 via-background to-red-50 py-16">
+      <section className="bg-gradient-to-br from-emerald-50 via-background to-red-50 py-16 dark:from-emerald-950/30 dark:via-background dark:to-red-950/20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mx-auto max-w-3xl">
             <div className="mb-10 text-center">
