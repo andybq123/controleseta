@@ -11,6 +11,7 @@ import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, 
 import { AlertTriangle, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import { fetchAllPaginated } from "@/lib/fetch-all";
+import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 
 export const Route = createFileRoute("/_authenticated/atrasados")({
   component: AtrasadosPage,
@@ -29,7 +30,7 @@ function AtrasadosPage() {
           .from("protocolos")
           .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
           .neq("status", "concluido")
-          .order("data_abertura", { ascending: true })
+          .order("data_abertura", { ascending: false })
           .range(from, to),
       ),
   });
@@ -49,7 +50,8 @@ function AtrasadosPage() {
         if (!busca) return true;
         const s = busca.toLowerCase();
         return `${p.numero} ${p.assunto} ${p.solicitante ?? ""}`.toLowerCase().includes(s);
-      });
+      })
+      .sort(sortProtocolosPorNumero);
   }, [protocolos, filtroTipo, filtroSec, busca]);
 
   const buckets = {

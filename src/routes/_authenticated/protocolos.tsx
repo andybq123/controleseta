@@ -15,6 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type TipoProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
+import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 import { Plus, Calendar, RotateCw, CheckCircle2, Trash2, Sparkles, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { fetchAllPaginated } from "@/lib/fetch-all";
@@ -52,19 +53,7 @@ function ProtocolosPage() {
           .order("data_abertura", { ascending: false })
           .range(from, to),
       );
-      const parseNum = (n: string | null | undefined): [number, number] => {
-        if (!n) return [0, 0];
-        const [seqRaw, yearRaw] = String(n).split("/");
-        const seq = parseInt(String(seqRaw ?? "").replace(/\D/g, ""), 10) || 0;
-        const year = parseInt(String(yearRaw ?? "").replace(/\D/g, ""), 10) || 0;
-        return [year, seq];
-      };
-      return [...rows].sort((a: any, b: any) => {
-        const [ay, as] = parseNum(a.numero);
-        const [by, bs] = parseNum(b.numero);
-        if (by !== ay) return by - ay;
-        return bs - as;
-      });
+      return [...rows].sort(sortProtocolosPorNumero);
     },
   });
 

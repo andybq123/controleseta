@@ -12,6 +12,7 @@ import { CATEGORIAS, type CategoriaProtocolo, situacaoProtocolo, formatDate, cat
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { fetchAllPaginated } from "@/lib/fetch-all";
+import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 
 export const Route = createFileRoute("/_authenticated/relatorios/secretaria/$id")({
   component: SecretariaRelatorio,
@@ -60,7 +61,7 @@ function SecretariaRelatorio() {
     if (!p.data_abertura.startsWith(ano)) return false;
     if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
     return true;
-  }), [protocolosAll, ano, mes]);
+  }).sort(sortProtocolosPorNumero), [protocolosAll, ano, mes]);
 
   const stats = useMemo(() => {
     const enriched = protocolos.map(p => ({ ...p, _s: situacaoProtocolo(p as any) }));
