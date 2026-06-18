@@ -306,7 +306,7 @@ function Dashboard() {
       icon: ShieldCheck,
       tone: vencidos.length === 0 ? "emerald" : "red",
       text: vencidos.length === 0
-        ? <>Nenhum protocolo se encontra atrasado.</>
+        ? <>Nenhum protocolo se encontra atrasado — todos estão dentro do prazo.</>
         : <><span className="font-semibold">{vencidos.length}</span> protocolo(s) em atraso requerem atenção imediata.</>,
     });
     if (prazoMedio > 0) {
@@ -317,12 +317,65 @@ function Dashboard() {
         icon: Activity,
         tone: abaixo ? "emerald" : "orange",
         text: abaixo
-          ? <>Tempo médio de resposta <span className="font-semibold">{diff}% abaixo da meta</span>.</>
-          : <>Tempo médio de resposta <span className="font-semibold">{diff}% acima da meta</span> de {meta} dias.</>,
+          ? <>Tempo médio de resposta <span className="font-semibold">{diff}% abaixo da meta</span> ({prazoMedio} dias vs {meta} dias).</>
+          : <>Tempo médio de resposta <span className="font-semibold">{diff}% acima da meta</span> de {meta} dias ({prazoMedio} dias atual).</>,
+      });
+    }
+    // Conclusão vs andamento
+    if (total > 0) {
+      const metaConclusao = 70;
+      const pctConc = Math.round((concluidos.length / total) * 100);
+      const acimaMeta = pctConc >= metaConclusao;
+      list.push({
+        icon: acimaMeta ? CheckCircle2 : AlertCircle,
+        tone: acimaMeta ? "emerald" : "orange",
+        text: <><span className="font-semibold">{pctConc}%</span> dos protocolos estão concluídos. Meta: {metaConclusao}%.</>,
+      });
+    }
+    // Protocolos no prazo vs fora
+    if (ativos.length > 0) {
+      const pctNoPrazo = Math.round((noPrazo.length / ativos.length) * 100);
+      list.push({
+        icon: pctNoPrazo >= 80 ? ShieldCheck : AlertTriangle,
+        tone: pctNoPrazo >= 80 ? "emerald" : "amber",
+        text: <><span className="font-semibold">{pctNoPrazo}%</span> dos protocolos em andamento estão dentro do prazo.</>,
+      });
+    }
+    // Reclamações vs elogios
+    const reclamacoes = filtrados.filter(p => p.categoria === "reclamacao").length;
+    const elogios = filtrados.filter(p => p.categoria === "elogio").length;
+    if (reclamacoes + elogios > 0) {
+      const ratio = elogios > 0 ? Math.round((elogios / (reclamacoes + elogios)) * 100) : 0;
+      list.push({
+        icon: ratio >= 50 ? ThumbsUp : ThumbsDown,
+        tone: ratio >= 50 ? "emerald" : "amber",
+        text: <><span className="font-semibold">{ratio}%</span> de aprovação entre elogios e reclamações ({elogios} elogios vs {reclamacoes} reclamações).</>,
+      });
+    }
+    // Participação do cidadão (protocolos com localização)
+    const comGeo = filtrados.filter(p => p.latitude != null && p.longitude != null).length;
+    if (total > 0) {
+      const pctGeo = Math.round((comGeo / total) * 100);
+      list.push({
+        icon: MapPin,
+        tone: "blue",
+        text: <><span className="font-semibold">{pctGeo}%</span> das manifestações incluem localização geográfica.</>,
+      });
+    }
+    // Evolução mês a mês (último vs penúltimo)
+    if (evolucao.length >= 2) {
+      const ultimo = evolucao[evolucao.length - 1];
+      const penultimo = evolucao[evolucao.length - 2];
+      const diff = ultimo.total - penultimo.total;
+      const cresceu = diff > 0;
+      list.push({
+        icon: cresceu ? ArrowUpRight : ArrowDownRight,
+        tone: cresceu ? "orange" : "emerald",
+        text: <><span className="font-semibold">{cresceu ? "+" : ""}{diff}</span> manifestações em relação ao mês anterior ({penultimo.mes}: {penultimo.total} → {ultimo.mes}: {ultimo.total}).</>,
       });
     }
     return list;
-  }, [topAssuntos, porSecretaria, vencidos.length, prazoMedio, total]);
+  }, [topAssuntos, porSecretaria, vencidos.length, prazoMedio, total, concluidos.length, ativos.length, noPrazo.length, filtrados, evolucao]);
 
   const exportarRelatorio = () => {
     const linhas = [
