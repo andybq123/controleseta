@@ -170,6 +170,15 @@ function AuthPage() {
                 Acesso restrito. Solicite ao administrador para cadastrar seu e-mail.
               </p>
             </div>
+
+            <div className="text-center pt-1">
+              <Link
+                to="/inicio"
+                className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
+              >
+                Conhecer o portal da Ouvidoria →
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
