@@ -10,7 +10,7 @@ import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { situacaoProtocolo, CATEGORIAS, type CategoriaProtocolo } from "@/lib/prazo";
 import {
   AlertTriangle, CheckCircle2, Clock, FileText, Smile,
-  Timer, Download, MapPin, TrendingUp,
+  Timer, Download, MapPin, TrendingUp, Lightbulb, Building, ShieldCheck, Activity,
 } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
@@ -280,6 +280,49 @@ function Dashboard() {
     [allEnriched],
   );
 
+  // Insights automáticos derivados das métricas do período
+  const insights = useMemo(() => {
+    const list: { icon: any; tone: string; text: React.ReactNode }[] = [];
+    if (topAssuntos.length > 0 && total > 0) {
+      const top = topAssuntos[0];
+      const pct = Math.round((top.qtd / total) * 100);
+      list.push({
+        icon: Lightbulb,
+        tone: "amber",
+        text: <><span className="font-semibold">{top.nome}</span> representa <span className="font-semibold">{pct}%</span> das manifestações do período.</>,
+      });
+    }
+    if (porSecretaria.length > 0 && total > 0) {
+      const topSec = porSecretaria[0];
+      const pct = Math.round((topSec.qtd / total) * 100);
+      list.push({
+        icon: Building,
+        tone: "blue",
+        text: <>Secretaria de <span className="font-semibold">{topSec.full}</span> concentra <span className="font-semibold">{topSec.qtd} protocolos ({pct}%)</span> do total.</>,
+      });
+    }
+    list.push({
+      icon: ShieldCheck,
+      tone: vencidos.length === 0 ? "emerald" : "red",
+      text: vencidos.length === 0
+        ? <>Nenhum protocolo se encontra atrasado.</>
+        : <><span className="font-semibold">{vencidos.length}</span> protocolo(s) em atraso requerem atenção imediata.</>,
+    });
+    if (prazoMedio > 0) {
+      const meta = 5;
+      const diff = Math.abs(Math.round(((prazoMedio - meta) / meta) * 100));
+      const abaixo = prazoMedio <= meta;
+      list.push({
+        icon: Activity,
+        tone: abaixo ? "emerald" : "orange",
+        text: abaixo
+          ? <>Tempo médio de resposta <span className="font-semibold">{diff}% abaixo da meta</span>.</>
+          : <>Tempo médio de resposta <span className="font-semibold">{diff}% acima da meta</span> de {meta} dias.</>,
+      });
+    }
+    return list;
+  }, [topAssuntos, porSecretaria, vencidos.length, prazoMedio, total]);
+
   const exportarRelatorio = () => {
     const linhas = [
       ["Numero", "Tipo", "Categoria", "Assunto", "Secretaria", "Status", "Aberto", "Concluído"].join(";"),
@@ -364,7 +407,8 @@ function Dashboard() {
 
         <Card className="lg:col-span-3">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Distribuição por Categoria</CardTitle>
+            <CardTitle className="text-base">Categorias</CardTitle>
+            <p className="text-[11px] text-muted-foreground">Distribuição das manifestações</p>
           </CardHeader>
           <CardContent>
             <div className="h-[200px] relative">
@@ -408,26 +452,36 @@ function Dashboard() {
         <Card className="lg:col-span-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Top 10 Assuntos</CardTitle>
+            <p className="text-[11px] text-muted-foreground">Mais recorrentes no período</p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {topAssuntos.length === 0 && <p className="text-xs text-muted-foreground">Sem dados.</p>}
               {(() => {
                 const max = Math.max(1, ...topAssuntos.map(a => a.qtd));
-                return topAssuntos.map(a => (
+                return topAssuntos.map((a, idx) => (
                   <button
                     key={a.nome}
                     type="button"
                     onClick={() => openDrill(`Assunto: ${a.nome}`, p => (p.assunto ?? "Outros").slice(0, 40) === a.nome)}
-                    className="w-full grid grid-cols-[1fr_auto] items-center gap-2 text-left rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                    className="group w-full grid grid-cols-[20px_1fr_auto] items-center gap-2 text-left rounded-md px-2 py-1.5 hover:bg-muted/60 transition"
                   >
+                    <span className="text-[10px] font-bold tabular-nums text-muted-foreground group-hover:text-primary">
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
                     <div className="min-w-0">
-                      <p className="text-xs truncate" title={a.nome}>{a.nome}</p>
+                      <p className="text-xs font-medium truncate" title={a.nome}>{a.nome}</p>
                       <div className="h-1.5 mt-1 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full bg-primary rounded-full" style={{ width: `${(a.qtd / max) * 100}%` }} />
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${(a.qtd / max) * 100}%`,
+                            background: `linear-gradient(90deg, hsl(217 91% 60%), hsl(262 83% 58%))`,
+                          }}
+                        />
                       </div>
                     </div>
-                    <span className="text-xs font-semibold tabular-nums">{a.qtd}</span>
+                    <span className="text-xs font-bold tabular-nums text-foreground min-w-[20px] text-right">{a.qtd}</span>
                   </button>
                 ));
               })()}
@@ -629,6 +683,26 @@ function Dashboard() {
         </Card>
       </div>
 
+      {insights.length > 0 && (
+        <Card className="border-l-4 border-l-primary/60">
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-amber-500" /> Insights Automáticos
+              </CardTitle>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Análise inteligente do período selecionado
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {insights.map((ins, i) => <InsightCard key={i} {...ins} />)}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2">
@@ -792,6 +866,25 @@ function Legenda({ dot, label }: { dot: string; label: string }) {
       <span className="h-2 w-2 rounded-full" style={{ background: dot }} />
       {label}
     </span>
+  );
+}
+
+function InsightCard({ icon: Icon, tone, text }: { icon: any; tone: string; text: React.ReactNode }) {
+  const tones: Record<string, { bg: string; fg: string; ring: string }> = {
+    amber:   { bg: "bg-amber-500/10",   fg: "text-amber-600",   ring: "ring-amber-500/20" },
+    blue:    { bg: "bg-blue-500/10",    fg: "text-blue-600",    ring: "ring-blue-500/20" },
+    emerald: { bg: "bg-emerald-500/10", fg: "text-emerald-600", ring: "ring-emerald-500/20" },
+    orange:  { bg: "bg-orange-500/10",  fg: "text-orange-600",  ring: "ring-orange-500/20" },
+    red:     { bg: "bg-destructive/10", fg: "text-destructive", ring: "ring-destructive/20" },
+  };
+  const t = tones[tone] ?? tones.blue;
+  return (
+    <div className={`flex items-start gap-3 rounded-xl border bg-card/50 ring-1 ${t.ring} p-3 transition hover:bg-card`}>
+      <div className={`h-9 w-9 shrink-0 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center`}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <p className="text-xs leading-relaxed text-foreground/90 mt-0.5">{text}</p>
+    </div>
   );
 }
 

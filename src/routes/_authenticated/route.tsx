@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, FileText, Building2, LogOut, AlertTriangle, BarChart3, Mail, Users, HeartPulse, Map as MapIcon, Archive, Settings, ChevronDown, PanelLeft, PanelTop, ChevronRight } from "lucide-react";
+import { LayoutDashboard, FileText, Building2, LogOut, AlertTriangle, BarChart3, Mail, Users, HeartPulse, Map as MapIcon, Archive, Settings, ChevronDown, PanelLeft, PanelTop } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -113,18 +113,6 @@ function AuthLayout() {
               );
             })}
           </nav>
-          <div className="p-4 border-t border-slate-800">
-            <div className="rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 p-4">
-              <div className="text-sm font-semibold text-white mb-1">Precisa de ajuda?</div>
-              <div className="text-xs text-slate-300 mb-3">Nossa equipe está pronta para te ajudar.</div>
-              <Link
-                to="/email-inbox"
-                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
-              >
-                Abrir chamado <ChevronRight className="h-3 w-3" />
-              </Link>
-            </div>
-          </div>
         </aside>
         <div className="flex-1 flex flex-col min-w-0">
           <header className="border-b bg-card sticky top-0 z-10">
