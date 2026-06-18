@@ -77,8 +77,8 @@ export const ASSUNTOS_CATEGORIAS = [
 export const PROTOCOLO_EXTRACT_SYSTEM = `Você extrai campos de e-mails de protocolos de Ouvidoria/LAI de prefeituras.
 Responda APENAS com JSON válido (sem markdown, sem texto extra) com EXATAMENTE estes 5 campos:
 {
-  "numero": string (valor após "Nº:" ou "Número:" ou "Protocolo:" — ex: "1.940/2026", "1940/2026", "12345"; preserve a formatação original incluindo pontos e barras; senão ""),
-  "assunto": string (valor após "Assunto:"; senão ""),
+  "numero": string (NÚMERO DA OUVIDORIA/LAI/E-SIC — extraia do início do campo "Assunto:" quando estiver no formato "Ouvidoria N/AAAA", "LAI N/AAAA" ou "E-SIC N/AAAA" (ex.: "Assunto: Ouvidoria 2.021/2026: Limpeza..." → "2.021/2026"). NÃO use o "Nº:" do cabeçalho do e-mail (esse é o protocolo interno do sistema de envio e deve ser ignorado). Se o Assunto não trouxer esse padrão, então use "Nº:"/"Número:"/"Protocolo:". Preserve pontos e barras. Senão ""),
+  "assunto": string (texto descritivo após o número no campo "Assunto:" — ex.: "Assunto: Ouvidoria 2.021/2026: Limpeza em terreno baldio" → "Limpeza em terreno baldio". Se não houver número no Assunto, use o valor após "Assunto:" inteiro. Senão ""),
   "solicitante": string (valor após "De:" — nome de quem enviou; ignore endereços automáticos da prefeitura; senão ""),
   "destinatario": string (valor após "Para:" — para quem foi enviado, ex: "SETA - OUV - Ouvidoria Geral"; senão ""),
   "assunto_categoria": string (classifique o teor da manifestação em EXATAMENTE UM dos rótulos abaixo, copiando o texto IDÊNTICO; se nenhum se aplica, use "")
@@ -105,9 +105,18 @@ export type ExtracaoProtocolo = {
 };
 
 export function normalizarExtracao(parsed: any): ExtracaoProtocolo {
+  let numero = String(parsed?.numero ?? "");
+  let assunto = String(parsed?.assunto ?? "");
+  // Safety net: se "assunto" começar com "Ouvidoria/LAI/E-SIC N/AAAA: ...",
+  // extrai o número de lá e limpa o assunto, garantindo prioridade sobre o "Nº:" do e-mail.
+  const m = assunto.match(/^\s*(?:Ouvidoria|LAI|E-?SIC|Manifesta(?:ç|c)(?:ã|a)o)\s+([\d.]+\/\d{2,4})\s*[:\-–]\s*(.+)$/i);
+  if (m) {
+    numero = m[1];
+    assunto = m[2].trim();
+  }
   return {
-    numero: String(parsed?.numero ?? ""),
-    assunto: String(parsed?.assunto ?? "").slice(0, 200),
+    numero,
+    assunto: assunto.slice(0, 200),
     solicitante: String(parsed?.solicitante ?? ""),
     destinatario: String(parsed?.destinatario ?? ""),
     assunto_categoria: String(parsed?.assunto_categoria ?? ""),
