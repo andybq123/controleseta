@@ -11,11 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
+import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, Clock, RefreshCw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { sincronizarGmail, ressincronizarGmail } from "@/lib/gmail-sync.functions";
+import { sincronizarGmail, ressincronizarGmail, reverificarEmails } from "@/lib/gmail-sync.functions";
 
 const SYNC_INTERVAL_MIN = 3;
 
@@ -44,8 +44,10 @@ function EmailInboxPage() {
   const qc = useQueryClient();
   const sincronizar = useServerFn(sincronizarGmail);
   const ressincronizar = useServerFn(ressincronizarGmail);
+  const reverificar = useServerFn(reverificarEmails);
   const [sincronizando, setSincronizando] = useState(false);
   const [ressincronizando, setRessincronizando] = useState(false);
+  const [reverificando, setReverificando] = useState(false);
   useTick(1000);
 
   async function rodarSync() {
@@ -74,6 +76,22 @@ function EmailInboxPage() {
       toast.error(e?.message ?? "Falha ao ressincronizar");
     } finally {
       setRessincronizando(false);
+    }
+  }
+
+  async function rodarReverificacao() {
+    if (!confirm("Reverificar os últimos 60 dias e tentar criar protocolo para todos os e-mails que ainda não foram protocolizados? Pode demorar alguns minutos.")) return;
+    setReverificando(true);
+    try {
+      const r = await reverificar({ data: { dias: 60 } }) as any;
+      toast.success(`Reverificação: ${r?.reprocessados ?? 0} reprocessado(s), ${r?.novos ?? 0} novo(s) protocolo(s), ${r?.erros ?? 0} erro(s)`);
+      qc.invalidateQueries({ queryKey: ["email-inbox-accounts"] });
+      qc.invalidateQueries({ queryKey: ["email-inbox-log"] });
+      qc.invalidateQueries({ queryKey: ["protocolos"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao reverificar");
+    } finally {
+      setReverificando(false);
     }
   }
 
@@ -150,6 +168,10 @@ function EmailInboxPage() {
           <p className="text-sm text-muted-foreground">Encaminhe e-mails para um endereço único e o sistema cria a ouvidoria automaticamente.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={rodarReverificacao} disabled={reverificando || ressincronizando || sincronizando} title="Reverifica e-mails não protocolizados nos últimos 60 dias">
+            <ShieldCheck className={`h-4 w-4 mr-1 ${reverificando ? "animate-spin" : ""}`} />
+            Reverificar não-protocolados
+          </Button>
           <Button variant="outline" onClick={rodarRessync} disabled={ressincronizando || sincronizando}>
             <RefreshCw className={`h-4 w-4 mr-1 ${ressincronizando ? "animate-spin" : ""}`} />
             Ressincronizar 30 dias
