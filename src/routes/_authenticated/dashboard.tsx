@@ -10,7 +10,7 @@ import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { situacaoProtocolo, CATEGORIAS, type CategoriaProtocolo } from "@/lib/prazo";
 import {
   AlertTriangle, CheckCircle2, Clock, FileText, Smile,
-  Timer, Download, MapPin, TrendingUp,
+  Timer, Download, MapPin, TrendingUp, Lightbulb, Building, ShieldCheck, Activity,
 } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
@@ -364,7 +364,8 @@ function Dashboard() {
 
         <Card className="lg:col-span-3">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Distribuição por Categoria</CardTitle>
+            <CardTitle className="text-base">Categorias</CardTitle>
+            <p className="text-[11px] text-muted-foreground">Distribuição das manifestações</p>
           </CardHeader>
           <CardContent>
             <div className="h-[200px] relative">
@@ -408,26 +409,36 @@ function Dashboard() {
         <Card className="lg:col-span-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Top 10 Assuntos</CardTitle>
+            <p className="text-[11px] text-muted-foreground">Mais recorrentes no período</p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {topAssuntos.length === 0 && <p className="text-xs text-muted-foreground">Sem dados.</p>}
               {(() => {
                 const max = Math.max(1, ...topAssuntos.map(a => a.qtd));
-                return topAssuntos.map(a => (
+                return topAssuntos.map((a, idx) => (
                   <button
                     key={a.nome}
                     type="button"
                     onClick={() => openDrill(`Assunto: ${a.nome}`, p => (p.assunto ?? "Outros").slice(0, 40) === a.nome)}
-                    className="w-full grid grid-cols-[1fr_auto] items-center gap-2 text-left rounded px-1 py-0.5 hover:bg-muted/60 transition"
+                    className="group w-full grid grid-cols-[20px_1fr_auto] items-center gap-2 text-left rounded-md px-2 py-1.5 hover:bg-muted/60 transition"
                   >
+                    <span className="text-[10px] font-bold tabular-nums text-muted-foreground group-hover:text-primary">
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
                     <div className="min-w-0">
-                      <p className="text-xs truncate" title={a.nome}>{a.nome}</p>
+                      <p className="text-xs font-medium truncate" title={a.nome}>{a.nome}</p>
                       <div className="h-1.5 mt-1 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full bg-primary rounded-full" style={{ width: `${(a.qtd / max) * 100}%` }} />
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${(a.qtd / max) * 100}%`,
+                            background: `linear-gradient(90deg, hsl(217 91% 60%), hsl(262 83% 58%))`,
+                          }}
+                        />
                       </div>
                     </div>
-                    <span className="text-xs font-semibold tabular-nums">{a.qtd}</span>
+                    <span className="text-xs font-bold tabular-nums text-foreground min-w-[20px] text-right">{a.qtd}</span>
                   </button>
                 ));
               })()}
