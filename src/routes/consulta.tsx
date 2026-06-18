@@ -159,9 +159,14 @@ function ConsultaPage() {
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Consulta de Protocolo</h1>
             <p className="text-xs md:text-sm text-muted-foreground mt-0.5">Acompanhe o andamento da sua manifestação.</p>
           </div>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/ouvidoria"><ArrowLeft className="h-4 w-4 mr-1" /> Nova manifestação</Link>
-          </Button>
+          <div className="flex flex-col gap-1 sm:flex-row sm:gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/inicio"><ArrowLeft className="h-4 w-4 mr-1" /> Início</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/ouvidoria">Nova manifestação</Link>
+            </Button>
+          </div>
         </div>
       </header>
 

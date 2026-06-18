@@ -13,7 +13,7 @@ import { MapPointPicker } from "@/components/map-point-picker";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { CATEGORIAS, gerarNumeroProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { ASSUNTOS_OUVIDORIA } from "@/lib/assuntos-ouvidoria";
-import { MapPin, CheckCircle2, ShieldAlert, Eye, EyeOff, UserX, Send, Copy, Download, Printer, Search } from "lucide-react";
+import { MapPin, CheckCircle2, ShieldAlert, Eye, EyeOff, UserX, Send, Copy, Download, Printer, Search, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import brusqueBrasao from "@/assets/brusque-brasao.png";
 import { gerarHashConsulta, gerarProtocoloPdf, type ProtocoloPdfData } from "@/lib/protocolo-pdf";
@@ -277,7 +277,12 @@ function OuvidoriaPublicaPage() {
               Canal oficial para elogios, reclamações, denúncias, sugestões e pedidos de informação.
             </p>
           </div>
-          <div className="ml-auto hidden sm:block">
+          <div className="ml-auto hidden sm:flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/inicio">
+                <ArrowLeft className="h-4 w-4 mr-1" /> Início
+              </Link>
+            </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/consulta">
                 <Search className="h-4 w-4 mr-1" /> Consultar protocolo
