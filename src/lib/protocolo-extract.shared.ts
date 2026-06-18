@@ -105,9 +105,18 @@ export type ExtracaoProtocolo = {
 };
 
 export function normalizarExtracao(parsed: any): ExtracaoProtocolo {
+  let numero = String(parsed?.numero ?? "");
+  let assunto = String(parsed?.assunto ?? "");
+  // Safety net: se "assunto" começar com "Ouvidoria/LAI/E-SIC N/AAAA: ...",
+  // extrai o número de lá e limpa o assunto, garantindo prioridade sobre o "Nº:" do e-mail.
+  const m = assunto.match(/^\s*(?:Ouvidoria|LAI|E-?SIC|Manifesta(?:ç|c)(?:ã|a)o)\s+([\d.]+\/\d{2,4})\s*[:\-–]\s*(.+)$/i);
+  if (m) {
+    numero = m[1];
+    assunto = m[2].trim();
+  }
   return {
-    numero: String(parsed?.numero ?? ""),
-    assunto: String(parsed?.assunto ?? "").slice(0, 200),
+    numero,
+    assunto: assunto.slice(0, 200),
     solicitante: String(parsed?.solicitante ?? ""),
     destinatario: String(parsed?.destinatario ?? ""),
     assunto_categoria: String(parsed?.assunto_categoria ?? ""),
