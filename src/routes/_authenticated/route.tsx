@@ -113,18 +113,6 @@ function AuthLayout() {
               );
             })}
           </nav>
-          <div className="p-4 border-t border-slate-800">
-            <div className="rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 p-4">
-              <div className="text-sm font-semibold text-white mb-1">Precisa de ajuda?</div>
-              <div className="text-xs text-slate-300 mb-3">Nossa equipe está pronta para te ajudar.</div>
-              <Link
-                to="/email-inbox"
-                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
-              >
-                Abrir chamado <ChevronRight className="h-3 w-3" />
-              </Link>
-            </div>
-          </div>
         </aside>
         <div className="flex-1 flex flex-col min-w-0">
           <header className="border-b bg-card sticky top-0 z-10">
