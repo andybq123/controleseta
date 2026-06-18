@@ -14,6 +14,7 @@ import {
   Legend,
   Cell,
 } from "recharts";
+import { ChartTooltipContent } from "@/components/chart-tooltip";
 
 
 
@@ -364,15 +365,22 @@ function Dashboard() {
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="rgb(100 116 139)" />
                 <YAxis tick={{ fontSize: 11 }} stroke="rgb(100 116 139)" allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{
-                    background: "rgb(15 23 42)",
-                    border: "none",
-                    borderRadius: "0.5rem",
-                    fontSize: 12,
-                    color: "#fff",
+                  content={(props: any) => {
+                    if (!props.active || !props.payload?.length) return null;
+                    const renamed = props.payload.map((p: any) => ({
+                      ...p,
+                      name: p.dataKey === "emDia" ? "Em dia" : "Atrasadas",
+                    }));
+                    return (
+                      <ChartTooltipContent
+                        {...props}
+                        payload={renamed}
+                        label={`Mês: ${props.label}`}
+                        unit="protocolo(s)"
+                      />
+                    );
                   }}
-                  formatter={(value: number, name: string) => [value, name === "emDia" ? "Em dia" : "Atrasadas"]}
-                  labelFormatter={(label: string) => `Mês: ${label}`}
+                  cursor={{ fill: "hsl(var(--muted)/0.4)" }}
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 12 }}
