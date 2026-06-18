@@ -124,6 +124,8 @@ function OuvidoriaPublicaPage() {
       };
 
       const { error } = await supabase.from("protocolos").insert(payload);
+      // Garante uma sensação de processamento mínima (~3s) para o munícipe.
+      await new Promise((r) => setTimeout(r, 3000));
       if (error) throw error;
       const pdfData: ProtocoloPdfData = {
         numero,
