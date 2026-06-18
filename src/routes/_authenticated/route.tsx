@@ -1,10 +1,11 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, FileText, Building2, LogOut, AlertTriangle, BarChart3, Mail, Users, HeartPulse, Map as MapIcon, Archive, Settings, ChevronDown } from "lucide-react";
+import { LayoutDashboard, FileText, Building2, LogOut, AlertTriangle, BarChart3, Mail, Users, HeartPulse, Map as MapIcon, Archive, Settings, ChevronDown, PanelLeft, PanelTop, ChevronRight } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useLayoutMode } from "@/hooks/use-layout-mode";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +35,7 @@ function AuthLayout() {
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: s => s.location.pathname });
   const { user } = Route.useRouteContext();
+  const [layoutMode, toggleLayout] = useLayoutMode();
 
   const { data: isAdmin = false } = useQuery({
     queryKey: ["is-admin", user.id],
@@ -66,6 +68,88 @@ function AuthLayout() {
     ...(isAdmin ? [{ to: "/users", label: "Usuários", icon: Users }] : []),
   ]) as { to: string; label: string; icon: any }[];
   const configActive = configItems.some(c => pathname.startsWith(c.to));
+
+  const LayoutSwitch = (
+    <button
+      type="button"
+      onClick={toggleLayout}
+      title={layoutMode === "sidebar" ? "Alternar para layout superior" : "Alternar para layout lateral"}
+      aria-label="Alternar layout"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background/80 text-foreground shadow-sm backdrop-blur transition-all hover:bg-accent hover:scale-105"
+    >
+      {layoutMode === "sidebar" ? <PanelTop className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+    </button>
+  );
+
+  if (layoutMode === "sidebar") {
+    const allNav = [...nav, ...configItems];
+    return (
+      <div className="min-h-screen flex bg-slate-50 dark:bg-background">
+        <aside className="w-64 shrink-0 bg-slate-900 text-slate-100 flex flex-col sticky top-0 h-screen">
+          <div className="px-5 py-5 flex items-center gap-3 border-b border-slate-800">
+            <img src={brusqueLogo} alt="" className="h-10 w-10 object-contain" />
+            <div className="min-w-0">
+              <div className="text-sm font-semibold leading-tight truncate">Ouvidoria de Brusque</div>
+              <div className="text-[11px] text-slate-400 leading-tight truncate">Controladoria do Município</div>
+            </div>
+          </div>
+          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+            {allNav.map(item => {
+              const active = pathname.startsWith(item.to);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="p-4 border-t border-slate-800">
+            <div className="rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 p-4">
+              <div className="text-sm font-semibold text-white mb-1">Precisa de ajuda?</div>
+              <div className="text-xs text-slate-300 mb-3">Nossa equipe está pronta para te ajudar.</div>
+              <Link
+                to="/email-inbox"
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
+              >
+                Abrir chamado <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </div>
+        </aside>
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="border-b bg-card sticky top-0 z-10">
+            <div className="px-6 h-16 flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-base font-semibold leading-tight truncate">Painel Executivo</div>
+                <div className="text-xs text-muted-foreground leading-tight truncate">Visão geral das manifestações da Ouvidoria</div>
+              </div>
+              <div className="flex items-center gap-1">
+                <NotificationBell />
+                <ThemeToggle />
+                {LayoutSwitch}
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Sair</span>
+                </Button>
+              </div>
+            </div>
+          </header>
+          <main className="flex-1 px-6 py-6 min-w-0">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -118,6 +202,7 @@ function AuthLayout() {
           <div className="flex items-center gap-1">
             <NotificationBell />
             <ThemeToggle />
+            {LayoutSwitch}
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Sair</span>
             </Button>
