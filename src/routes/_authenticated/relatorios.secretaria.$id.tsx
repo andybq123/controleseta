@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Download, FileText } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { CATEGORIAS, type CategoriaProtocolo, situacaoProtocolo, formatDate, categoriaLabel, PRAZOS, type TipoProtocolo } from "@/lib/prazo";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -282,10 +283,7 @@ function SecretariaRelatorio() {
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip
-                      formatter={(value: number, name: string) => [`${value} protocolos`, name]}
-                      contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}
-                    />
+                    <Tooltip content={<ChartTooltipContent unit="protocolos" />} />
                     <Legend
                       verticalAlign="bottom"
                       iconType="circle"
@@ -324,10 +322,7 @@ function SecretariaRelatorio() {
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip
-                      formatter={(value: number, name: string) => [`${value} protocolos`, name]}
-                      contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}
-                    />
+                    <Tooltip content={<ChartTooltipContent unit="protocolos" />} />
                     <Legend
                       verticalAlign="bottom"
                       iconType="circle"
@@ -389,7 +384,7 @@ function SecretariaRelatorio() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis dataKey="mes" className="text-xs" />
                 <YAxis allowDecimals={false} className="text-xs" />
-                <Tooltip />
+                <Tooltip content={<ChartTooltipContent unit="protocolos" />} cursor={{ fill: "hsl(var(--muted)/0.4)" }} />
                 <Bar dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

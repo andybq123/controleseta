@@ -15,6 +15,7 @@ import {
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestacoes-map";
+import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { Link, useNavigate } from "@tanstack/react-router";
 import ouvidoriasData from "@/data/ouvidorias.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
@@ -352,7 +353,7 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                   <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip content={<ChartTooltipContent unit="manifestações" />} cursor={{ stroke: "hsl(var(--border))" }} />
                   <Line type="monotone" dataKey="total" stroke="hsl(217 91% 60%)" strokeWidth={2.5}
                     dot={{ r: 4, fill: "hsl(217 91% 60%)" }} label={{ position: "top", fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                 </LineChart>
@@ -375,7 +376,7 @@ function Dashboard() {
                       <Cell key={i} fill={(d as any).color} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip content={<ChartTooltipContent unit="manifestações" total={total} />} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -448,7 +449,7 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis dataKey="nome" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" interval={0} angle={-15} textAnchor="end" height={50} />
                   <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip content={<ChartTooltipContent unit="manifestações" />} cursor={{ fill: "hsl(var(--muted)/0.4)" }} />
                   <Bar
                     dataKey="qtd"
                     fill="hsl(217 91% 60%)"
@@ -550,7 +551,7 @@ function Dashboard() {
                       <Cell key={i} fill={(d as any).color} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip content={<ChartTooltipContent unit="protocolo(s)" total={total} />} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -696,13 +697,6 @@ function Dashboard() {
     </div>
   );
 }
-
-const tooltipStyle = {
-  background: "hsl(var(--background))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: 8,
-  fontSize: 12,
-} as const;
 
 function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone, onClick }: {
   icon: any; label: string; value: number | string; hint?: string; suffix?: string;
