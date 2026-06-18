@@ -379,6 +379,81 @@ export async function ressincronizarGmailContas(dias = 30): Promise<{ contas: nu
   return await sincronizarGmailContasComJanela(`newer_than:${dias}d`, 100, 20);
 }
 
+/**
+ * Re-verifica e-mails antigos no Gmail dentro da janela informada, forçando o
+ * reprocessamento de mensagens que já existem no log mas que NÃO geraram
+ * protocolo (status erro/ignorado/pendente sem protocolo_id). Útil para
+ * recuperar ouvidorias que ficaram presas por falha temporária na IA, etc.
+ */
+export async function reverificarEmailsSemProtocolo(dias = 60): Promise<{ contas: number; reprocessados: number; novos: number; erros: number; detalhes: any[] }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const q = `newer_than:${Math.min(Math.max(dias, 1), 180)}d`;
+
+  const { data: contas } = await supabaseAdmin
+    .from("email_inbox_accounts")
+    .select("*")
+    .eq("ativo", true)
+    .eq("provider", "gmail");
+
+  let reprocessados = 0, novos = 0, erros = 0;
+  const detalhes: any[] = [];
+
+  for (const conta of contas ?? []) {
+    try {
+      const todasMsgs: { id: string }[] = [];
+      let pageToken: string | undefined;
+      let pagesRead = 0;
+      do {
+        const qStr = encodeURIComponent(`in:inbox ${q}`);
+        const url = `${GMAIL_GATEWAY}/users/me/messages?maxResults=100&q=${qStr}${pageToken ? `&pageToken=${pageToken}` : ""}`;
+        const listRes = await fetch(url, { headers: gmailHeaders() });
+        if (!listRes.ok) throw new Error(`Gmail list ${listRes.status}: ${(await listRes.text()).slice(0, 200)}`);
+        const listJson = await listRes.json();
+        const msgs: { id: string }[] = listJson.messages ?? [];
+        todasMsgs.push(...msgs);
+        pageToken = listJson.nextPageToken;
+        pagesRead++;
+      } while (pageToken && pagesRead < 30);
+
+      for (const m of todasMsgs) {
+        const { data: logExistente } = await supabaseAdmin.from("email_inbox_log")
+          .select("id, protocolo_id, status")
+          .eq("account_id", conta.id).eq("external_id", m.id).maybeSingle();
+
+        // Se já gerou protocolo, pula. Caso contrário, apaga log antigo para
+        // permitir nova tentativa pelo ingerirEmail (que cria novo log).
+        if (logExistente?.protocolo_id) continue;
+        if (logExistente?.id) {
+          await supabaseAdmin.from("email_inbox_log").delete().eq("id", logExistente.id);
+        }
+
+        const mr = await fetch(`${GMAIL_GATEWAY}/users/me/messages/${m.id}?format=full`, { headers: gmailHeaders() });
+        if (!mr.ok) { erros++; continue; }
+        const mj = await mr.json();
+        const hdrs = mj.payload?.headers ?? [];
+        const from = header(hdrs, "From");
+        const to = header(hdrs, "To");
+        const subject = header(hdrs, "Subject");
+        const body = extractBody(mj.payload) || mj.snippet || "";
+
+        const res = await ingerirEmail({
+          account: conta, remetente: from, destinatario: to,
+          assunto: subject, corpo: body, externalId: m.id,
+        });
+        reprocessados++;
+        if (res.ok && res.protocoloId) novos++;
+        else if (!res.ok) erros++;
+        detalhes.push({ id: m.id, subject, ok: res.ok, numero: res.numero, error: res.error });
+      }
+    } catch (e: any) {
+      erros++;
+      detalhes.push({ conta: conta.email, error: String(e?.message ?? e) });
+    }
+  }
+
+  return { contas: contas?.length ?? 0, reprocessados, novos, erros, detalhes };
+}
+
 async function sincronizarGmailContasComJanela(q: string, pageSize: number, maxPages: number): Promise<{ contas: number; novos: number; erros: number; detalhes: any[] }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
