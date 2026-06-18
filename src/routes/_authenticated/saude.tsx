@@ -13,6 +13,7 @@ import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { currentMonthValue } from "@/lib/month-filter";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { ChartTooltipContent } from "@/components/chart-tooltip";
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316", "#84cc16", "#14b8a6", "#a855f7", "#eab308"];
 
@@ -199,7 +200,7 @@ function SaudePage() {
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number, n: string) => [`${v} protocolo(s)`, n]} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }} />
+                  <Tooltip content={<ChartTooltipContent unit="protocolo(s)" />} />
                   <Legend verticalAlign="bottom" iconType="circle" formatter={(v: string) => <span className="text-xs">{v}</span>} />
                 </PieChart>
               </ResponsiveContainer>
@@ -233,7 +234,7 @@ function SaudePage() {
                         <Cell key={i} fill={COLORS[(i + 3) % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number, n: string) => [`${v} protocolo(s)`, n]} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }} />
+                    <Tooltip content={<ChartTooltipContent unit="protocolo(s)" />} />
                     <Legend verticalAlign="bottom" iconType="circle" formatter={(v: string) => <span className="text-xs">{v}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
