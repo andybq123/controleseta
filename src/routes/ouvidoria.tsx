@@ -123,9 +123,11 @@ function OuvidoriaPublicaPage() {
         hash_consulta: hash,
       };
 
-      const { error } = await supabase.from("protocolos").insert(payload);
-      // Garante uma sensação de processamento mínima (~3s) para o munícipe.
-      await new Promise((r) => setTimeout(r, 3000));
+      // Roda em paralelo com um delay mínimo de 3s para dar sensação de processamento.
+      const [{ error }] = await Promise.all([
+        supabase.from("protocolos").insert(payload),
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
       if (error) throw error;
       const pdfData: ProtocoloPdfData = {
         numero,
