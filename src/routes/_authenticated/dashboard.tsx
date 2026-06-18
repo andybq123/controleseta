@@ -280,6 +280,49 @@ function Dashboard() {
     [allEnriched],
   );
 
+  // Insights automáticos derivados das métricas do período
+  const insights = useMemo(() => {
+    const list: { icon: any; tone: string; text: React.ReactNode }[] = [];
+    if (topAssuntos.length > 0 && total > 0) {
+      const top = topAssuntos[0];
+      const pct = Math.round((top.qtd / total) * 100);
+      list.push({
+        icon: Lightbulb,
+        tone: "amber",
+        text: <><span className="font-semibold">{top.nome}</span> representa <span className="font-semibold">{pct}%</span> das manifestações do período.</>,
+      });
+    }
+    if (porSecretaria.length > 0 && total > 0) {
+      const topSec = porSecretaria[0];
+      const pct = Math.round((topSec.qtd / total) * 100);
+      list.push({
+        icon: Building,
+        tone: "blue",
+        text: <>Secretaria de <span className="font-semibold">{topSec.full}</span> concentra <span className="font-semibold">{topSec.qtd} protocolos ({pct}%)</span> do total.</>,
+      });
+    }
+    list.push({
+      icon: ShieldCheck,
+      tone: vencidos.length === 0 ? "emerald" : "red",
+      text: vencidos.length === 0
+        ? <>Nenhum protocolo se encontra atrasado.</>
+        : <><span className="font-semibold">{vencidos.length}</span> protocolo(s) em atraso requerem atenção imediata.</>,
+    });
+    if (prazoMedio > 0) {
+      const meta = 5;
+      const diff = Math.abs(Math.round(((prazoMedio - meta) / meta) * 100));
+      const abaixo = prazoMedio <= meta;
+      list.push({
+        icon: Activity,
+        tone: abaixo ? "emerald" : "orange",
+        text: abaixo
+          ? <>Tempo médio de resposta <span className="font-semibold">{diff}% abaixo da meta</span>.</>
+          : <>Tempo médio de resposta <span className="font-semibold">{diff}% acima da meta</span> de {meta} dias.</>,
+      });
+    }
+    return list;
+  }, [topAssuntos, porSecretaria, vencidos.length, prazoMedio, total]);
+
   const exportarRelatorio = () => {
     const linhas = [
       ["Numero", "Tipo", "Categoria", "Assunto", "Secretaria", "Status", "Aberto", "Concluído"].join(";"),
