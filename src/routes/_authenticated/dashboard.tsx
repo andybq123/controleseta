@@ -869,6 +869,25 @@ function Legenda({ dot, label }: { dot: string; label: string }) {
   );
 }
 
+function InsightCard({ icon: Icon, tone, text }: { icon: any; tone: string; text: React.ReactNode }) {
+  const tones: Record<string, { bg: string; fg: string; ring: string }> = {
+    amber:   { bg: "bg-amber-500/10",   fg: "text-amber-600",   ring: "ring-amber-500/20" },
+    blue:    { bg: "bg-blue-500/10",    fg: "text-blue-600",    ring: "ring-blue-500/20" },
+    emerald: { bg: "bg-emerald-500/10", fg: "text-emerald-600", ring: "ring-emerald-500/20" },
+    orange:  { bg: "bg-orange-500/10",  fg: "text-orange-600",  ring: "ring-orange-500/20" },
+    red:     { bg: "bg-destructive/10", fg: "text-destructive", ring: "ring-destructive/20" },
+  };
+  const t = tones[tone] ?? tones.blue;
+  return (
+    <div className={`flex items-start gap-3 rounded-xl border bg-card/50 ring-1 ${t.ring} p-3 transition hover:bg-card`}>
+      <div className={`h-9 w-9 shrink-0 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center`}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <p className="text-xs leading-relaxed text-foreground/90 mt-0.5">{text}</p>
+    </div>
+  );
+}
+
 function DrillDialog({
   data,
   onOpenChange,
