@@ -24,6 +24,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { fetchAllPaginated } from "@/lib/fetch-all";
+import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 import { useServerFn } from "@tanstack/react-start";
 import { gerarRelatorioIA } from "@/lib/relatorio-ia.functions";
 import { buildProtocolosAntigos, isAntigo, isAntigoAtrasada } from "@/lib/protocolos-antigos-merge";
@@ -88,7 +89,7 @@ function RelatoriosPage() {
     const antigos = buildProtocolosAntigos(
       (secretarias as any[]).map((s) => ({ id: s.id, nome: s.nome })),
     );
-    return [...(protocolos as any[]), ...antigos];
+    return [...(protocolos as any[]), ...antigos].sort(sortProtocolosPorNumero);
   }, [protocolos, secretarias]);
 
   const anosDisponiveis = useMemo(() => {

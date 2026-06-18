@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, categoriaBadgeClass, CATEGORIAS, type CategoriaProtocolo, type TipoProtocolo } from "@/lib/prazo";
 import { HeartPulse } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
+import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { currentMonthValue } from "@/lib/month-filter";
@@ -74,7 +75,7 @@ function SaudePage() {
       if (!txt.includes(s)) return false;
     }
     return true;
-  });
+  }).sort(sortProtocolosPorNumero);
 
   const anosDisponiveis = useMemo(() => {
     const set = new Set<string>([String(new Date().getFullYear())]);

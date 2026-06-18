@@ -13,6 +13,7 @@ import {
   Timer, Download, MapPin, TrendingUp,
 } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
+import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestacoes-map";
 import { Link, useNavigate } from "@tanstack/react-router";
 import ouvidoriasData from "@/data/ouvidorias.json";
@@ -130,7 +131,7 @@ function Dashboard() {
   }, [secretarias, overridesVer]);
 
   const allEnriched = useMemo(
-    () => [...enriched, ...antigosEnriched],
+    () => [...enriched, ...antigosEnriched].sort(sortProtocolosPorNumero),
     [enriched, antigosEnriched],
   );
 
