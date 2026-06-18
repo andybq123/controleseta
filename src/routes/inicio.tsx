@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import brusqueBrasao from "@/assets/brusque-brasao.png";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/inicio")({
   ssr: false,
   head: () => ({
     meta: [

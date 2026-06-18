@@ -11,11 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OuvidoriaRouteImport } from './routes/ouvidoria'
+import { Route as InicioRouteImport } from './routes/inicio'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ConsultaRouteImport } from './routes/consulta'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedSecretariasRouteImport } from './routes/_authenticated/secretarias'
 import { Route as AuthenticatedSaudeRouteImport } from './routes/_authenticated/saude'
@@ -43,6 +43,11 @@ const OuvidoriaRoute = OuvidoriaRouteImport.update({
   path: '/ouvidoria',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InicioRoute = InicioRouteImport.update({
+  id: '/inicio',
+  path: '/inicio',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
@@ -60,11 +65,6 @@ const AuthRoute = AuthRouteImport.update({
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
@@ -155,10 +155,11 @@ const AuthenticatedProtocolosAntigosSourceNumeroRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/consulta': typeof ConsultaRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/inicio': typeof InicioRoute
   '/ouvidoria': typeof OuvidoriaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/atrasados': typeof AuthenticatedAtrasadosRoute
@@ -179,10 +180,11 @@ export interface FileRoutesByFullPath {
   '/api/public/inbound-email/$token': typeof ApiPublicInboundEmailTokenRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/consulta': typeof ConsultaRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/inicio': typeof InicioRoute
   '/ouvidoria': typeof OuvidoriaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/atrasados': typeof AuthenticatedAtrasadosRoute
@@ -203,11 +205,11 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/consulta': typeof ConsultaRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/inicio': typeof InicioRoute
   '/ouvidoria': typeof OuvidoriaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/atrasados': typeof AuthenticatedAtrasadosRoute
@@ -234,6 +236,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/consulta'
     | '/forgot-password'
+    | '/inicio'
     | '/ouvidoria'
     | '/reset-password'
     | '/atrasados'
@@ -258,6 +261,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/consulta'
     | '/forgot-password'
+    | '/inicio'
     | '/ouvidoria'
     | '/reset-password'
     | '/atrasados'
@@ -277,11 +281,11 @@ export interface FileRouteTypes {
     | '/api/public/inbound-email/$token'
   id:
     | '__root__'
-    | '/'
     | '/_authenticated'
     | '/auth'
     | '/consulta'
     | '/forgot-password'
+    | '/inicio'
     | '/ouvidoria'
     | '/reset-password'
     | '/_authenticated/atrasados'
@@ -303,11 +307,11 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConsultaRoute: typeof ConsultaRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  InicioRoute: typeof InicioRoute
   OuvidoriaRoute: typeof OuvidoriaRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiPublicEmailSyncRoute: typeof ApiPublicEmailSyncRoute
@@ -329,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/ouvidoria'
       fullPath: '/ouvidoria'
       preLoaderRoute: typeof OuvidoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inicio': {
+      id: '/inicio'
+      path: '/inicio'
+      fullPath: '/inicio'
+      preLoaderRoute: typeof InicioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -357,13 +368,6 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/users': {
@@ -532,11 +536,11 @@ const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ConsultaRoute: ConsultaRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  InicioRoute: InicioRoute,
   OuvidoriaRoute: OuvidoriaRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ApiPublicEmailSyncRoute: ApiPublicEmailSyncRoute,
