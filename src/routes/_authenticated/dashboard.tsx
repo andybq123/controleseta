@@ -698,13 +698,6 @@ function Dashboard() {
   );
 }
 
-const tooltipStyle = {
-  background: "hsl(var(--background))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: 8,
-  fontSize: 12,
-} as const;
-
 function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone, onClick }: {
   icon: any; label: string; value: number | string; hint?: string; suffix?: string;
   hintTrend?: "up" | "down";
