@@ -710,28 +710,28 @@ function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone, onCl
   tone: "primary" | "info" | "success" | "destructive" | "violet" | "emerald";
   onClick?: () => void;
 }) {
-  const tones: Record<string, { bg: string; fg: string }> = {
-    primary:     { bg: "bg-primary/10",     fg: "text-primary" },
-    info:        { bg: "bg-amber-500/10",   fg: "text-amber-600" },
-    success:     { bg: "bg-emerald-500/10", fg: "text-emerald-600" },
-    destructive: { bg: "bg-destructive/10", fg: "text-destructive" },
-    violet:      { bg: "bg-violet-500/10",  fg: "text-violet-600" },
-    emerald:     { bg: "bg-teal-500/10",    fg: "text-teal-600" },
+  const tones: Record<string, { bg: string; fg: string; ring: string; grad: string }> = {
+    primary:     { bg: "bg-primary/10",     fg: "text-primary",       ring: "ring-primary/20",     grad: "from-primary/10 via-transparent to-transparent" },
+    info:        { bg: "bg-amber-500/10",   fg: "text-amber-600",     ring: "ring-amber-500/20",   grad: "from-amber-500/10 via-transparent to-transparent" },
+    success:     { bg: "bg-emerald-500/10", fg: "text-emerald-600",   ring: "ring-emerald-500/20", grad: "from-emerald-500/10 via-transparent to-transparent" },
+    destructive: { bg: "bg-destructive/10", fg: "text-destructive",   ring: "ring-destructive/20", grad: "from-destructive/10 via-transparent to-transparent" },
+    violet:      { bg: "bg-violet-500/10",  fg: "text-violet-600",    ring: "ring-violet-500/20",  grad: "from-violet-500/10 via-transparent to-transparent" },
+    emerald:     { bg: "bg-teal-500/10",    fg: "text-teal-600",      ring: "ring-teal-500/20",    grad: "from-teal-500/10 via-transparent to-transparent" },
   };
   const t = tones[tone];
   return (
     <Card
       onClick={onClick}
-      className={onClick ? "cursor-pointer transition hover:shadow-md hover:-translate-y-0.5" : undefined}
+      className={`relative overflow-hidden border ring-1 ${t.ring} bg-gradient-to-br ${t.grad} ${onClick ? "cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 hover:ring-2" : ""}`}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-4 relative">
         <div className="flex items-center gap-3">
-          <div className={`h-10 w-10 rounded-full ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}>
+          <div className={`h-11 w-11 rounded-xl ${t.bg} ${t.fg} flex items-center justify-center shrink-0 shadow-sm`}>
             <Icon className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] text-muted-foreground leading-tight">{label}</p>
-            <p className="text-2xl font-bold leading-tight">
+            <p className="text-2xl font-bold leading-tight tracking-tight">
               {value}{suffix && <span className="text-sm font-medium text-muted-foreground ml-1">{suffix}</span>}
             </p>
           </div>
