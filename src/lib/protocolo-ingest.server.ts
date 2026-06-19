@@ -271,13 +271,50 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
       }
     }
 
+    // Regra: local e responsável herdam o nome da secretaria. Se ainda não
+    // existir um local/responsável homônimo dentro daquela secretaria,
+    // criamos um automaticamente. Assim os gráficos "por Local" deixam de
+    // cair em "Outros/Sem local".
     let localId: string | null = null;
-    if (secretariaId && extr.local_sugerido) {
-      const { data: locs } = await supabaseAdmin
-        .from("locais").select("id, nome").eq("secretaria_id", secretariaId);
-      const alvo = norm(extr.local_sugerido);
-      const hit = (locs ?? []).find(l => norm(l.nome).includes(alvo) || alvo.includes(norm(l.nome)));
-      if (hit) localId = hit.id;
+    let responsavelId: string | null = null;
+    if (secretariaId) {
+      const { data: secRow } = await supabaseAdmin
+        .from("secretarias").select("nome").eq("id", secretariaId).maybeSingle();
+      const secNome = secRow?.nome?.trim();
+      if (secNome) {
+        // Local
+        const { data: locs } = await supabaseAdmin
+          .from("locais").select("id, nome").eq("secretaria_id", secretariaId);
+        const alvoSec = norm(secNome);
+        let hitLoc = (locs ?? []).find(l => norm(l.nome) === alvoSec);
+        // Se a IA sugeriu um local específico que existe, prioriza
+        if (extr.local_sugerido) {
+          const alvoSug = norm(extr.local_sugerido);
+          const sug = (locs ?? []).find(l => norm(l.nome) === alvoSug);
+          if (sug) hitLoc = sug;
+        }
+        if (!hitLoc) {
+          const { data: novoLoc } = await supabaseAdmin
+            .from("locais").insert({ nome: secNome, secretaria_id: secretariaId })
+            .select("id").single();
+          if (novoLoc) localId = novoLoc.id;
+        } else {
+          localId = hitLoc.id;
+        }
+
+        // Responsável
+        const { data: resps } = await supabaseAdmin
+          .from("responsaveis").select("id, nome").eq("secretaria_id", secretariaId);
+        let hitResp = (resps ?? []).find(r => norm(r.nome) === alvoSec);
+        if (!hitResp) {
+          const { data: novoResp } = await supabaseAdmin
+            .from("responsaveis").insert({ nome: secNome, secretaria_id: secretariaId })
+            .select("id").single();
+          if (novoResp) responsavelId = novoResp.id;
+        } else {
+          responsavelId = hitResp.id;
+        }
+      }
     }
 
     const numero = extr.numero || gerarNumeroProtocolo(extr.tipo);
@@ -299,7 +336,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
         assunto: extr.assunto || assunto || "Sem assunto",
         descricao: resumo,
         solicitante: extr.solicitante || remetente || null,
-        secretaria_id: secretariaId, local_id: localId,
+        secretaria_id: secretariaId, local_id: localId, responsavel_id: responsavelId,
         data_abertura: dataAbertura, created_by: account.created_by,
       })
       .select("id, numero").single();
