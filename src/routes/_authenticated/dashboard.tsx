@@ -167,14 +167,17 @@ function Dashboard() {
   const pctAtrasados = total > 0 ? ((vencidos.length / total) * 100).toFixed(2) : "0";
   const slaNoPrazo = ativos.length > 0 ? Math.round((noPrazo.length / ativos.length) * 100) : 100;
 
-  // Evolução por mês — últimos 6 meses (acumulado)
+  // Evolução por mês — últimos 6 meses (abertos no mês)
   const evolucao = useMemo(() => {
     const meses: { mes: string; total: number }[] = [];
     for (let i = 5; i >= 0; i--) {
-      const ref = startOfMonth(subMonths(new Date(), i));
+      const inicio = startOfMonth(subMonths(new Date(), i));
       const fim = startOfMonth(subMonths(new Date(), i - 1));
-      const acum = allEnriched.filter(p => new Date(p.data_abertura) < fim).length;
-      meses.push({ mes: format(ref, "MMM/yy", { locale: ptBR }), total: acum });
+      const qtd = allEnriched.filter(p => {
+        const d = new Date(p.data_abertura);
+        return d >= inicio && d < fim;
+      }).length;
+      meses.push({ mes: format(inicio, "MMM/yy", { locale: ptBR }), total: qtd });
     }
     return meses;
   }, [allEnriched]);
