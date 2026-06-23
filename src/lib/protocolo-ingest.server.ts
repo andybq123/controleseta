@@ -119,6 +119,33 @@ function normalizarNumero(n: string): string[] {
   return Array.from(variantes);
 }
 
+// Extrai o número real da Ouvidoria/Protocolo do assunto (ou corpo como
+// fallback). Padrões observados nos e-mails do 1Doc:
+//   "Ouvidoria 2.078/2026: ..."  →  "2.078/2026"
+//   "Ouvidoria Nº 2.084/2026"    →  "2.084/2026"
+//   "Protocolo 123/2026"         →  "123/2026"
+//   "e-SIC 45/2026"              →  "45/2026"
+function extrairNumeroDoAssunto(assunto: string, corpo: string): string | null {
+  const numRe = String.raw`(\d{1,4}(?:\.\d{3})*\/20\d{2})`;
+  const padroes = [
+    new RegExp(String.raw`Ouvidoria\s+(?:n[ºo°]\s*)?` + numRe, "i"),
+    new RegExp(String.raw`Protocolo\s+(?:n[ºo°]\s*)?` + numRe, "i"),
+    new RegExp(String.raw`e[\s\-]?sic\s+(?:n[ºo°]\s*)?` + numRe, "i"),
+    new RegExp(String.raw`\bLAI\s+(?:n[ºo°]\s*)?` + numRe, "i"),
+  ];
+  for (const re of padroes) {
+    const m = assunto?.match(re);
+    if (m?.[1]) return m[1];
+  }
+  // Fallback genérico no assunto e depois nas primeiras linhas do corpo
+  const generic = new RegExp(numRe);
+  const ms = assunto?.match(generic);
+  if (ms?.[1]) return ms[1];
+  const mc = (corpo || "").slice(0, 2000).match(generic);
+  if (mc?.[1]) return mc[1];
+  return null;
+}
+
 function detectarAcao(assunto: string, corpo: string): "conclusao" | "atualizacao" {
   const texto = norm(`${assunto}\n${corpo}`);
   const padroesConclusao = [
@@ -190,6 +217,11 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
   try {
     if (textoCompleto.trim().length < 10) throw new Error("Conteúdo vazio");
     const extr = await extrairComIA(textoCompleto);
+
+    // Número real da Ouvidoria vindo no assunto do e-mail tem prioridade
+    // sobre o que a IA inferiu (evita gerar números sintéticos).
+    const numeroDoAssunto = extrairNumeroDoAssunto(assunto, corpo);
+    if (numeroDoAssunto) extr.numero = numeroDoAssunto;
 
     // Detecta e-SIC pelo assunto/corpo do e-mail (ex: "Pedido de e-SIC")
     {

@@ -1,97 +1,36 @@
 ## Objetivo
 
-1. Catálogo de **assuntos** vira tabela do banco, com página administrativa para listar, buscar, criar, editar, excluir e vincular cada assunto a uma secretaria.
-2. Quando um e-mail chega, a secretaria é definida automaticamente pelo vínculo `assunto → secretaria` salvo no banco (em vez do mapa hard-coded no código).
-3. Repaginar a página de **Secretarias**, removendo o conceito de **Responsáveis** e a coluna **Centro de Custo**.
-4. Remover totalmente os responsáveis: tabela, página, dropdowns e exibições.
+Fazer com que o `protocolo-ingest` use o número real da Ouvidoria que vem no assunto do e-mail (ex.: `Ouvidoria 2.078/2026: Poluição Ambiental` → `2.078/2026`) em vez de gerar um número novo aleatório (`5.602/2026`, `6.971/2026`).
 
----
+## O que muda
 
-## 1. Modelo de dados (migração única)
+### 1. `src/lib/protocolo-ingest.server.ts`
 
-**Nova tabela `public.assuntos`:**
+- Adicionar uma função `extrairNumeroDoAssunto(assunto, corpo)` que tenta achar o número no padrão `NNN(.NNN)?/AAAA` em:
+  1. `Ouvidoria <num>:`
+  2. `Ouvidoria Nº/N° <num>` ou `Protocolo <num>`
+  3. `e-SIC <num>` / `LAI <num>`
+  4. Fallback: primeira ocorrência de `\d{1,3}(\.\d{3})*\/20\d{2}` no assunto, depois no corpo.
+- Usar esse número como **fonte autoritativa**: passa a ter prioridade sobre o `extr.numero` vindo da IA (a IA continua usada para os demais campos).
+- Aplicar `normalizarNumero` para já fazer a checagem de duplicidade considerando variações com/sem ponto de milhar — se já existir protocolo com aquele número, segue o fluxo de "atualização/baixa" já implementado (não cria duplicado).
+- Só cai no `gerarNumeroProtocolo(extr.tipo)` quando nenhum número for encontrado nem no assunto, nem no corpo, nem pela IA. Isso evita gerar números sintéticos quando o e-mail claramente traz o número da Ouvidoria.
 
-| coluna | tipo | observação |
-|---|---|---|
-| id | uuid PK | |
-| nome | text unique not null | rótulo do assunto |
-| grupo | text | agrupador opcional (ex. "Saúde", "Trânsito e Vias") |
-| secretaria_id | uuid FK → secretarias(id) ON DELETE SET NULL | vínculo padrão |
-| ativo | boolean default true | esconder sem perder histórico |
-| created_at / updated_at | timestamps | |
+### 2. Correção dos 2 protocolos já criados de forma incorreta
 
-- GRANTs para `authenticated` e `service_role`. Sem `anon`.
-- RLS: autenticados leem e gerenciam.
-- Trigger `update_updated_at_column` no UPDATE.
-- **Seed**: insere todos os 78 itens do catálogo atual (`src/lib/assuntos-ouvidoria.ts`), já vinculando à secretaria correspondente conforme o mapa existente em `src/lib/protocolo-ingest.server.ts` (match por `lower(unaccent(secretarias.nome))`).
-- Normaliza **na própria migração** as duplicidades do catálogo: mantém **"Programas Sociais"** (descarta "Programas Socias") e **"Praça e/ou quadra para lazer e esportes"** (descarta "Praça e ou quadra…").
+Migração única para renumerar:
+- `5.602/2026` → `2.078/2026` (Poluição Ambiental, Fundema)
+- `6.971/2026` → `2.084/2026` (Poda de árvores de rua, Secretaria de Obras)
 
-**Remoção de Responsáveis:**
+Antes de atualizar, a migração checa se já não existe outro protocolo com o número de destino para não estourar a unique constraint. O trigger `log_protocolo_changes` vai registrar a mudança no histórico automaticamente.
 
-- `ALTER TABLE protocolos DROP COLUMN responsavel_id;`
-- `DROP TABLE public.responsaveis;`
+## O que NÃO muda
 
-**Remoção de Centro de Custo:**
+- Lógica de roteamento por secretaria (catálogo `assuntos` + fallback hard-coded) permanece igual.
+- Extração de demais campos pela IA permanece igual.
+- Fluxo de detecção de "baixa/atualização" para protocolos já existentes permanece igual — só passa a casar mais cedo porque o número correto será extraído do assunto.
 
-- `ALTER TABLE secretarias DROP COLUMN centro_custo;`
+## Detalhes técnicos
 
----
-
-## 2. Nova página: `/assuntos`
-
-Rota `src/routes/_authenticated/assuntos.tsx`.
-
-- Tabela com colunas: **Assunto**, **Grupo**, **Secretaria vinculada**, **Ativo**, **Ações**.
-- Busca por texto (filtra `nome` e `grupo`) + filtro por secretaria + filtro ativo/inativo.
-- Botão **Novo assunto** → diálogo com campos: nome, grupo (combobox livre com sugestões dos grupos atuais), secretaria (select), ativo.
-- Edição inline da secretaria via `<Select>` na linha (salva ao mudar).
-- Editar/excluir via diálogo. Excluir só permitido se nenhum protocolo usa esse assunto (verificação na chamada).
-- Item de menu **Assuntos** na sidebar do `_authenticated/route.tsx`.
-
----
-
-## 3. Integração com ingestão de e-mail
-
-`src/lib/protocolo-ingest.server.ts`:
-
-- Substituir o objeto `ASSUNTO_PARA_SECRETARIA` por uma busca em `assuntos` (`select nome, secretaria_id`) carregada uma vez por execução.
-- Lookup case/acento-insensitivo do `extr.assunto_categoria` na tabela; se houver match e `secretaria_id` não nulo, usa.
-- Mantém os fallbacks atuais (regra por palavras-chave) se nenhum vínculo for encontrado.
-
-Atualizar `src/lib/protocolo-extract.shared.ts` para listar os rótulos válidos a partir dos `nome` em `assuntos` ativos (gerado em build-time não é viável; manter lista estática sincronizada com o catálogo seed). Não bloqueante: o prompt já tolera "" quando não há match.
-
----
-
-## 4. Repaginação das páginas
-
-**`/secretarias`** (`src/routes/_authenticated/secretarias.tsx`):
-
-- Remover totalmente a aba/seção de Responsáveis e a coluna Centro de Custo.
-- Layout em cards por secretaria mostrando: nome, sigla, ícone, endereço, **nº de assuntos vinculados** (link para `/assuntos?secretaria=<id>`) e **nº de protocolos abertos**.
-- Manter editar/excluir e o mapa atual.
-
-**Página `/responsaveis` / aba responsáveis:** removida.
-
-**Outros arquivos afetados (responsavel_id / centro_custo):**
-
-- `protocolos.tsx`, `dashboard.tsx`, `atrasados.tsx`, `saude.tsx`, `relatorios.index.tsx`, `relatorios.secretaria.$id.tsx`, `protocolo-detail-dialog.tsx`, `notification-bell.tsx` → remover colunas, filtros, joins e exportações que mencionam responsável/centro de custo.
-
----
-
-## 5. Detalhes técnicos
-
-- Tipos do Supabase são regerados após a migração; só então editar os arquivos `.tsx`.
-- Server functions novas em `src/lib/assuntos.functions.ts` com `requireSupabaseAuth`:
-  - `listAssuntos`, `createAssunto`, `updateAssunto`, `deleteAssunto` (verifica uso em `protocolos.assunto`).
-- Leituras na página usam padrão TanStack Query (`ensureQueryData` no loader + `useSuspenseQuery` no componente).
-- Sem alterações em `responsaveis` policies — a tabela é dropada.
-
----
-
-## Ordem de execução
-
-1. Migração: nova tabela `assuntos` + seed + drop `responsaveis` + drop `secretarias.centro_custo` + drop `protocolos.responsavel_id`.
-2. Server fns `assuntos.functions.ts` + ajuste em `protocolo-ingest.server.ts`.
-3. Página `/assuntos` + item de menu.
-4. Refatorar `/secretarias` e remover todas as referências a responsável e centro de custo.
-5. Remover `src/lib/assuntos-ouvidoria.ts` (ou deixá-lo apenas como fonte de seed comentado).
+- Regex principal: `/Ouvidoria\s+(?:n[ºo°]\s*)?(\d{1,3}(?:\.\d{3})*\/20\d{2})/i`
+- Regex genérica de fallback: `/(\d{1,3}(?:\.\d{3})*\/20\d{2})/`
+- A função roda **antes** do bloco de detecção de existente (linhas 203-247), substituindo o `extr.numero` quando encontra match — assim o lookup `IN (variantes)` já encontra o protocolo certo na próxima vez que o mesmo e-mail chegar.
