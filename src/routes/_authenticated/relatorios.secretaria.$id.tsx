@@ -149,7 +149,6 @@ function SecretariaRelatorio() {
     doc.setFont("helvetica", "normal");
     let y = 70;
     if (secretaria.sigla) { doc.text(`Sigla: ${secretaria.sigla}`, 40, y); y += 14; }
-    if (secretaria.centro_custo) { doc.text(`Centro de Custo: ${secretaria.centro_custo}`, 40, y); y += 14; }
     doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 40, y); y += 20;
 
     // Resumo
@@ -211,7 +210,6 @@ function SecretariaRelatorio() {
             <h1 className="text-2xl font-bold tracking-tight">{secretaria.nome}</h1>
             <p className="text-sm text-muted-foreground">
               {secretaria.sigla && <span className="mr-2">{secretaria.sigla}</span>}
-              {secretaria.centro_custo && <span className="font-mono">CC: {secretaria.centro_custo}</span>}
             </p>
           </div>
         </div>
