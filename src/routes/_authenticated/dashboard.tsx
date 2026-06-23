@@ -76,7 +76,7 @@ function Dashboard() {
       fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
-          .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+          .select("*, secretarias(nome, sigla), locais(nome)")
           .order("data_abertura", { ascending: false })
           .range(from, to),
       ),
@@ -101,7 +101,7 @@ function Dashboard() {
     const ov = getAllOverrides();
     const saudeSec = (secretarias as any[]).find(s => /sa[uú]de/i.test(s.nome));
     const ANTIGOS = (ouvidoriasData as Array<{
-      source: string; setor: string | null; responsavel: string | null;
+      source: string; setor: string | null;
       data: string; numero: number; situacao: string; comentario?: string | null;
     }>).filter((r) => !r.data?.startsWith("2026-06"));
     return ANTIGOS.map(r => {
@@ -122,8 +122,7 @@ function Dashboard() {
         secretarias: r.source === "Saúde"
           ? { nome: saudeSec?.nome ?? "Saúde", sigla: saudeSec?.sigla ?? "SMS" }
           : { nome: r.source, sigla: r.source.slice(0, 6) },
-        responsaveis: r.responsavel ? { nome: r.responsavel } : null,
-        locais: r.setor ? { nome: r.setor, centro_custo: null } : null,
+        locais: r.setor ? { nome: r.setor } : null,
         latitude: null,
         longitude: null,
         _antigo: true,

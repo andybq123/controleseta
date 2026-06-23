@@ -19,7 +19,7 @@ export function NotificationBell() {
       fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
-          .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+          .select("*, secretarias(nome, sigla), locais(nome)")
           .order("data_abertura", { ascending: false })
           .range(from, to),
       ),

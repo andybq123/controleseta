@@ -49,7 +49,7 @@ function ProtocolosPage() {
       const rows = await fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
-          .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+          .select("*, secretarias(nome, sigla), locais(nome)")
           .order("data_abertura", { ascending: false })
           .range(from, to),
       );
@@ -60,11 +60,6 @@ function ProtocolosPage() {
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
     queryFn: async () => (await supabase.from("secretarias").select("*").order("nome")).data ?? [],
-  });
-
-  const { data: responsaveis = [] } = useQuery({
-    queryKey: ["responsaveis"],
-    queryFn: async () => (await supabase.from("responsaveis").select("*").order("nome")).data ?? [],
   });
 
   const { data: locais = [] } = useQuery({
@@ -117,7 +112,7 @@ function ProtocolosPage() {
           <h1 className="text-2xl font-bold tracking-tight">Protocolos</h1>
           <p className="text-sm text-muted-foreground">{filtrados.length} de {protocolos.length}</p>
         </div>
-        <NovoProtocoloDialog secretarias={secretarias} responsaveis={responsaveis} locais={locais} />
+        <NovoProtocoloDialog secretarias={secretarias} locais={locais} />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -220,7 +215,6 @@ function ProtocolosPage() {
                       <span><Calendar className="inline h-3 w-3 mr-1" />Aberto {formatDate(p.data_abertura)}</span>
                       <span>Prazo {formatDate(s.prazoFinal)}</span>
                       {(p as any).secretarias && <span>📍 {(p as any).secretarias.nome}</span>}
-                      {(p as any).responsaveis && <span>👤 {(p as any).responsaveis.nome}</span>}
                       {p.solicitante && <span>✉ {p.solicitante}</span>}
                     </div>
                   </div>
@@ -262,7 +256,7 @@ function ProtocolosPage() {
   );
 }
 
-function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretarias: any[]; responsaveis: any[]; locais: any[] }) {
+function NovoProtocoloDialog({ secretarias, locais }: { secretarias: any[]; locais: any[] }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState<TipoProtocolo>("ouvidoria");
@@ -272,7 +266,6 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
   const [descricao, setDescricao] = useState("");
   const [secretariaId, setSecretariaId] = useState<string>("");
   const [localId, setLocalId] = useState<string>("");
-  const [responsavelId, setResponsavelId] = useState<string>("");
   const [solicitante, setSolicitante] = useState("");
   const [dataAbertura, setDataAbertura] = useState(new Date().toISOString().slice(0, 10));
   const [endereco, setEndereco] = useState("");
@@ -288,7 +281,6 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
   const extrair = useServerFn(extrairProtocolo);
   const geocode = useServerFn(geocodeAddress);
 
-  const respFiltrados = responsaveis.filter(r => !secretariaId || r.secretaria_id === secretariaId);
   const locaisFiltrados = locais.filter(l => !secretariaId || l.secretaria_id === secretariaId);
 
   async function handleExtrair() {
@@ -353,7 +345,6 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
         tipo, categoria, assunto, descricao: descricao || null,
         secretaria_id: secretariaId || null,
         local_id: localId || null,
-        responsavel_id: responsavelId || null,
         solicitante: solicitante || null,
         data_abertura: dataAbertura,
         endereco: endereco || null,
@@ -367,7 +358,7 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
       qc.invalidateQueries({ queryKey: ["protocolos"] });
       toast.success("Protocolo cadastrado");
       setOpen(false);
-      setNumero(""); setAssunto(""); setDescricao(""); setSecretariaId(""); setLocalId(""); setResponsavelId(""); setSolicitante(""); setEndereco("");
+      setNumero(""); setAssunto(""); setDescricao(""); setSecretariaId(""); setLocalId(""); setSolicitante(""); setEndereco("");
       setEnderecoCoords(null);
       setEnderecoExact(false);
       setEnderecoTemNumero(false);
@@ -511,8 +502,6 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
               setSecretariaId(v);
               const locaisDaSec = locais.filter(l => l.secretaria_id === v);
               setLocalId(locaisDaSec[0]?.id ?? "");
-              const respDaSec = responsaveis.filter(r => r.secretaria_id === v);
-              setResponsavelId(respDaSec[0]?.id ?? "");
             }}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
@@ -521,20 +510,11 @@ function NovoProtocoloDialog({ secretarias, responsaveis, locais }: { secretaria
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Local / Centro de Custo</Label>
+            <Label>Local</Label>
             <Select value={localId} onValueChange={setLocalId} disabled={!secretariaId}>
               <SelectTrigger><SelectValue placeholder={secretariaId ? "Selecione" : "Escolha uma secretaria"} /></SelectTrigger>
               <SelectContent>
-                {locaisFiltrados.map(l => <SelectItem key={l.id} value={l.id}>{l.nome}{l.centro_custo ? ` · ${l.centro_custo}` : ""}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Responsável</Label>
-            <Select value={responsavelId} onValueChange={setResponsavelId} disabled={!secretariaId}>
-              <SelectTrigger><SelectValue placeholder={secretariaId ? "Selecione" : "Escolha uma secretaria"} /></SelectTrigger>
-              <SelectContent>
-                {respFiltrados.map(r => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
+                {locaisFiltrados.map(l => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

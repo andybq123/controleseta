@@ -47,7 +47,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     queryFn: async () => {
       const { data, error } = await supabase
         .from("protocolos")
-        .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+        .select("*, secretarias(nome, sigla), locais(nome)")
         .eq("id", protocoloProp.id)
         .maybeSingle();
       if (error) throw error;
@@ -60,11 +60,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
     queryFn: async () => (await supabase.from("secretarias").select("*").order("nome")).data ?? [],
-    enabled: open,
-  });
-  const { data: responsaveis = [] } = useQuery({
-    queryKey: ["responsaveis"],
-    queryFn: async () => (await supabase.from("responsaveis").select("*").order("nome")).data ?? [],
     enabled: open,
   });
   const { data: locais = [] } = useQuery({
@@ -96,7 +91,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         descricao: protocolo.descricao ?? "",
         solicitante: protocolo.solicitante ?? "",
         secretaria_id: protocolo.secretaria_id ?? "",
-        responsavel_id: protocolo.responsavel_id ?? "",
         local_id: protocolo.local_id ?? "",
         data_abertura: protocolo.data_abertura ?? "",
         data_conclusao: protocolo.data_conclusao ?? "",
@@ -139,7 +133,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   if (!protocolo) return null;
   const s = situacaoProtocolo(protocolo);
 
-  const respFiltrados = responsaveis.filter((r: any) => !form.secretaria_id || r.secretaria_id === form.secretaria_id);
   const locaisFiltrados = locais.filter((l: any) => !form.secretaria_id || l.secretaria_id === form.secretaria_id);
 
   function handleSave() {
@@ -156,7 +149,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
       descricao: form.descricao || null,
       solicitante: form.solicitante || null,
       secretaria_id: form.secretaria_id || null,
-      responsavel_id: form.responsavel_id || null,
       local_id: form.local_id || null,
       data_abertura: form.data_abertura,
       data_conclusao: form.data_conclusao || null,
@@ -290,8 +282,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               {protocolo.data_prorrogacao && <Field label="Data prorrogação" value={formatDate(protocolo.data_prorrogacao)} />}
               {protocolo.data_conclusao && <Field label="Data conclusão" value={formatDate(protocolo.data_conclusao)} />}
               <Field label="Secretaria" value={protocolo.secretarias?.nome ?? "—"} />
-              <Field label="Responsável" value={protocolo.responsaveis?.nome ?? "—"} />
-              {protocolo.locais && <Field label="Local" value={`${protocolo.locais.nome}${protocolo.locais.centro_custo ? ` · ${protocolo.locais.centro_custo}` : ""}`} />}
+              {protocolo.locais && <Field label="Local" value={protocolo.locais.nome} />}
               <Field label="Solicitante" value={protocolo.solicitante ?? "—"} />
             </div>
             <div className="pt-2">
@@ -357,7 +348,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 <Input type="date" value={form.data_abertura} onChange={e => setForm({ ...form, data_abertura: e.target.value })} />
               </Field2>
               <Field2 label="Secretaria">
-                <Select value={form.secretaria_id || "none"} onValueChange={(v) => setForm({ ...form, secretaria_id: v === "none" ? "" : v, responsavel_id: "", local_id: "" })}>
+                <Select value={form.secretaria_id || "none"} onValueChange={(v) => setForm({ ...form, secretaria_id: v === "none" ? "" : v, local_id: "" })}>
                   <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhuma</SelectItem>
@@ -371,15 +362,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
                     {locaisFiltrados.map((x: any) => <SelectItem key={x.id} value={x.id}>{x.nome}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </Field2>
-              <Field2 label="Responsável">
-                <Select value={form.responsavel_id || "none"} onValueChange={(v) => setForm({ ...form, responsavel_id: v === "none" ? "" : v })}>
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {respFiltrados.map((x: any) => <SelectItem key={x.id} value={x.id}>{x.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </Field2>

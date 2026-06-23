@@ -44,6 +44,44 @@ export type Database = {
         }
         Relationships: []
       }
+      assuntos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          grupo: string | null
+          id: string
+          nome: string
+          secretaria_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          grupo?: string | null
+          id?: string
+          nome: string
+          secretaria_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          grupo?: string | null
+          id?: string
+          nome?: string
+          secretaria_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assuntos_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_inbox_accounts: {
         Row: {
           ativo: boolean
@@ -180,7 +218,6 @@ export type Database = {
       }
       locais: {
         Row: {
-          centro_custo: string | null
           created_at: string
           id: string
           nome: string
@@ -188,7 +225,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          centro_custo?: string | null
           created_at?: string
           id?: string
           nome: string
@@ -196,7 +232,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          centro_custo?: string | null
           created_at?: string
           id?: string
           nome?: string
@@ -304,7 +339,6 @@ export type Database = {
           numero: string
           origem: string | null
           prorrogado: boolean
-          responsavel_id: string | null
           secretaria_id: string | null
           sigilo: string
           solicitante: string | null
@@ -334,7 +368,6 @@ export type Database = {
           numero: string
           origem?: string | null
           prorrogado?: boolean
-          responsavel_id?: string | null
           secretaria_id?: string | null
           sigilo?: string
           solicitante?: string | null
@@ -364,7 +397,6 @@ export type Database = {
           numero?: string
           origem?: string | null
           prorrogado?: boolean
-          responsavel_id?: string | null
           secretaria_id?: string | null
           sigilo?: string
           solicitante?: string | null
@@ -381,55 +413,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "protocolos_responsavel_id_fkey"
-            columns: ["responsavel_id"]
-            isOneToOne: false
-            referencedRelation: "responsaveis"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "protocolos_secretaria_id_fkey"
-            columns: ["secretaria_id"]
-            isOneToOne: false
-            referencedRelation: "secretarias"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      responsaveis: {
-        Row: {
-          cargo: string | null
-          created_at: string
-          email: string | null
-          id: string
-          nome: string
-          secretaria_id: string
-          telefone: string | null
-          updated_at: string
-        }
-        Insert: {
-          cargo?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          nome: string
-          secretaria_id: string
-          telefone?: string | null
-          updated_at?: string
-        }
-        Update: {
-          cargo?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          nome?: string
-          secretaria_id?: string
-          telefone?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "responsaveis_secretaria_id_fkey"
             columns: ["secretaria_id"]
             isOneToOne: false
             referencedRelation: "secretarias"
@@ -439,7 +423,6 @@ export type Database = {
       }
       secretarias: {
         Row: {
-          centro_custo: string | null
           created_at: string
           created_by: string | null
           endereco: string | null
@@ -452,7 +435,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          centro_custo?: string | null
           created_at?: string
           created_by?: string | null
           endereco?: string | null
@@ -465,7 +447,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          centro_custo?: string | null
           created_at?: string
           created_by?: string | null
           endereco?: string | null

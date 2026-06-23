@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, FileText, Building2, LogOut, AlertTriangle, BarChart3, Mail, Users, HeartPulse, Map as MapIcon, Archive, Settings, ChevronDown, PanelLeft, PanelTop } from "lucide-react";
+import { LayoutDashboard, FileText, Building2, LogOut, AlertTriangle, BarChart3, Mail, Users, HeartPulse, Map as MapIcon, Archive, Settings, ChevronDown, PanelLeft, PanelTop, Tag } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -64,6 +64,7 @@ function AuthLayout() {
 
   const configItems = ([
     { to: "/secretarias", label: "Secretarias", icon: Building2 },
+    { to: "/assuntos", label: "Assuntos", icon: Tag },
     { to: "/email-inbox", label: "E-mails", icon: Mail },
     ...(isAdmin ? [{ to: "/users", label: "Usuários", icon: Users }] : []),
   ]) as { to: string; label: string; icon: any }[];

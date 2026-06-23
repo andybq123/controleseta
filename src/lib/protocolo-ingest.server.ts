@@ -260,13 +260,25 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
         if (hit) secretariaId = hit.id;
       }
 
-      // 2) Fallback: classifica pelo assunto/categoria detectada pela IA
+      // 2) Fallback: usa o vínculo assunto → secretaria salvo no catálogo (tabela assuntos)
       if (!secretariaId && extr.assunto_categoria) {
-        const alvoNome = ASSUNTO_PARA_SECRETARIA[extr.assunto_categoria];
-        if (alvoNome) {
-          const alvo = norm(alvoNome);
-          const hit = (secs ?? []).find(s => norm(s.nome) === alvo);
-          if (hit) secretariaId = hit.id;
+        const alvoAssunto = norm(extr.assunto_categoria);
+        const { data: matches } = await supabaseAdmin
+          .from("assuntos")
+          .select("nome, secretaria_id")
+          .eq("ativo", true)
+          .not("secretaria_id", "is", null);
+        const hit = (matches ?? []).find((a: any) => norm(a.nome) === alvoAssunto);
+        if (hit?.secretaria_id) secretariaId = hit.secretaria_id;
+
+        // 3) Último fallback: mapa hard-coded (compat para assuntos ainda não cadastrados)
+        if (!secretariaId) {
+          const alvoNome = ASSUNTO_PARA_SECRETARIA[extr.assunto_categoria];
+          if (alvoNome) {
+            const alvo = norm(alvoNome);
+            const hitSec = (secs ?? []).find(s => norm(s.nome) === alvo);
+            if (hitSec) secretariaId = hitSec.id;
+          }
         }
       }
     }

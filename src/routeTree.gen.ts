@@ -26,6 +26,7 @@ import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/m
 import { Route as AuthenticatedEmailInboxRouteImport } from './routes/_authenticated/email-inbox'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
+import { Route as AuthenticatedAssuntosRouteImport } from './routes/_authenticated/assuntos'
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
 import { Route as AuthenticatedProtocolosAntigosIndexRouteImport } from './routes/_authenticated/protocolos-antigos.index'
 import { Route as ApiPublicGmailSyncRouteImport } from './routes/api/public/gmail-sync'
@@ -119,6 +120,11 @@ const AuthenticatedAtrasadosRoute = AuthenticatedAtrasadosRouteImport.update({
   path: '/atrasados',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAssuntosRoute = AuthenticatedAssuntosRouteImport.update({
+  id: '/assuntos',
+  path: '/assuntos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRelatoriosIndexRoute =
   AuthenticatedRelatoriosIndexRouteImport.update({
     id: '/',
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/inicio': typeof InicioRoute
   '/ouvidoria': typeof OuvidoriaRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/assuntos': typeof AuthenticatedAssuntosRoute
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/inicio': typeof InicioRoute
   '/ouvidoria': typeof OuvidoriaRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/assuntos': typeof AuthenticatedAssuntosRoute
   '/atrasados': typeof AuthenticatedAtrasadosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/inicio': typeof InicioRoute
   '/ouvidoria': typeof OuvidoriaRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/assuntos': typeof AuthenticatedAssuntosRoute
   '/_authenticated/atrasados': typeof AuthenticatedAtrasadosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/email-inbox': typeof AuthenticatedEmailInboxRoute
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/ouvidoria'
     | '/reset-password'
+    | '/assuntos'
     | '/atrasados'
     | '/dashboard'
     | '/email-inbox'
@@ -271,6 +281,7 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/ouvidoria'
     | '/reset-password'
+    | '/assuntos'
     | '/atrasados'
     | '/dashboard'
     | '/email-inbox'
@@ -296,6 +307,7 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/ouvidoria'
     | '/reset-password'
+    | '/_authenticated/assuntos'
     | '/_authenticated/atrasados'
     | '/_authenticated/dashboard'
     | '/_authenticated/email-inbox'
@@ -449,6 +461,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAtrasadosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/assuntos': {
+      id: '/_authenticated/assuntos'
+      path: '/assuntos'
+      fullPath: '/assuntos'
+      preLoaderRoute: typeof AuthenticatedAssuntosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios/': {
       id: '/_authenticated/relatorios/'
       path: '/'
@@ -519,6 +538,7 @@ const AuthenticatedRelatoriosRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAssuntosRoute: typeof AuthenticatedAssuntosRoute
   AuthenticatedAtrasadosRoute: typeof AuthenticatedAtrasadosRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmailInboxRoute: typeof AuthenticatedEmailInboxRoute
@@ -533,6 +553,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAssuntosRoute: AuthenticatedAssuntosRoute,
   AuthenticatedAtrasadosRoute: AuthenticatedAtrasadosRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmailInboxRoute: AuthenticatedEmailInboxRoute,
@@ -567,13 +588,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
