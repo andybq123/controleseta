@@ -134,12 +134,17 @@ export function ManifestacoesMap({
     map.addControl(new mapboxgl.FullscreenControl(), "top-right");
     mapRef.current = map;
     return () => {
-      rootsRef.current.forEach(r => { try { r.unmount(); } catch { /* noop */ } });
+      const roots = rootsRef.current;
+      const markers = markersRef.current;
       rootsRef.current = [];
-      markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
-      map.remove();
       mapRef.current = null;
+      // Defer unmount to avoid "synchronously unmount a root while React was already rendering"
+      queueMicrotask(() => {
+        roots.forEach(r => { try { r.unmount(); } catch { /* noop */ } });
+        markers.forEach(m => m.remove());
+        try { map.remove(); } catch { /* noop */ }
+      });
     };
   }, []);
 
@@ -150,10 +155,14 @@ export function ManifestacoesMap({
 
     const apply = () => {
       // cleanup existing
-      rootsRef.current.forEach(r => { try { r.unmount(); } catch { /* noop */ } });
+      const oldRoots = rootsRef.current;
+      const oldMarkers = markersRef.current;
       rootsRef.current = [];
-      markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
+      queueMicrotask(() => {
+        oldRoots.forEach(r => { try { r.unmount(); } catch { /* noop */ } });
+        oldMarkers.forEach(m => m.remove());
+      });
 
       // secretarias
       validSecs.forEach(s => {
