@@ -12,8 +12,10 @@ import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { currentMonthValue } from "@/lib/month-filter";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
+import { format, startOfMonth, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316", "#84cc16", "#14b8a6", "#a855f7", "#eab308"];
 
@@ -119,6 +121,21 @@ function SaudePage() {
         .sort((a, b) => b.value - a.value);
     });
     return map;
+  }, [saude]);
+
+  // Evolução de solicitações por mês — últimos 12 meses (Saúde)
+  const evolucaoSaude = useMemo(() => {
+    const meses: { mes: string; total: number }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const inicio = startOfMonth(subMonths(new Date(), i));
+      const fim = startOfMonth(subMonths(new Date(), i - 1));
+      const qtd = saude.filter(p => {
+        const d = new Date(p.data_abertura);
+        return d >= inicio && d < fim;
+      }).length;
+      meses.push({ mes: format(inicio, "MMM/yy", { locale: ptBR }), total: qtd });
+    }
+    return meses;
   }, [saude]);
 
   return (
