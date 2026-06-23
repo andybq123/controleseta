@@ -1,0 +1,1 @@
+ALTER TABLE public.locais DROP COLUMN IF EXISTS centro_custo;

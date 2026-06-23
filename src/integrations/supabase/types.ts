@@ -218,7 +218,6 @@ export type Database = {
       }
       locais: {
         Row: {
-          centro_custo: string | null
           created_at: string
           id: string
           nome: string
@@ -226,7 +225,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          centro_custo?: string | null
           created_at?: string
           id?: string
           nome: string
@@ -234,7 +232,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          centro_custo?: string | null
           created_at?: string
           id?: string
           nome?: string
