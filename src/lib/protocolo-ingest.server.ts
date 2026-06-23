@@ -219,7 +219,9 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     const extr = await extrairComIA(textoCompleto);
 
     // Número real da Ouvidoria vindo no assunto do e-mail tem prioridade
-    // sobre o que a IA inferiu (evita gerar números sintéticos).
+    // absoluta sobre o que a IA inferiu (evita gerar números sintéticos).
+    // Se for encontrado, ele é autoritativo: nunca será sobrescrito nem
+    // substituído por um número gerado.
     const numeroDoAssunto = extrairNumeroDoAssunto(assunto, corpo);
     if (numeroDoAssunto) extr.numero = numeroDoAssunto;
 
@@ -324,7 +326,40 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
       if (hit) localId = hit.id;
     }
 
-    const numero = extr.numero || gerarNumeroProtocolo(extr.tipo);
+    // Validação final: se o assunto trouxe um número, ele é a fonte da
+    // verdade — jamais cair no gerador automático nesse caso.
+    let numero: string;
+    let numeroGerado = false;
+    if (numeroDoAssunto) {
+      numero = numeroDoAssunto;
+    } else if (extr.numero) {
+      numero = extr.numero;
+    } else {
+      numero = gerarNumeroProtocolo(extr.tipo);
+      numeroGerado = true;
+    }
+
+    // Última checagem de duplicidade considerando variantes (com/sem
+    // separador de milhar) antes de inserir, para o caso de o lookup
+    // anterior ter falhado (ex.: número só apareceu no assunto e a IA
+    // tinha devolvido outro valor).
+    {
+      const variantes = normalizarNumero(numero);
+      const { data: jaExiste } = await supabaseAdmin
+        .from("protocolos")
+        .select("id, numero")
+        .in("numero", variantes)
+        .maybeSingle();
+      if (jaExiste) {
+        await supabaseAdmin.from("email_inbox_log").update({
+          status: "processado",
+          protocolo_id: jaExiste.id,
+          processado_em: new Date().toISOString(),
+          erro: "duplicado (mesmo número já existia)",
+        }).eq("id", logRow!.id);
+        return { ok: true, protocoloId: jaExiste.id, numero: jaExiste.numero, logId: logRow!.id };
+      }
+    }
     const dataAbertura = extr.data_abertura || new Date().toISOString().slice(0, 10);
 
     const resumo = [
@@ -350,7 +385,10 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     if (errIns) throw errIns;
 
     await supabaseAdmin.from("email_inbox_log").update({
-      status: "processado", protocolo_id: novo!.id, processado_em: new Date().toISOString(),
+      status: "processado",
+      protocolo_id: novo!.id,
+      processado_em: new Date().toISOString(),
+      erro: numeroGerado ? "número gerado (não encontrado no e-mail)" : null,
     }).eq("id", logRow!.id);
 
     return { ok: true, protocoloId: novo!.id, numero: novo!.numero, logId: logRow!.id };
