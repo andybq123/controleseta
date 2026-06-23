@@ -28,7 +28,7 @@ function AtrasadosPage() {
       fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
-          .select("*, secretarias(nome, sigla), responsaveis(nome), locais(nome,centro_custo)")
+          .select("*, secretarias(nome, sigla), locais(nome)")
           .neq("status", "concluido")
           .order("data_abertura", { ascending: false })
           .range(from, to),
@@ -73,7 +73,6 @@ function AtrasadosPage() {
       "Prorrogado": p.prorrogado ? "Sim" : "Não",
       "Secretaria": (p as any).secretarias?.nome ?? "",
       "Local": (p as any).locais?.nome ?? "",
-      "Responsável": (p as any).responsaveis?.nome ?? "",
       "Solicitante": p.solicitante ?? "",
       "Assunto": p.assunto,
     }));
