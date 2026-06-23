@@ -301,6 +301,24 @@ function SaudePage() {
       )}
 
       <div className="grid gap-3">
+        {saude.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">Evolução de solicitações (últimos 12 meses)</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={evolucaoSaude} margin={{ top: 20, right: 20, bottom: 0, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                  <Tooltip content={<ChartTooltipContent unit="solicitação(ões)" />} cursor={{ stroke: "hsl(var(--border))" }} />
+                  <Line type="monotone" dataKey="total" stroke="#10b981" strokeWidth={2.5}
+                    dot={{ r: 4, fill: "#10b981" }}
+                    label={{ position: "top", fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
         {saude.length === 0 && (
           <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Nenhum protocolo da Saúde encontrado. Marque um protocolo definindo a Secretaria como "Saúde" e selecione a unidade no campo Local.</CardContent></Card>
         )}
