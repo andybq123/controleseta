@@ -165,7 +165,7 @@ function RelatoriosPage() {
 
   function exportResumoSecretaria() {
     const rows = resumoSecretaria.map(s => {
-      const r: any = { Secretaria: s.nome, "Centro de Custo": s.centro_custo ?? "" };
+      const r: any = { Secretaria: s.nome };
       MESES.forEach((m, i) => r[m] = s.meses[i]);
       CATEGORIAS.forEach(c => r[c.label] = s.porCat[c.value]);
       r.Total = s.total;
@@ -382,10 +382,9 @@ function RelatoriosPage() {
     pdfHeader(doc, `Resumo por secretaria — ${ano}`);
     autoTable(doc, {
       startY: filtrosAtivos ? 84 : 70,
-      head: [["Secretaria", "C. Custo", ...CATEGORIAS.map(c => c.label), "Total", "Abertos", "Concluídos"]],
+      head: [["Secretaria", ...CATEGORIAS.map(c => c.label), "Total", "Abertos", "Concluídos"]],
       body: resumoSecretaria.map(s => [
         s.nome,
-        s.centro_custo ?? "—",
         ...CATEGORIAS.map(c => String(s.porCat[c.value] ?? 0)),
         String(s.total),
         String(s.abertos),
@@ -677,7 +676,6 @@ function RelatoriosPage() {
                           <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition" />
                           <div>
                             <div className="font-medium underline-offset-2 group-hover:underline">{s.nome}</div>
-                            {s.centro_custo && <div className="text-[10px] text-muted-foreground font-mono">{s.centro_custo}</div>}
                           </div>
                         </Link>
                       </td>
