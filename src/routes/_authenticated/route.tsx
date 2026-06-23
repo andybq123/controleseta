@@ -64,6 +64,7 @@ function AuthLayout() {
 
   const configItems = ([
     { to: "/secretarias", label: "Secretarias", icon: Building2 },
+    { to: "/assuntos", label: "Assuntos", icon: Tag },
     { to: "/email-inbox", label: "E-mails", icon: Mail },
     ...(isAdmin ? [{ to: "/users", label: "Usuários", icon: Users }] : []),
   ]) as { to: string; label: string; icon: any }[];
