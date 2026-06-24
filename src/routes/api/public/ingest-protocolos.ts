@@ -120,12 +120,21 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
           let atualizados = 0;
           let semCorrespondencia = 0;
           let jaConcluidos = 0;
+          const ignoradosDetalhes: Array<{ numero: string; motivo: string; url: string | null }> = [];
 
           for (const p of protocolos) {
             const vs = variantesPorNum.get(p.numero) || [p.numero];
             const match = vs.map((v) => porVariante.get(v)).find(Boolean);
-            if (!match) { semCorrespondencia++; continue; }
-            if (match.status === "concluido") { jaConcluidos++; continue; }
+            if (!match) {
+              semCorrespondencia++;
+              ignoradosDetalhes.push({ numero: p.numero, motivo: "sem_correspondencia", url: p.url ?? null });
+              continue;
+            }
+            if (match.status === "concluido") {
+              jaConcluidos++;
+              ignoradosDetalhes.push({ numero: p.numero, motivo: "ja_concluido", url: p.url ?? null });
+              continue;
+            }
 
             const det = (p.detalhes || {}) as Record<string, any>;
             const dataConclusao =
@@ -144,8 +153,14 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
           }
 
           await supabaseAdmin.from("coletas").insert({
-            total: protocolos.length, novos: atualizados, sucesso: true,
-            erro: `Coleta via extensão: ${atualizados} concluído(s), ${jaConcluidos} já concluído(s), ${semCorrespondencia} sem correspondência`,
+            total: protocolos.length,
+            novos: atualizados,
+            atualizados,
+            ja_concluidos: jaConcluidos,
+            sem_correspondencia: semCorrespondencia,
+            ignorados_detalhes: ignoradosDetalhes,
+            sucesso: true,
+            erro: null,
             duracao_ms: Date.now() - inicio,
           });
 
