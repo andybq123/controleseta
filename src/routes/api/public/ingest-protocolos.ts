@@ -51,6 +51,18 @@ function parseDataBr(s: string | null | undefined): string | null {
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
+function mapCategoria(finalidade: string | null | undefined): string | null {
+  if (!finalidade) return null;
+  const f = norm(finalidade);
+  if (f.startsWith("reclama")) return "reclamacao";
+  if (f.startsWith("elogio")) return "elogio";
+  if (f.startsWith("denun")) return "denuncia";
+  if (f.startsWith("sugest")) return "sugestao";
+  if (f.startsWith("solicit")) return "solicitacao";
+  if (f.includes("informa")) return "pedido_informacao";
+  return null;
+}
+
 export const Route = createFileRoute("/api/public/ingest-protocolos")({
   server: {
     handlers: {
@@ -183,7 +195,14 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
                 status: "concluido",
                 data_conclusao: dataConclusao,
                 url: p.url ?? null,
-                ...(det.assunto ? { descricao: String(det.assunto) } : {}),
+                ...(det.assunto ? { assunto: String(det.assunto) } : {}),
+                ...(det.relato_completo || det.descricao
+                  ? { descricao: String(det.relato_completo || det.descricao) }
+                  : {}),
+                ...(det.solicitante ? { solicitante: String(det.solicitante) } : {}),
+                ...(mapCategoria(det.finalidade as string | undefined)
+                  ? { categoria: mapCategoria(det.finalidade as string | undefined) as any }
+                  : {}),
               })
               .eq("id", match.id);
             if (errUpd) throw new Error(`Erro ao atualizar ${p.numero}: ${errUpd.message}`);
