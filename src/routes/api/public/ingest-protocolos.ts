@@ -4,7 +4,7 @@ import { z } from "zod";
 const ProtocoloSchema = z.object({
   numero: z.string().min(1).max(100),
   setor: z.string().max(500).nullable().optional(),
-  relato: z.string().max(20000).nullable().optional(),
+  relato: z.string().max(40000).nullable().optional(),
   status: z.string().max(100).nullable().optional(),
   data_protocolo: z.string().max(50).nullable().optional(),
   url: z.string().max(1000).nullable().optional(),
