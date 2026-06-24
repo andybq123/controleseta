@@ -517,6 +517,7 @@ export type Database = {
           data_conclusao: string | null
           id: string
           numero: number
+          resolucao: string | null
           source: string
           updated_at: string
           url: string | null
@@ -527,6 +528,7 @@ export type Database = {
           data_conclusao?: string | null
           id?: string
           numero: number
+          resolucao?: string | null
           source: string
           updated_at?: string
           url?: string | null
@@ -537,6 +539,7 @@ export type Database = {
           data_conclusao?: string | null
           id?: string
           numero?: number
+          resolucao?: string | null
           source?: string
           updated_at?: string
           url?: string | null

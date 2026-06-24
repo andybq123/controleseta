@@ -170,6 +170,7 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
                       ano: antigo.ano,
                       url: p.url ?? null,
                       data_conclusao: dataConclusao,
+                    ...(det.despacho ? { resolucao: String(det.despacho) } : {}),
                     },
                     { onConflict: "source,numero,ano" },
                   );
@@ -183,6 +184,16 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
               continue;
             }
             if (match.status === "concluido") {
+            // Mesmo já concluído, atualizamos a Resolução / URL com o último despacho.
+            if (det.despacho || p.url) {
+              await supabaseAdmin
+                .from("protocolos")
+                .update({
+                  ...(p.url ? { url: p.url } : {}),
+                  ...(det.despacho ? { resolucao: String(det.despacho) } : {}),
+                })
+                .eq("id", match.id);
+            }
               jaConcluidos++;
               ignoradosDetalhes.push({ numero: p.numero, motivo: "ja_concluido", url: p.url ?? null });
               jaConcluidosLista.push({ numero: p.numero, url: p.url ?? null });

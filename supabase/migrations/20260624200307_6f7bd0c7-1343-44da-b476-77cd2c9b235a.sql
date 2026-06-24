@@ -1,0 +1,1 @@
+ALTER TABLE public.protocolos_antigos_conclusoes ADD COLUMN IF NOT EXISTS resolucao text;
