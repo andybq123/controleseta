@@ -111,7 +111,8 @@ function scrapeLista() {
     return null;
   };
   const push = (p) => { if (p.numero && !out.has(p.numero)) out.set(p.numero, p); };
-  const reNum = /(\d[\d.]*\s*\/\s*\d{2,4}|\d{6,})/;
+  // Aceita apenas anos com 4 dígitos (ex.: 1234/2026), descartando paginação tipo "1/30".
+  const reNum = /(\d[\d.]*\s*\/\s*\d{4}|\d{6,})/;
   const reData = /\d{2}\/\d{2}\/\d{4}/;
   document.querySelectorAll("tr").forEach((tr) => {
     const text = (tr.innerText || "").replace(/\s+/g, " ").trim();
