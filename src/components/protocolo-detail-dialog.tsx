@@ -284,7 +284,18 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                   toast.error("Defina a secretaria antes de concluir a triagem.");
                   return;
                 }
+                const relato = (form.descricao ?? "").trim();
+                if (relato.length < 5) {
+                  toast.error("Informe uma descrição (breve relato) antes de concluir a triagem.");
+                  return;
+                }
                 (async () => {
+                  // Persiste o relato da triagem antes de concluir
+                  const { error: upErr } = await supabase
+                    .from("protocolos")
+                    .update({ descricao: relato })
+                    .eq("id", protocolo.id);
+                  if (upErr) { toast.error(upErr.message); return; }
                   const { data, error } = await supabase.rpc("concluir_triagem", {
                     p_id: protocolo.id,
                     p_secretaria: protocolo.secretaria_id,
