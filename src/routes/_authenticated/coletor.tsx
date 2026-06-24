@@ -95,12 +95,17 @@ function ColetorPage() {
       <Tabs defaultValue="protocolos" className="space-y-4">
         <TabsList>
           <TabsTrigger value="protocolos">Protocolos</TabsTrigger>
+          <TabsTrigger value="auditoria">Auditoria</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="extensao">Extensão</TabsTrigger>
         </TabsList>
 
         <TabsContent value="protocolos" className="space-y-4">
           <ProtocolosColetados />
+        </TabsContent>
+
+        <TabsContent value="auditoria" className="space-y-4">
+          <AuditoriaUltimaColeta />
         </TabsContent>
 
         <TabsContent value="historico" className="space-y-4">
