@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide-react";
-import { Inbox, Lock } from "lucide-react";
+import { Inbox, Lock, ExternalLink } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
@@ -336,6 +336,19 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               {protocolo.locais && <Field label="Local" value={protocolo.locais.nome} />}
               <Field label="Solicitante" value={protocolo.solicitante ?? "—"} />
             </div>
+            {protocolo.url && (
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Origem 1doc</span>
+                <a
+                  href={protocolo.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                >
+                  Abrir no 1doc <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-3">

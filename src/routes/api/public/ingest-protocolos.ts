@@ -121,6 +121,8 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
           let semCorrespondencia = 0;
           let jaConcluidos = 0;
           const ignoradosDetalhes: Array<{ numero: string; motivo: string; url: string | null }> = [];
+          const jaConcluidosLista: Array<{ numero: string; url: string | null }> = [];
+          const semCorrespondenciaLista: Array<{ numero: string; url: string | null }> = [];
 
           for (const p of protocolos) {
             const vs = variantesPorNum.get(p.numero) || [p.numero];
@@ -128,11 +130,13 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
             if (!match) {
               semCorrespondencia++;
               ignoradosDetalhes.push({ numero: p.numero, motivo: "sem_correspondencia", url: p.url ?? null });
+              semCorrespondenciaLista.push({ numero: p.numero, url: p.url ?? null });
               continue;
             }
             if (match.status === "concluido") {
               jaConcluidos++;
               ignoradosDetalhes.push({ numero: p.numero, motivo: "ja_concluido", url: p.url ?? null });
+              jaConcluidosLista.push({ numero: p.numero, url: p.url ?? null });
               continue;
             }
 
@@ -165,7 +169,15 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
           });
 
           return Response.json(
-            { sucesso: true, total: protocolos.length, atualizados, jaConcluidos, ignorados: semCorrespondencia },
+            {
+              sucesso: true,
+              total: protocolos.length,
+              atualizados,
+              jaConcluidos,
+              ignorados: semCorrespondencia,
+              jaConcluidosLista,
+              semCorrespondenciaLista,
+            },
             { headers: corsHeaders() },
           );
         } catch (e: unknown) {

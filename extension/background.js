@@ -198,29 +198,9 @@ async function processarLista(protocolos) {
       }
     }
 
-    // Buscamos no backend quais protocolos JÁ EXISTEM (são esses que vamos concluir).
-    await setProgress({ fase: "verificando_duplicados" });
-    const numeros = lista.map((p) => p.numero);
-    let existentes = new Set();
-    try {
-      const rc = await fetch(`${backend.replace(/\/$/, "")}/api/public/check-protocolos`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ numeros }),
-      });
-      if (rc.ok) {
-        const d = await rc.json();
-        existentes = new Set(d.existentes || []);
-      }
-    } catch {}
-    const semCorrespondencia = lista.length - existentes.size;
-    lista = lista.filter((p) => existentes.has(p.numero));
-    await setProgress({ jaSalvos: semCorrespondencia, novos: lista.length });
-
-    if (lista.length === 0) {
-      await setProgress({ rodando: false, fase: "concluido", total: 0, novos: 0 });
-      return { ok: true, novos: 0, ignorados: semCorrespondencia, total: 0, msg: `Nenhum dos ${semCorrespondencia} corresponde a protocolos do sistema.` };
-    }
+    // Não pré-filtramos: enviamos TUDO e o backend decide se reprocessa,
+    // ignora (já concluído) ou avisa que não existe correspondência.
+    await setProgress({ novos: lista.length });
 
     if (coletarDetalhes) {
       const limite = Math.min(lista.length, Math.max(1, Number(maxDetalhes) || 200));
@@ -259,7 +239,15 @@ async function processarLista(protocolos) {
       return { ok: false, msg: data.error || `Falha ${res.status}` };
     }
     await setProgress({ rodando: false, fase: "concluido", novos: data.atualizados ?? data.novos ?? 0, total: data.total });
-    return { ok: true, novos: data.atualizados ?? data.novos ?? 0, ignorados: (data.ignorados || 0) + semCorrespondencia, total: data.total };
+    return {
+      ok: true,
+      novos: data.atualizados ?? data.novos ?? 0,
+      ignorados: data.ignorados || 0,
+      jaConcluidos: data.jaConcluidos || 0,
+      jaConcluidosLista: data.jaConcluidosLista || [],
+      semCorrespondenciaLista: data.semCorrespondenciaLista || [],
+      total: data.total,
+    };
   } catch (e) {
     await setProgress({ rodando: false, fase: "erro" });
     return { ok: false, msg: e.message };
