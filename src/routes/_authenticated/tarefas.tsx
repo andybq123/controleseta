@@ -96,7 +96,7 @@ function TarefasPage() {
       const conflitos: string[] = [];
       for (const id of Array.from(selected)) {
         const { data, error } = await supabase.rpc("concluir_triagem", {
-          p_id: id, p_secretaria: batchSec, p_local: batchLocal || null,
+          p_id: id, p_secretaria: batchSec, p_local: batchLocal || (null as any),
         });
         if (error) { conflitos.push(`${id.slice(0,8)}: ${error.message}`); continue; }
         const r = data as any;
