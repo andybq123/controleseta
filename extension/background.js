@@ -242,7 +242,7 @@ async function processarLista(protocolos) {
           erros: (prev.erros || 0) + (ok ? 0 : 1),
           ultimosErros,
         });
-        if (i < limite - 1) await new Promise((r) => setTimeout(r, Math.max(500, Number(delayDetalheMs) || 1500)));
+        if (i < limite - 1) await new Promise((r) => setTimeout(r, Math.max(100, Number(delayDetalheMs) || 500)));
       }
       lista = detalhados.concat(lista.slice(limite));
     }
