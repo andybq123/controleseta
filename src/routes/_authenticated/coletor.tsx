@@ -530,6 +530,145 @@ function KV({ label, value }: { label: string; value: string | null | undefined 
 
 /* ------------------------ HISTÓRICO ------------------------- */
 
+type IgnoradoItem = { numero: string; motivo: string; url?: string | null };
+type ColetaRow = {
+  id: string;
+  executado_em: string;
+  total: number;
+  novos: number;
+  atualizados: number | null;
+  ja_concluidos: number | null;
+  sem_correspondencia: number | null;
+  ignorados_detalhes: IgnoradoItem[] | null;
+  sucesso: boolean;
+  erro: string | null;
+  duracao_ms: number | null;
+};
+
+const MOTIVO_LABEL: Record<string, string> = {
+  sem_correspondencia: "Não existe no sistema",
+  ja_concluido: "Já estava concluído",
+};
+
+function AuditoriaUltimaColeta() {
+  const { data: ultima, isLoading } = useQuery({
+    queryKey: ["coletor-auditoria-ultima"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("coletas")
+        .select("id, executado_em, total, novos, atualizados, ja_concluidos, sem_correspondencia, ignorados_detalhes, sucesso, erro, duracao_ms")
+        .order("executado_em", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as ColetaRow | null;
+    },
+  });
+
+  if (isLoading) {
+    return <div className="p-10 text-center text-sm text-muted-foreground">Carregando…</div>;
+  }
+  if (!ultima) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
+          Nenhuma execução do coletor ainda.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const total = ultima.total ?? 0;
+  const atualizados = ultima.atualizados ?? ultima.novos ?? 0;
+  const jaConcluidos = ultima.ja_concluidos ?? 0;
+  const semCorr = ultima.sem_correspondencia ?? 0;
+  const ignorados = (ultima.ignorados_detalhes ?? []) as IgnoradoItem[];
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-start justify-between gap-3 space-y-0">
+          <div>
+            <CardTitle className="text-base">Última execução</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              {new Date(ultima.executado_em).toLocaleString("pt-BR")}
+              {ultima.duracao_ms != null && <> · {(ultima.duracao_ms / 1000).toFixed(1)}s</>}
+            </p>
+          </div>
+          {ultima.sucesso ? (
+            <Badge variant="secondary"><CheckCircle2 className="h-3 w-3 mr-1" /> sucesso</Badge>
+          ) : (
+            <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> falha</Badge>
+          )}
+        </CardHeader>
+        <CardContent className="pt-3">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <Stat title="Encontrados" value={total} />
+            <Stat title="Concluídos agora" value={atualizados} />
+            <Stat title="Já concluídos" value={jaConcluidos} />
+            <Stat title="Sem correspondência" value={semCorr} />
+          </div>
+          {ultima.erro && (
+            <div className="mt-3 rounded border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+              {ultima.erro}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Ignorados ({ignorados.length})
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Protocolos recebidos do 1doc que não foram aplicados, com o motivo.
+          </p>
+        </CardHeader>
+        <CardContent className="p-0">
+          {ignorados.length === 0 ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              Nenhum protocolo ignorado nesta execução.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Protocolo</TableHead>
+                  <TableHead>Motivo</TableHead>
+                  <TableHead>1doc</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ignorados.map((it, i) => (
+                  <TableRow key={`${it.numero}-${i}`}>
+                    <TableCell className="font-medium">{it.numero}</TableCell>
+                    <TableCell>
+                      <Badge variant={it.motivo === "sem_correspondencia" ? "outline" : "secondary"}>
+                        {MOTIVO_LABEL[it.motivo] ?? it.motivo}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {it.url ? (
+                        <a href={it.url} target="_blank" rel="noopener noreferrer"
+                           className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                          abrir <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function HistoricoColetas() {
   const { data: coletas = [], isLoading } = useQuery({
     queryKey: ["coletor-historico"],
