@@ -25,6 +25,36 @@ function isLockAtivo(p: any) {
   return Date.now() - new Date(p.triagem_lock_em).getTime() < LOCK_TTL_MS;
 }
 
+const ASSUNTOS_SAUDE_TRIAGEM = new Set([
+  "demora em marcar consulta / procedimento",
+  "falta de materiais em posto de saude",
+  "falta de medicacao",
+  "medicos",
+  "postos de saude",
+  "transporte para tratamento",
+  "vacinas",
+]);
+const normAssunto = (s: string) =>
+  (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+function MotivoTriagemBadge({ protocolo }: { protocolo: any }) {
+  if (!protocolo.secretaria_id) {
+    return (
+      <Badge variant="outline" className="text-[10px] border-rose-500/50 text-rose-700 dark:text-rose-300 bg-rose-500/10">
+        sem secretaria identificada
+      </Badge>
+    );
+  }
+  if (ASSUNTOS_SAUDE_TRIAGEM.has(normAssunto(protocolo.assunto))) {
+    return (
+      <Badge variant="outline" className="text-[10px] border-emerald-500/50 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10">
+        Saúde · definir UBS/CAPS
+      </Badge>
+    );
+  }
+  return null;
+}
+
 function TarefasPage() {
   const qc = useQueryClient();
   const [detail, setDetail] = useState<any | null>(null);
@@ -205,6 +235,7 @@ function TarefasPage() {
                     <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10">
                       triagem pendente
                     </Badge>
+                    <MotivoTriagemBadge protocolo={p} />
                     {isLockAtivo(p) && (
                       <Badge variant="outline" className="text-[10px] border-blue-500/50 text-blue-700 dark:text-blue-300 bg-blue-500/10 gap-1">
                         <Lock className="h-3 w-3" />
