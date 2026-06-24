@@ -205,6 +205,7 @@ function TarefasPage() {
                     <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10">
                       triagem pendente
                     </Badge>
+                    <MotivoTriagemBadge protocolo={p} />
                     {isLockAtivo(p) && (
                       <Badge variant="outline" className="text-[10px] border-blue-500/50 text-blue-700 dark:text-blue-300 bg-blue-500/10 gap-1">
                         <Lock className="h-3 w-3" />
