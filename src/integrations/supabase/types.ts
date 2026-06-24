@@ -507,6 +507,39 @@ export type Database = {
           },
         ]
       }
+      protocolos_antigos_conclusoes: {
+        Row: {
+          ano: number
+          created_at: string
+          data_conclusao: string | null
+          id: string
+          numero: number
+          source: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          ano: number
+          created_at?: string
+          data_conclusao?: string | null
+          id?: string
+          numero: number
+          source: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          ano?: number
+          created_at?: string
+          data_conclusao?: string | null
+          id?: string
+          numero?: number
+          source?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       secretarias: {
         Row: {
           created_at: string

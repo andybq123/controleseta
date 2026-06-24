@@ -120,14 +120,51 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
           let atualizados = 0;
           let semCorrespondencia = 0;
           let jaConcluidos = 0;
+          let antigosAtualizados = 0;
           const ignoradosDetalhes: Array<{ numero: string; motivo: string; url: string | null }> = [];
           const jaConcluidosLista: Array<{ numero: string; url: string | null }> = [];
           const semCorrespondenciaLista: Array<{ numero: string; url: string | null }> = [];
 
+          // Índice de protocolos antigos (planilhas históricas) por numero+ano
+          const ouvidoriasJson = (await import("@/data/ouvidorias.json")).default as Array<{
+            source: string; numero: number; data: string;
+          }>;
+          const antigosIndex = new Map<string, { source: string; numero: number; ano: number }>();
+          for (const r of ouvidoriasJson) {
+            const ano = Number((r.data || "").slice(0, 4));
+            if (!ano || !r.numero) continue;
+            antigosIndex.set(`${r.numero}|${ano}`, { source: r.source, numero: r.numero, ano });
+          }
+
           for (const p of protocolos) {
             const vs = variantesPorNum.get(p.numero) || [p.numero];
             const match = vs.map((v) => porVariante.get(v)).find(Boolean);
+            const det = (p.detalhes || {}) as Record<string, any>;
+            const dataConclusao =
+              parseDataBr((det.data_arquivamento || det.data_finalizacao || det.data) as string | undefined) || hoje;
             if (!match) {
+              // Tenta match em protocolos antigos (Brusque / Saúde).
+              const [numPart, anoPart] = p.numero.split("/");
+              const numLimpo = Number((numPart || "").replace(/\./g, ""));
+              const ano = Number(anoPart);
+              const antigo = numLimpo && ano ? antigosIndex.get(`${numLimpo}|${ano}`) : null;
+              if (antigo) {
+                const { error: errUp } = await supabaseAdmin
+                  .from("protocolos_antigos_conclusoes")
+                  .upsert(
+                    {
+                      source: antigo.source,
+                      numero: antigo.numero,
+                      ano: antigo.ano,
+                      url: p.url ?? null,
+                      data_conclusao: dataConclusao,
+                    },
+                    { onConflict: "source,numero,ano" },
+                  );
+                if (errUp) throw new Error(`Erro ao concluir antigo ${p.numero}: ${errUp.message}`);
+                antigosAtualizados++;
+                continue;
+              }
               semCorrespondencia++;
               ignoradosDetalhes.push({ numero: p.numero, motivo: "sem_correspondencia", url: p.url ?? null });
               semCorrespondenciaLista.push({ numero: p.numero, url: p.url ?? null });
@@ -139,10 +176,6 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
               jaConcluidosLista.push({ numero: p.numero, url: p.url ?? null });
               continue;
             }
-
-            const det = (p.detalhes || {}) as Record<string, any>;
-            const dataConclusao =
-              parseDataBr((det.data_arquivamento || det.data_finalizacao || det.data) as string | undefined) || hoje;
 
             const { error: errUpd } = await supabaseAdmin
               .from("protocolos")
@@ -158,8 +191,8 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
 
           await supabaseAdmin.from("coletas").insert({
             total: protocolos.length,
-            novos: atualizados,
-            atualizados,
+            novos: atualizados + antigosAtualizados,
+            atualizados: atualizados + antigosAtualizados,
             ja_concluidos: jaConcluidos,
             sem_correspondencia: semCorrespondencia,
             ignorados_detalhes: ignoradosDetalhes,
@@ -172,7 +205,9 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
             {
               sucesso: true,
               total: protocolos.length,
-              atualizados,
+              atualizados: atualizados + antigosAtualizados,
+              atualizadosAtuais: atualizados,
+              antigosAtualizados,
               jaConcluidos,
               ignorados: semCorrespondencia,
               jaConcluidosLista,
