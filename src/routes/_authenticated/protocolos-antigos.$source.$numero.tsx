@@ -1,6 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import ouvidorias from "@/data/ouvidorias.json";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getOverride,
   setOverride,
@@ -60,6 +61,20 @@ function Detail() {
     setOverrideState(getOverride(base.source, base.numero));
   }, [base.source, base.numero]);
 
+  const [conclusao, setConclusao] = useState<{ url: string | null; data_conclusao: string | null } | null>(null);
+  useEffect(() => {
+    const ano = Number((base.data || "").slice(0, 4));
+    if (!ano) return;
+    supabase
+      .from("protocolos_antigos_conclusoes")
+      .select("url, data_conclusao")
+      .eq("source", base.source)
+      .eq("numero", base.numero)
+      .eq("ano", ano)
+      .maybeSingle()
+      .then(({ data }) => setConclusao(data ?? null));
+  }, [base.source, base.numero, base.data]);
+
   const r = { ...base, situacao: override?.situacao ?? base.situacao };
   const atrasada = r.situacao !== "Em dia";
 
@@ -117,9 +132,20 @@ function Detail() {
               {override?.situacao && override.situacao !== base.situacao && (
                 <span className="rounded bg-amber-50 px-2 py-0.5 font-medium text-amber-700">editado (era: {base.situacao})</span>
               )}
+              {conclusao?.data_conclusao && (
+                <span className="rounded bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
+                  ✓ Concluído em {new Date(conclusao.data_conclusao).toLocaleDateString("pt-BR")}
+                </span>
+              )}
             </div>
             <h1 className="mt-3 text-2xl font-semibold text-slate-900">Ouvidoria nº {r.numero}</h1>
             <p className="mt-1 text-sm capitalize text-slate-500">{dataFmt}</p>
+            {conclusao?.url && (
+              <a href={conclusao.url} target="_blank" rel="noreferrer"
+                 className="mt-2 inline-block text-sm font-medium text-indigo-600 hover:underline">
+                Abrir no 1doc ↗
+              </a>
+            )}
           </div>
           <div className={`rounded-full px-3 py-1 text-xs font-medium ${atrasada ? "bg-red-600 text-white" : "bg-emerald-600 text-white"}`}>
             {atrasada ? "⚠ Atrasada" : "✓ Em dia"}
