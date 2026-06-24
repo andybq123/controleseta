@@ -326,6 +326,31 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
       if (hit) localId = hit.id;
     }
 
+    // Fallback: para secretarias sem subgrupos (todas exceto Saúde), o local
+    // padrão deve ser a unidade com o mesmo nome/sigla da própria secretaria.
+    // Ex.: SEPLAN → local "SEPLAN". A Saúde tem várias UBS, então não se aplica.
+    if (secretariaId && !localId) {
+      const { data: secRow } = await supabaseAdmin
+        .from("secretarias")
+        .select("nome, sigla")
+        .eq("id", secretariaId)
+        .maybeSingle();
+      const secNome = norm(secRow?.nome ?? "");
+      const ehSaude = /\bsaude\b/.test(secNome);
+      if (secRow && !ehSaude) {
+        const { data: locs } = await supabaseAdmin
+          .from("locais")
+          .select("id, nome")
+          .eq("secretaria_id", secretariaId);
+        const alvos = [norm(secRow.nome ?? ""), norm(secRow.sigla ?? "")].filter(Boolean);
+        const hit = (locs ?? []).find(l => {
+          const n = norm(l.nome);
+          return alvos.some(a => n === a || n.includes(a) || a.includes(n));
+        });
+        if (hit) localId = hit.id;
+      }
+    }
+
     // Validação final: se o assunto trouxe um número, ele é a fonte da
     // verdade — jamais cair no gerador automático nesse caso.
     let numero: string;
