@@ -30,6 +30,7 @@ function scrapeDetalhe() {
     "Prazo": "prazo", "Protocolo": "protocolo", "Responsável": "responsavel",
     "E-mail": "email", "Telefone": "telefone", "Endereço": "endereco",
     "Descrição": "descricao", "Mensagem": "mensagem", "Relato": "relato",
+    "Finalidade": "finalidade", "Entrada": "entrada",
   };
   const detalhes = {};
   document.querySelectorAll("dl").forEach((dl) => {
@@ -70,6 +71,44 @@ function scrapeDetalhe() {
   const textoCompleto = norm(main.innerText).slice(0, 15000);
   const padronizado = {};
   Object.entries(detalhes).forEach(([k, v]) => { padronizado[labelMap[k] || k] = v; });
+
+  // --- Heurísticas extras para o layout do 1doc ---
+  const bodyText = document.body.innerText || "";
+
+  // Solicitante: nome próximo do email/CPF no cabeçalho do protocolo
+  if (!padronizado.solicitante) {
+    const emailEl = document.querySelector('a[href^="mailto:"]');
+    if (emailEl) {
+      const container = emailEl.closest("div,li,td,section,header,aside") || emailEl.parentElement;
+      if (container) {
+        const lines = (container.innerText || "")
+          .split("\n").map((s) => s.trim()).filter(Boolean);
+        const nome = lines.find((l) =>
+          /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ' .-]{2,}$/.test(l) && !l.includes("@") && !/CPF/i.test(l)
+        );
+        if (nome) padronizado.solicitante = nome;
+      }
+    }
+  }
+
+  // Finalidade: "Finalidade*: Reclamação"
+  if (!padronizado.finalidade) {
+    const mFin = bodyText.match(/Finalidade\s*\*?\s*:?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ /\-]{2,40})/);
+    if (mFin) {
+      padronizado.finalidade = mFin[1].split(/\s{2,}|\n/)[0].trim();
+    }
+  }
+
+  // Relato completo: bloco "Assunto: ..." no corpo principal
+  const rawMain = main.innerText || "";
+  const idxA = rawMain.indexOf("Assunto:");
+  if (idxA >= 0) {
+    const trecho = rawMain.slice(idxA, Math.min(rawMain.length, idxA + 8000)).trim();
+    padronizado.relato_completo = trecho;
+    // Sobrescreve descricao com o texto completo (Assunto + corpo)
+    padronizado.descricao = trecho;
+  }
+
   const semAcentos = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const alvo = "deu baixa manualmente no prazo";
   const haystack = semAcentos(norm(main.innerText));
@@ -85,7 +124,9 @@ function scrapeDetalhe() {
     detalhes: padronizado,
     setor: padronizado.setor || null,
     status: padronizado.status || null,
-    relato: padronizado.descricao || padronizado.mensagem || padronizado.relato || textoCompleto,
+    relato: padronizado.relato_completo || padronizado.descricao || padronizado.mensagem || padronizado.relato || textoCompleto,
+    solicitante: padronizado.solicitante || null,
+    finalidade: padronizado.finalidade || null,
     data_protocolo: padronizado.data || padronizado.data_abertura || padronizado.data_cadastro || null,
   };
 }
