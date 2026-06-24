@@ -18,6 +18,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedSecretariasRouteImport } from './routes/_authenticated/secretarias'
 import { Route as AuthenticatedSaudeRouteImport } from './routes/_authenticated/saude'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
@@ -77,6 +78,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
+  id: '/tarefas',
+  path: '/tarefas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSecretariasRoute =
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/saude': typeof AuthenticatedSaudeRoute
   '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/tarefas': typeof AuthenticatedTarefasRoute
   '/users': typeof AuthenticatedUsersRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
@@ -208,6 +215,7 @@ export interface FileRoutesByTo {
   '/protocolos': typeof AuthenticatedProtocolosRoute
   '/saude': typeof AuthenticatedSaudeRoute
   '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/tarefas': typeof AuthenticatedTarefasRoute
   '/users': typeof AuthenticatedUsersRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
@@ -236,6 +244,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/saude': typeof AuthenticatedSaudeRoute
   '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
+  '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
@@ -264,6 +273,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/saude'
     | '/secretarias'
+    | '/tarefas'
     | '/users'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/protocolos'
     | '/saude'
     | '/secretarias'
+    | '/tarefas'
     | '/users'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
@@ -316,6 +327,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios'
     | '/_authenticated/saude'
     | '/_authenticated/secretarias'
+    | '/_authenticated/tarefas'
     | '/_authenticated/users'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
@@ -403,6 +415,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tarefas': {
+      id: '/_authenticated/tarefas'
+      path: '/tarefas'
+      fullPath: '/tarefas'
+      preLoaderRoute: typeof AuthenticatedTarefasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/secretarias': {
@@ -547,6 +566,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedSaudeRoute: typeof AuthenticatedSaudeRoute
   AuthenticatedSecretariasRoute: typeof AuthenticatedSecretariasRoute
+  AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedProtocolosAntigosIndexRoute: typeof AuthenticatedProtocolosAntigosIndexRoute
   AuthenticatedProtocolosAntigosSourceNumeroRoute: typeof AuthenticatedProtocolosAntigosSourceNumeroRoute
@@ -562,6 +582,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedSaudeRoute: AuthenticatedSaudeRoute,
   AuthenticatedSecretariasRoute: AuthenticatedSecretariasRoute,
+  AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedProtocolosAntigosIndexRoute:
     AuthenticatedProtocolosAntigosIndexRoute,
