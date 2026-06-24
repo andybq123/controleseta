@@ -13,6 +13,16 @@ import { Map as MapIcon, Sparkles, Loader2 } from "lucide-react";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { geocodarProtocolosPendentes } from "@/lib/geocode-bulk.functions";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/mapa")({
   component: MapaPage,
@@ -23,6 +33,17 @@ function MapaPage() {
   const [secretariaId, setSecretariaId] = useState<string>("todas");
   const [detail, setDetail] = useState<any | null>(null);
   const [loadingGeo, setLoadingGeo] = useState(false);
+  const [pendingMove, setPendingMove] = useState<{
+    kind: "local" | "secretaria";
+    id: string;
+    nome: string;
+    oldLat: number;
+    oldLng: number;
+    newLat: number;
+    newLng: number;
+    resolve: (ok: boolean) => void;
+  } | null>(null);
+  const [savingMove, setSavingMove] = useState(false);
   const qc = useQueryClient();
   const geocodar = useServerFn(geocodarProtocolosPendentes);
 
@@ -233,34 +254,114 @@ function MapaPage() {
             }}
             onMoveLocal={async (id, lat, lng) => {
               const local = (locaisComCoord as any[]).find(l => l.id === id);
-              const { error } = await supabase
-                .from("locais")
-                .update({ latitude: lat, longitude: lng })
-                .eq("id", id);
-              if (error) {
-                toast.error(`Falha ao mover ${local?.nome ?? "local"}: ${error.message}`);
-              } else {
-                toast.success(`${local?.nome ?? "Local"} reposicionado.`);
-                await qc.invalidateQueries({ queryKey: ["locais-com-coordenadas"] });
-              }
+              if (!local) return false;
+              return await new Promise<boolean>((resolve) => {
+                setPendingMove({
+                  kind: "local",
+                  id,
+                  nome: local.nome,
+                  oldLat: local.latitude,
+                  oldLng: local.longitude,
+                  newLat: lat,
+                  newLng: lng,
+                  resolve,
+                });
+              });
             }}
             onMoveSecretaria={async (id, lat, lng) => {
               const sec = (secretarias as any[]).find(s => s.id === id);
-              const { error } = await supabase
-                .from("secretarias")
-                .update({ latitude: lat, longitude: lng })
-                .eq("id", id);
-              if (error) {
-                toast.error(`Falha ao mover ${sec?.nome ?? "secretaria"}: ${error.message}`);
-              } else {
-                toast.success(`${sec?.nome ?? "Secretaria"} reposicionada.`);
-                await qc.invalidateQueries({ queryKey: ["secretarias"] });
-              }
+              if (!sec) return false;
+              return await new Promise<boolean>((resolve) => {
+                setPendingMove({
+                  kind: "secretaria",
+                  id,
+                  nome: sec.nome,
+                  oldLat: sec.latitude,
+                  oldLng: sec.longitude,
+                  newLat: lat,
+                  newLng: lng,
+                  resolve,
+                });
+              });
             }}
           />
         </CardContent>
       </Card>
       <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
+      <AlertDialog
+        open={!!pendingMove}
+        onOpenChange={(open) => {
+          if (!open && pendingMove && !savingMove) {
+            pendingMove.resolve(false);
+            setPendingMove(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar nova localização</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <div>
+                  Mover <strong>{pendingMove?.nome}</strong> para uma nova coordenada?
+                </div>
+                {pendingMove && (
+                  <div className="rounded border border-border bg-muted/40 p-2 font-mono text-xs space-y-1">
+                    <div>
+                      <span className="text-muted-foreground">Antes: </span>
+                      {pendingMove.oldLat.toFixed(5)}, {pendingMove.oldLng.toFixed(5)}
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Agora: </span>
+                      <span className="text-foreground font-semibold">
+                        {pendingMove.newLat.toFixed(5)}, {pendingMove.newLng.toFixed(5)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={savingMove}
+              onClick={() => {
+                pendingMove?.resolve(false);
+                setPendingMove(null);
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={savingMove}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!pendingMove) return;
+                setSavingMove(true);
+                const table = pendingMove.kind === "local" ? "locais" : "secretarias";
+                const { error } = await supabase
+                  .from(table)
+                  .update({ latitude: pendingMove.newLat, longitude: pendingMove.newLng })
+                  .eq("id", pendingMove.id);
+                setSavingMove(false);
+                if (error) {
+                  toast.error(`Falha ao salvar: ${error.message}`);
+                  pendingMove.resolve(false);
+                } else {
+                  toast.success(`${pendingMove.nome} reposicionado.`);
+                  await qc.invalidateQueries({
+                    queryKey: pendingMove.kind === "local" ? ["locais-com-coordenadas"] : ["secretarias"],
+                  });
+                  pendingMove.resolve(true);
+                }
+                setPendingMove(null);
+              }}
+            >
+              {savingMove ? "Salvando..." : "Confirmar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
