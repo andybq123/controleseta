@@ -117,6 +117,8 @@ export function ManifestacoesMap({
   onOpenProtocolo,
   secretarias = [],
   locais = [],
+  onMoveLocal,
+  onMoveSecretaria,
 }: {
   points: MapPoint[];
   height?: number | string;
@@ -124,6 +126,8 @@ export function ManifestacoesMap({
   onOpenProtocolo?: (id: string) => void;
   secretarias?: SecretariaPoint[];
   locais?: LocalPoint[];
+  onMoveLocal?: (id: string, lat: number, lng: number) => void;
+  onMoveSecretaria?: (id: string, lat: number, lng: number) => void;
 }) {
   const valid = useMemo(
     () => points.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng)),
@@ -154,6 +158,10 @@ export function ManifestacoesMap({
   const rootsRef = useRef<Root[]>([]);
   const onOpenRef = useRef(onOpenProtocolo);
   useEffect(() => { onOpenRef.current = onOpenProtocolo; }, [onOpenProtocolo]);
+  const onMoveLocalRef = useRef(onMoveLocal);
+  useEffect(() => { onMoveLocalRef.current = onMoveLocal; }, [onMoveLocal]);
+  const onMoveSecRef = useRef(onMoveSecretaria);
+  useEffect(() => { onMoveSecRef.current = onMoveSecretaria; }, [onMoveSecretaria]);
 
   // init map once
   useEffect(() => {
@@ -205,7 +213,8 @@ export function ManifestacoesMap({
         const cfg = SECRETARIA_ICONES[s.icone ?? "administracao"] ?? SECRETARIA_ICONES.administracao;
         const el = document.createElement("div");
         el.innerHTML = secretariaSvg(s.icone);
-        el.style.cursor = "pointer";
+        el.style.cursor = onMoveSecRef.current ? "grab" : "pointer";
+        el.title = onMoveSecRef.current ? "Arraste para reposicionar" : "";
         const popupNode = document.createElement("div");
         const root = createRoot(popupNode);
         root.render(
@@ -221,10 +230,19 @@ export function ManifestacoesMap({
         );
         rootsRef.current.push(root);
         const popup = new mapboxgl.Popup({ offset: 28, maxWidth: "300px" }).setDOMContent(popupNode);
-        const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
+        const draggableSec = !!onMoveSecRef.current;
+        const marker = new mapboxgl.Marker({ element: el, anchor: "bottom", draggable: draggableSec })
           .setLngLat([s.lng, s.lat])
           .setPopup(popup)
           .addTo(map);
+        if (draggableSec) {
+          marker.on("dragstart", () => { el.style.cursor = "grabbing"; });
+          marker.on("dragend", () => {
+            el.style.cursor = "grab";
+            const ll = marker.getLngLat();
+            onMoveSecRef.current?.(s.id, ll.lat, ll.lng);
+          });
+        }
         markersRef.current.push(marker);
       });
 
@@ -233,7 +251,8 @@ export function ManifestacoesMap({
         const emoji = SECRETARIA_ICONES[l.secretariaIcone ?? "administracao"]?.emoji ?? "📍";
         const el = document.createElement("div");
         el.innerHTML = localSvg(emoji);
-        el.style.cursor = "pointer";
+        el.style.cursor = onMoveLocalRef.current ? "grab" : "pointer";
+        el.title = onMoveLocalRef.current ? "Arraste para reposicionar" : "";
         const lista = protocolosPorLocal.get(l.id) ?? [];
         const popupNode = document.createElement("div");
         const root = createRoot(popupNode);
@@ -273,10 +292,19 @@ export function ManifestacoesMap({
         );
         rootsRef.current.push(root);
         const popup = new mapboxgl.Popup({ offset: 22, maxWidth: "340px" }).setDOMContent(popupNode);
-        const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+        const draggableLocal = !!onMoveLocalRef.current;
+        const marker = new mapboxgl.Marker({ element: el, anchor: "center", draggable: draggableLocal })
           .setLngLat([l.lng, l.lat])
           .setPopup(popup)
           .addTo(map);
+        if (draggableLocal) {
+          marker.on("dragstart", () => { el.style.cursor = "grabbing"; });
+          marker.on("dragend", () => {
+            el.style.cursor = "grab";
+            const ll = marker.getLngLat();
+            onMoveLocalRef.current?.(l.id, ll.lat, ll.lng);
+          });
+        }
         markersRef.current.push(marker);
       });
 
