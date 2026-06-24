@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
-import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestacoes-map";
+import { ManifestacoesMap, type SecretariaPoint, type LocalPoint } from "@/components/manifestacoes-map";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Inbox } from "lucide-react";
