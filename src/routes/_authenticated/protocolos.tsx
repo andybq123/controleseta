@@ -96,6 +96,12 @@ function ProtocolosPage() {
 
   const filtrados = protocolos.filter(p => {
     if (saudeSecId && p.secretaria_id === saudeSecId) return false;
+    // Concluídos só aparecem quando filtrados explicitamente ou buscados pelo número.
+    if (p.status === "concluido"
+        && filtroStatus !== "concluido"
+        && !(busca.trim() && p.numero?.toLowerCase().includes(busca.trim().toLowerCase()))) {
+      return false;
+    }
     if (filtroStatus !== "todos" && p.status !== filtroStatus) return false;
     if (filtroTipo !== "todos" && p.tipo !== filtroTipo) return false;
     if (filtroCategoria !== "todos" && p.categoria !== filtroCategoria) return false;
