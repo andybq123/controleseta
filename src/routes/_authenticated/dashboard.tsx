@@ -84,6 +84,36 @@ function Dashboard() {
       ),
   });
 
+  const { data: triagemStats } = useQuery({
+    queryKey: ["triagem-stats"],
+    queryFn: async () => {
+      const { count: pendentes } = await supabase
+        .from("protocolos")
+        .select("id", { count: "exact", head: true })
+        .eq("triagem_pendente", true);
+      const desdeIso = new Date(Date.now() - 30 * 86400000).toISOString();
+      const { data: concluidas } = await supabase
+        .from("protocolos")
+        .select("created_at, triagem_concluida_em")
+        .not("triagem_concluida_em", "is", null)
+        .gte("triagem_concluida_em", desdeIso);
+      const horas = (concluidas ?? [])
+        .map((r: any) => (new Date(r.triagem_concluida_em).getTime() - new Date(r.created_at).getTime()) / 3600000)
+        .filter((h) => h >= 0 && Number.isFinite(h));
+      const media = horas.length ? horas.reduce((a, b) => a + b, 0) / horas.length : 0;
+      const { data: maisAntiga } = await supabase
+        .from("protocolos")
+        .select("created_at")
+        .eq("triagem_pendente", true)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const esperaH = maisAntiga ? (Date.now() - new Date((maisAntiga as any).created_at).getTime()) / 3600000 : 0;
+      return { pendentes: pendentes ?? 0, mediaHoras: media, esperaMaiorHoras: esperaH, amostra: horas.length };
+    },
+    refetchInterval: 60000,
+  });
+
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
     queryFn: async () => {
