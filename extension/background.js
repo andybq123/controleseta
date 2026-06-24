@@ -174,10 +174,10 @@ async function processarLista(protocolos) {
   const {
     backend = "", token = "", autoCloseTab = true,
     coletarDetalhes = true, delayDetalheMs = 1500, maxDetalhes = 200,
-    apenasJaCumprido = true,
+    apenasArquivado = true,
   } = await chrome.storage.local.get([
     "backend", "token", "autoCloseTab", "coletarDetalhes",
-    "delayDetalheMs", "maxDetalhes", "apenasJaCumprido",
+    "delayDetalheMs", "maxDetalhes", "apenasArquivado",
   ]);
   if (!backend || !token) return { ok: false, msg: "Configure backend e token." };
   if (!Array.isArray(protocolos) || protocolos.length === 0) {
@@ -189,16 +189,16 @@ async function processarLista(protocolos) {
     const totalBruto = protocolos.length;
     let lista = protocolos;
 
-    if (apenasJaCumprido !== false) {
-      lista = lista.filter((p) => p.status === "ja_cumprido");
-      await setProgress({ totalBruto, filtrados: lista.length, filtro: "ja_cumprido" });
+    if (apenasArquivado !== false) {
+      lista = lista.filter((p) => p.status === "arquivado_marcador");
+      await setProgress({ totalBruto, filtrados: lista.length, filtro: "arquivado_marcador" });
       if (lista.length === 0) {
         await setProgress({ rodando: false, fase: "vazio" });
-        return { ok: true, novos: 0, ignorados: 0, total: 0, msg: `Nenhum 'já cumprido' (de ${totalBruto}).` };
+        return { ok: true, novos: 0, ignorados: 0, total: 0, msg: `Nenhum 'Arquivado✅' (de ${totalBruto}).` };
       }
     }
 
-    // Dedup: pergunta ao backend quais já existem
+    // Buscamos no backend quais protocolos JÁ EXISTEM (são esses que vamos concluir).
     await setProgress({ fase: "verificando_duplicados" });
     const numeros = lista.map((p) => p.numero);
     let existentes = new Set();
@@ -213,13 +213,13 @@ async function processarLista(protocolos) {
         existentes = new Set(d.existentes || []);
       }
     } catch {}
-    const jaSalvos = existentes.size;
-    lista = lista.filter((p) => !existentes.has(p.numero));
-    await setProgress({ jaSalvos, novos: lista.length });
+    const semCorrespondencia = lista.length - existentes.size;
+    lista = lista.filter((p) => existentes.has(p.numero));
+    await setProgress({ jaSalvos: semCorrespondencia, novos: lista.length });
 
     if (lista.length === 0) {
       await setProgress({ rodando: false, fase: "concluido", total: 0, novos: 0 });
-      return { ok: true, novos: 0, ignorados: jaSalvos, total: 0, msg: `Todos os ${jaSalvos} já estavam salvos.` };
+      return { ok: true, novos: 0, ignorados: semCorrespondencia, total: 0, msg: `Nenhum dos ${semCorrespondencia} corresponde a protocolos do sistema.` };
     }
 
     if (coletarDetalhes) {
@@ -258,8 +258,8 @@ async function processarLista(protocolos) {
       await setProgress({ rodando: false, fase: "erro" });
       return { ok: false, msg: data.error || `Falha ${res.status}` };
     }
-    await setProgress({ rodando: false, fase: "concluido", novos: data.novos, total: data.total });
-    return { ok: true, novos: data.novos, ignorados: (data.ignorados || 0) + jaSalvos, total: data.total };
+    await setProgress({ rodando: false, fase: "concluido", novos: data.atualizados ?? data.novos ?? 0, total: data.total });
+    return { ok: true, novos: data.atualizados ?? data.novos ?? 0, ignorados: (data.ignorados || 0) + semCorrespondencia, total: data.total };
   } catch (e) {
     await setProgress({ rodando: false, fase: "erro" });
     return { ok: false, msg: e.message };

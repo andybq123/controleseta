@@ -68,7 +68,7 @@ async function loadCfg() {
   } catch {}
   const cfg = await chrome.storage.local.get([
     "backend", "token", "autoCloseTab", "coletarDetalhes",
-    "delayDetalheMs", "maxDetalhes", "apenasJaCumprido",
+    "delayDetalheMs", "maxDetalhes", "apenasArquivado",
   ]);
   $("backend").value = cfg.backend || "";
   $("token").value = cfg.token || "";
@@ -76,7 +76,7 @@ async function loadCfg() {
   $("coletarDetalhes").checked = cfg.coletarDetalhes !== false;
   $("delayDetalheMs").value = cfg.delayDetalheMs || 1500;
   $("maxDetalhes").value = cfg.maxDetalhes || 200;
-  $("apenasJaCumprido").checked = cfg.apenasJaCumprido !== false;
+  $("apenasArquivado").checked = cfg.apenasArquivado !== false;
   pollProgress();
 }
 
@@ -94,7 +94,7 @@ $("salvar-opts").addEventListener("click", async () => {
     coletarDetalhes: $("coletarDetalhes").checked,
     delayDetalheMs: Math.max(500, Number($("delayDetalheMs").value) || 1500),
     maxDetalhes: Math.max(1, Number($("maxDetalhes").value) || 200),
-    apenasJaCumprido: $("apenasJaCumprido").checked,
+    apenasArquivado: $("apenasArquivado").checked,
   });
   log("Opções salvas.", "ok");
 });
@@ -104,13 +104,14 @@ function scrapeLista() {
   const out = new Map();
   const semAcentos = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const detectStatus = (t) => {
+    if (/arquivado\s*\u2705/i.test(t)) return "arquivado_marcador";
     const n = semAcentos(t);
     if (n.includes("ja cumprido")) return "ja_cumprido";
     if (/arquivad|finaliz|baixad/i.test(t)) return "arquivado";
     return null;
   };
   const push = (p) => { if (p.numero && !out.has(p.numero)) out.set(p.numero, p); };
-  const reNum = /(\d{3,}\s*\/\s*\d{2,4}|\d{6,})/;
+  const reNum = /(\d[\d.]*\s*\/\s*\d{2,4}|\d{6,})/;
   const reData = /\d{2}\/\d{2}\/\d{4}/;
   document.querySelectorAll("tr").forEach((tr) => {
     const text = (tr.innerText || "").replace(/\s+/g, " ").trim();
