@@ -51,44 +51,6 @@ function parseDataBr(s: string | null | undefined): string | null {
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
-function statusConcluido(s: string | null | undefined): boolean {
-  const n = norm(s);
-  if (!n) return false;
-  return (
-    n.includes("ja cumprido") ||
-    n.includes("cumprido") ||
-    n.includes("arquivad") ||
-    n.includes("finaliz") ||
-    n.includes("baixad") ||
-    n.includes("encerrad") ||
-    n.includes("concluid")
-  );
-}
-
-// Tenta casar o "setor" recebido do 1doc com uma secretaria existente.
-function acharSecretaria(
-  secretarias: Array<{ id: string; nome: string; sigla: string | null }>,
-  setor: string | null | undefined,
-): string | null {
-  const alvo = norm(setor);
-  if (!alvo) return null;
-  // 1) match exato por nome ou sigla
-  for (const s of secretarias) {
-    if (norm(s.nome) === alvo) return s.id;
-    if (s.sigla && norm(s.sigla) === alvo) return s.id;
-  }
-  // 2) inclusão de termos (nome contém alvo, alvo contém nome, ou sigla aparece no alvo)
-  for (const s of secretarias) {
-    const n = norm(s.nome);
-    if (n && (alvo.includes(n) || n.includes(alvo))) return s.id;
-    const sg = norm(s.sigla || "");
-    if (sg && (alvo.includes(` ${sg} `) || alvo.startsWith(`${sg} `) || alvo.endsWith(` ${sg}`) || alvo === sg)) {
-      return s.id;
-    }
-  }
-  return null;
-}
-
 export const Route = createFileRoute("/api/public/ingest-protocolos")({
   server: {
     handlers: {
@@ -126,81 +88,69 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
               total: 0, novos: 0, sucesso: true,
               erro: "Coleta via extensão (vazia)", duracao_ms: Date.now() - inicio,
             });
-            return Response.json({ sucesso: true, total: 0, novos: 0, ignorados: 0 }, { headers: corsHeaders() });
+            return Response.json({ sucesso: true, total: 0, atualizados: 0, ignorados: 0 }, { headers: corsHeaders() });
           }
 
-          // Dedup: buscar todas as variantes equivalentes em uma única query.
+          // Novo modelo: NÃO inserimos nada no sistema geral. Para cada item
+          // recebido, procuramos um protocolo existente pelo número e
+          // concluímos com link/data vindos do 1doc.
+          const hoje = new Date().toISOString().slice(0, 10);
+
+          // Mapa: variante -> número original recebido (para casar de volta)
           const todasVariantes = new Set<string>();
-          const mapaVariantes = new Map<string, string[]>();
+          const variantesPorNum = new Map<string, string[]>();
           for (const p of protocolos) {
             const v = variantesNumero(p.numero);
-            mapaVariantes.set(p.numero, v);
+            variantesPorNum.set(p.numero, v);
             for (const x of v) todasVariantes.add(x);
           }
-          const { data: existentes } = await supabaseAdmin
+
+          const { data: existentes, error: errSel } = await supabaseAdmin
             .from("protocolos")
-            .select("numero")
+            .select("id, numero, status")
             .in("numero", Array.from(todasVariantes));
-          const setExistentes = new Set((existentes || []).map((r) => r.numero));
-          const novosProtocolos = protocolos.filter(
-            (p) => !(mapaVariantes.get(p.numero) || [p.numero]).some((v) => setExistentes.has(v)),
-          );
-          const novos = novosProtocolos.length;
-          const ignorados = protocolos.length - novos;
+          if (errSel) throw new Error(errSel.message);
 
-          if (novosProtocolos.length > 0) {
-            const { data: secretarias } = await supabaseAdmin
-              .from("secretarias")
-              .select("id, nome, sigla");
-            const secs = secretarias || [];
+          // numeroVariante -> { id, status }
+          const porVariante = new Map<string, { id: string; status: string | null }>();
+          for (const r of existentes || []) {
+            porVariante.set(r.numero, { id: r.id, status: r.status });
+          }
 
-            const hoje = new Date().toISOString().slice(0, 10);
-            const agora = new Date().toISOString();
+          let atualizados = 0;
+          let semCorrespondencia = 0;
+          let jaConcluidos = 0;
 
-            const linhas = novosProtocolos.map((p) => {
-              const det = (p.detalhes || {}) as Record<string, any>;
-              const assuntoTxt = (det.assunto as string | undefined) || (p.setor || "Ouvidoria coletada do 1doc");
-              const setorAlvo = (det.setor as string | undefined) || p.setor || null;
-              const secretariaId = acharSecretaria(secs, setorAlvo);
-              const concluido = statusConcluido(p.status);
-              const dataAbertura = parseDataBr(p.data_protocolo) || hoje;
-              const solicitante = (det.solicitante as string | undefined) || null;
-              const descricao = (p.relato && p.relato.trim().length > 0
-                ? p.relato
-                : (det.descricao as string | undefined) || (det.mensagem as string | undefined) || null);
+          for (const p of protocolos) {
+            const vs = variantesPorNum.get(p.numero) || [p.numero];
+            const match = vs.map((v) => porVariante.get(v)).find(Boolean);
+            if (!match) { semCorrespondencia++; continue; }
+            if (match.status === "concluido") { jaConcluidos++; continue; }
 
-              return {
-                numero: p.numero,
-                tipo: "ouvidoria" as const,
-                categoria: "reclamacao" as const,
-                assunto: (assuntoTxt || "Ouvidoria").slice(0, 500),
-                descricao,
-                status: concluido ? ("concluido" as const) : ("em_andamento" as const),
-                secretaria_id: secretariaId,
-                solicitante,
-                data_abertura: dataAbertura,
-                data_conclusao: concluido ? (parseDataBr((det.data_arquivamento || det.data_finalizacao) as string | undefined) || hoje) : null,
+            const det = (p.detalhes || {}) as Record<string, any>;
+            const dataConclusao =
+              parseDataBr((det.data_arquivamento || det.data_finalizacao || det.data) as string | undefined) || hoje;
+
+            const { error: errUpd } = await supabaseAdmin
+              .from("protocolos")
+              .update({
+                status: "concluido",
+                data_conclusao: dataConclusao,
                 url: p.url ?? null,
-                detalhes: p.detalhes ?? null,
-                coletado_em: agora,
-                // Não passa pela triagem manual — já vem do sistema oficial.
-                triagem_pendente: false,
-                origem: "1doc-coletor",
-              };
-            });
-
-            const { error } = await supabaseAdmin.from("protocolos").insert(linhas);
-            if (error) throw new Error(`Erro ao salvar: ${error.message}`);
+              })
+              .eq("id", match.id);
+            if (errUpd) throw new Error(`Erro ao atualizar ${p.numero}: ${errUpd.message}`);
+            atualizados++;
           }
 
           await supabaseAdmin.from("coletas").insert({
-            total: protocolos.length, novos, sucesso: true,
-            erro: "Coleta via extensão do navegador",
+            total: protocolos.length, novos: atualizados, sucesso: true,
+            erro: `Coleta via extensão: ${atualizados} concluído(s), ${jaConcluidos} já concluído(s), ${semCorrespondencia} sem correspondência`,
             duracao_ms: Date.now() - inicio,
           });
 
           return Response.json(
-            { sucesso: true, total: protocolos.length, novos, ignorados },
+            { sucesso: true, total: protocolos.length, atualizados, jaConcluidos, ignorados: semCorrespondencia },
             { headers: corsHeaders() },
           );
         } catch (e: unknown) {
