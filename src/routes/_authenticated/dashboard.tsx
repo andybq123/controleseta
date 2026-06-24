@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
-import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestacoes-map";
+import { ManifestacoesMap, type SecretariaPoint, type LocalPoint } from "@/components/manifestacoes-map";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Inbox } from "lucide-react";
@@ -128,6 +128,18 @@ function Dashboard() {
       if (error) throw error;
       return data ?? [];
     },
+  });
+
+  const { data: locaisComCoord = [] } = useQuery({
+    queryKey: ["locais-com-coordenadas"],
+    queryFn: async () => (
+      await supabase
+        .from("locais")
+        .select("id, nome, latitude, longitude, secretaria_id, secretarias(nome, icone)")
+        .not("latitude", "is", null)
+        .not("longitude", "is", null)
+        .order("nome")
+    ).data ?? [],
   });
 
   const enriched = useMemo(
@@ -828,16 +840,23 @@ function Dashboard() {
                 id: s.id, lat: s.latitude, lng: s.longitude, nome: s.nome,
                 sigla: s.sigla, endereco: s.endereco, icone: s.icone,
               }))}
+            locais={(locaisComCoord as any[]).map<LocalPoint>((l) => ({
+              id: l.id,
+              lat: l.latitude,
+              lng: l.longitude,
+              nome: l.nome,
+              secretaria: l.secretarias?.nome,
+              secretariaIcone: l.secretarias?.icone,
+            }))}
             onOpenProtocolo={(id) => {
               const p = enriched.find((x: any) => x.id === id);
               if (p) setDetail(p);
             }}
             points={filtrados
-              .filter((p: any) => p.latitude != null && p.longitude != null)
               .map((p: any) => ({
                 id: p.id,
-                lat: p.latitude,
-                lng: p.longitude,
+                lat: p.latitude ?? NaN,
+                lng: p.longitude ?? NaN,
                 numero: p.numero,
                 assunto: p.assunto,
                 endereco: p.endereco,
@@ -848,6 +867,7 @@ function Dashboard() {
                 categoria: p.categoria,
                 tipo: p.tipo,
                 local: p.locais?.nome,
+                local_id: p.local_id,
               }))}
           />
         </CardContent>
