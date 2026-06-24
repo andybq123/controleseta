@@ -126,8 +126,8 @@ export function ManifestacoesMap({
   onOpenProtocolo?: (id: string) => void;
   secretarias?: SecretariaPoint[];
   locais?: LocalPoint[];
-  onMoveLocal?: (id: string, lat: number, lng: number) => void;
-  onMoveSecretaria?: (id: string, lat: number, lng: number) => void;
+  onMoveLocal?: (id: string, lat: number, lng: number) => Promise<boolean> | boolean | void;
+  onMoveSecretaria?: (id: string, lat: number, lng: number) => Promise<boolean> | boolean | void;
 }) {
   const valid = useMemo(
     () => points.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng)),
@@ -236,11 +236,13 @@ export function ManifestacoesMap({
           .setPopup(popup)
           .addTo(map);
         if (draggableSec) {
+          const origin: [number, number] = [s.lng, s.lat];
           marker.on("dragstart", () => { el.style.cursor = "grabbing"; });
-          marker.on("dragend", () => {
+          marker.on("dragend", async () => {
             el.style.cursor = "grab";
             const ll = marker.getLngLat();
-            onMoveSecRef.current?.(s.id, ll.lat, ll.lng);
+            const ok = await onMoveSecRef.current?.(s.id, ll.lat, ll.lng);
+            if (ok === false) marker.setLngLat(origin);
           });
         }
         markersRef.current.push(marker);
@@ -298,11 +300,13 @@ export function ManifestacoesMap({
           .setPopup(popup)
           .addTo(map);
         if (draggableLocal) {
+          const origin: [number, number] = [l.lng, l.lat];
           marker.on("dragstart", () => { el.style.cursor = "grabbing"; });
-          marker.on("dragend", () => {
+          marker.on("dragend", async () => {
             el.style.cursor = "grab";
             const ll = marker.getLngLat();
-            onMoveLocalRef.current?.(l.id, ll.lat, ll.lng);
+            const ok = await onMoveLocalRef.current?.(l.id, ll.lat, ll.lng);
+            if (ok === false) marker.setLngLat(origin);
           });
         }
         markersRef.current.push(marker);
