@@ -64,6 +64,15 @@ export type SecretariaPoint = {
   icone?: string | null;
 };
 
+export type LocalPoint = {
+  id: string;
+  lat: number;
+  lng: number;
+  nome: string;
+  secretaria?: string | null;
+  secretariaIcone?: string | null;
+};
+
 export type MapPoint = {
   id: string;
   lat: number;
@@ -78,6 +87,7 @@ export type MapPoint = {
   categoria?: string | null;
   tipo?: string | null;
   local?: string | null;
+  local_id?: string | null;
 };
 
 function formatLocalDate(s: string) {
@@ -90,18 +100,30 @@ function formatLocalDate(s: string) {
 // Brusque center [lng, lat]
 const BRUSQUE: [number, number] = [-48.9114, -27.0978];
 
+function localSvg(emoji: string) {
+  return `
+    <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" style="position:absolute;inset:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.35));">
+        <circle cx="16" cy="16" r="14" fill="#ffffff" stroke="#10b981" stroke-width="2.5"/>
+      </svg>
+      <div style="position:relative;font-size:16px;line-height:1;">${emoji}</div>
+    </div>`;
+}
+
 export function ManifestacoesMap({
   points,
   height = 400,
   className,
   onOpenProtocolo,
   secretarias = [],
+  locais = [],
 }: {
   points: MapPoint[];
   height?: number | string;
   className?: string;
   onOpenProtocolo?: (id: string) => void;
   secretarias?: SecretariaPoint[];
+  locais?: LocalPoint[];
 }) {
   const valid = useMemo(
     () => points.filter(p => typeof p.lat === "number" && typeof p.lng === "number"),
@@ -111,6 +133,20 @@ export function ManifestacoesMap({
     () => secretarias.filter(s => typeof s.lat === "number" && typeof s.lng === "number"),
     [secretarias],
   );
+  const validLocais = useMemo(
+    () => locais.filter(l => typeof l.lat === "number" && typeof l.lng === "number"),
+    [locais],
+  );
+  const protocolosPorLocal = useMemo(() => {
+    const map = new Map<string, MapPoint[]>();
+    points.forEach(p => {
+      if (!p.local_id) return;
+      const arr = map.get(p.local_id) ?? [];
+      arr.push(p);
+      map.set(p.local_id, arr);
+    });
+    return map;
+  }, [points]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -192,6 +228,58 @@ export function ManifestacoesMap({
         markersRef.current.push(marker);
       });
 
+      // locais (UBS / pontos de atendimento)
+      validLocais.forEach(l => {
+        const emoji = SECRETARIA_ICONES[l.secretariaIcone ?? "administracao"]?.emoji ?? "📍";
+        const el = document.createElement("div");
+        el.innerHTML = localSvg(emoji);
+        el.style.cursor = "pointer";
+        const lista = protocolosPorLocal.get(l.id) ?? [];
+        const popupNode = document.createElement("div");
+        const root = createRoot(popupNode);
+        root.render(
+          <div className="space-y-2 min-w-[260px] max-w-[320px]">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-base leading-none">{emoji}</span>
+                <span className="text-sm font-bold">{l.nome}</span>
+              </div>
+              {l.secretaria && <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{l.secretaria}</p>}
+              <p className="text-xs mt-1"><strong>{lista.length}</strong> protocolo(s) neste local</p>
+            </div>
+            {lista.length > 0 && (
+              <div className="max-h-[260px] overflow-y-auto -mx-1 pr-1 space-y-1">
+                {lista.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => onOpenRef.current?.(p.id)}
+                    className="w-full text-left text-xs px-2 py-1.5 rounded border border-border hover:bg-muted/60 transition"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-semibold text-primary">{p.numero}</span>
+                      {p.status && (
+                        <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted">
+                          {p.status.replace(/_/g, " ")}
+                        </span>
+                      )}
+                    </div>
+                    {p.assunto && <p className="mt-0.5 line-clamp-2 text-foreground">{p.assunto}</p>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>,
+        );
+        rootsRef.current.push(root);
+        const popup = new mapboxgl.Popup({ offset: 22, maxWidth: "340px" }).setDOMContent(popupNode);
+        const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+          .setLngLat([l.lng, l.lat])
+          .setPopup(popup)
+          .addTo(map);
+        markersRef.current.push(marker);
+      });
+
       // protocolos
       valid.forEach(p => {
         const el = document.createElement("div");
@@ -240,7 +328,7 @@ export function ManifestacoesMap({
       });
 
       // fit bounds
-      const all = [...valid, ...validSecs];
+      const all = [...valid, ...validSecs, ...validLocais];
       if (all.length === 1) {
         map.flyTo({ center: [all[0].lng, all[0].lat], zoom: 15, duration: 0 });
       } else if (all.length > 1) {
@@ -252,7 +340,7 @@ export function ManifestacoesMap({
 
     if (map.isStyleLoaded()) apply();
     else map.once("load", apply);
-  }, [valid, validSecs]);
+  }, [valid, validSecs, validLocais, protocolosPorLocal]);
 
   return (
     <div className={className} style={{ height, width: "100%", isolation: "isolate", position: "relative", zIndex: 0 }}>
