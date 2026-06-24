@@ -30,8 +30,10 @@ import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAssuntosRouteImport } from './routes/_authenticated/assuntos'
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
 import { Route as AuthenticatedProtocolosAntigosIndexRouteImport } from './routes/_authenticated/protocolos-antigos.index'
+import { Route as ApiPublicIngestProtocolosRouteImport } from './routes/api/public/ingest-protocolos'
 import { Route as ApiPublicGmailSyncRouteImport } from './routes/api/public/gmail-sync'
 import { Route as ApiPublicEmailSyncRouteImport } from './routes/api/public/email-sync'
+import { Route as ApiPublicCheckProtocolosRouteImport } from './routes/api/public/check-protocolos'
 import { Route as ApiPublicInboundEmailTokenRouteImport } from './routes/api/public/inbound-email.$token'
 import { Route as AuthenticatedRelatoriosSecretariaIdRouteImport } from './routes/_authenticated/relatorios.secretaria.$id'
 import { Route as AuthenticatedProtocolosAntigosSourceNumeroRouteImport } from './routes/_authenticated/protocolos-antigos.$source.$numero'
@@ -143,6 +145,12 @@ const AuthenticatedProtocolosAntigosIndexRoute =
     path: '/protocolos-antigos/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicIngestProtocolosRoute =
+  ApiPublicIngestProtocolosRouteImport.update({
+    id: '/api/public/ingest-protocolos',
+    path: '/api/public/ingest-protocolos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicGmailSyncRoute = ApiPublicGmailSyncRouteImport.update({
   id: '/api/public/gmail-sync',
   path: '/api/public/gmail-sync',
@@ -153,6 +161,12 @@ const ApiPublicEmailSyncRoute = ApiPublicEmailSyncRouteImport.update({
   path: '/api/public/email-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCheckProtocolosRoute =
+  ApiPublicCheckProtocolosRouteImport.update({
+    id: '/api/public/check-protocolos',
+    path: '/api/public/check-protocolos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicInboundEmailTokenRoute =
   ApiPublicInboundEmailTokenRouteImport.update({
     id: '/api/public/inbound-email/$token',
@@ -191,8 +205,10 @@ export interface FileRoutesByFullPath {
   '/secretarias': typeof AuthenticatedSecretariasRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/api/public/check-protocolos': typeof ApiPublicCheckProtocolosRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
+  '/api/public/ingest-protocolos': typeof ApiPublicIngestProtocolosRoute
   '/protocolos-antigos/': typeof AuthenticatedProtocolosAntigosIndexRoute
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/protocolos-antigos/$source/$numero': typeof AuthenticatedProtocolosAntigosSourceNumeroRoute
@@ -217,8 +233,10 @@ export interface FileRoutesByTo {
   '/secretarias': typeof AuthenticatedSecretariasRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/api/public/check-protocolos': typeof ApiPublicCheckProtocolosRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
+  '/api/public/ingest-protocolos': typeof ApiPublicIngestProtocolosRoute
   '/protocolos-antigos': typeof AuthenticatedProtocolosAntigosIndexRoute
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/protocolos-antigos/$source/$numero': typeof AuthenticatedProtocolosAntigosSourceNumeroRoute
@@ -246,8 +264,10 @@ export interface FileRoutesById {
   '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/api/public/check-protocolos': typeof ApiPublicCheckProtocolosRoute
   '/api/public/email-sync': typeof ApiPublicEmailSyncRoute
   '/api/public/gmail-sync': typeof ApiPublicGmailSyncRoute
+  '/api/public/ingest-protocolos': typeof ApiPublicIngestProtocolosRoute
   '/_authenticated/protocolos-antigos/': typeof AuthenticatedProtocolosAntigosIndexRoute
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/protocolos-antigos/$source/$numero': typeof AuthenticatedProtocolosAntigosSourceNumeroRoute
@@ -275,8 +295,10 @@ export interface FileRouteTypes {
     | '/secretarias'
     | '/tarefas'
     | '/users'
+    | '/api/public/check-protocolos'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
+    | '/api/public/ingest-protocolos'
     | '/protocolos-antigos/'
     | '/relatorios/'
     | '/protocolos-antigos/$source/$numero'
@@ -301,8 +323,10 @@ export interface FileRouteTypes {
     | '/secretarias'
     | '/tarefas'
     | '/users'
+    | '/api/public/check-protocolos'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
+    | '/api/public/ingest-protocolos'
     | '/protocolos-antigos'
     | '/relatorios'
     | '/protocolos-antigos/$source/$numero'
@@ -329,8 +353,10 @@ export interface FileRouteTypes {
     | '/_authenticated/secretarias'
     | '/_authenticated/tarefas'
     | '/_authenticated/users'
+    | '/api/public/check-protocolos'
     | '/api/public/email-sync'
     | '/api/public/gmail-sync'
+    | '/api/public/ingest-protocolos'
     | '/_authenticated/protocolos-antigos/'
     | '/_authenticated/relatorios/'
     | '/_authenticated/protocolos-antigos/$source/$numero'
@@ -347,8 +373,10 @@ export interface RootRouteChildren {
   InicioRoute: typeof InicioRoute
   OuvidoriaRoute: typeof OuvidoriaRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicCheckProtocolosRoute: typeof ApiPublicCheckProtocolosRoute
   ApiPublicEmailSyncRoute: typeof ApiPublicEmailSyncRoute
   ApiPublicGmailSyncRoute: typeof ApiPublicGmailSyncRoute
+  ApiPublicIngestProtocolosRoute: typeof ApiPublicIngestProtocolosRoute
   ApiPublicInboundEmailTokenRoute: typeof ApiPublicInboundEmailTokenRoute
 }
 
@@ -501,6 +529,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProtocolosAntigosIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/ingest-protocolos': {
+      id: '/api/public/ingest-protocolos'
+      path: '/api/public/ingest-protocolos'
+      fullPath: '/api/public/ingest-protocolos'
+      preLoaderRoute: typeof ApiPublicIngestProtocolosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/gmail-sync': {
       id: '/api/public/gmail-sync'
       path: '/api/public/gmail-sync'
@@ -513,6 +548,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/email-sync'
       fullPath: '/api/public/email-sync'
       preLoaderRoute: typeof ApiPublicEmailSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/check-protocolos': {
+      id: '/api/public/check-protocolos'
+      path: '/api/public/check-protocolos'
+      fullPath: '/api/public/check-protocolos'
+      preLoaderRoute: typeof ApiPublicCheckProtocolosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/inbound-email/$token': {
@@ -602,20 +644,12 @@ const rootRouteChildren: RootRouteChildren = {
   InicioRoute: InicioRoute,
   OuvidoriaRoute: OuvidoriaRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicCheckProtocolosRoute: ApiPublicCheckProtocolosRoute,
   ApiPublicEmailSyncRoute: ApiPublicEmailSyncRoute,
   ApiPublicGmailSyncRoute: ApiPublicGmailSyncRoute,
+  ApiPublicIngestProtocolosRoute: ApiPublicIngestProtocolosRoute,
   ApiPublicInboundEmailTokenRoute: ApiPublicInboundEmailTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
