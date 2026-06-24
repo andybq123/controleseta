@@ -396,6 +396,24 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
       `Para: ${extr.destinatario || ""}`,
     ].join("\n");
 
+    // Triagem só é necessária para ouvidorias quando:
+    //  (a) não conseguimos identificar a secretaria responsável, OU
+    //  (b) o assunto é da Saúde e exige decidir qual UBS/CAPS atende.
+    // Demais assuntos com secretaria já identificada seguem direto, sem triagem.
+    const ASSUNTOS_SAUDE_TRIAGEM = new Set([
+      "demora em marcar consulta / procedimento",
+      "falta de materiais em posto de saude",
+      "falta de medicacao",
+      "medicos",
+      "postos de saude",
+      "transporte para tratamento",
+      "vacinas",
+    ]);
+    const assuntoNorm = norm(extr.assunto_categoria || extr.assunto || "");
+    const precisaTriagem =
+      extr.tipo === "ouvidoria" &&
+      (!secretariaId || ASSUNTOS_SAUDE_TRIAGEM.has(assuntoNorm));
+
     const { data: novo, error: errIns } = await supabaseAdmin
       .from("protocolos")
       .insert({
@@ -405,7 +423,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
         solicitante: extr.solicitante || remetente || null,
         secretaria_id: secretariaId, local_id: localId,
         data_abertura: dataAbertura, created_by: account.created_by,
-        triagem_pendente: extr.tipo === "ouvidoria",
+        triagem_pendente: precisaTriagem,
       })
       .select("id, numero").single();
     if (errIns) throw errIns;
