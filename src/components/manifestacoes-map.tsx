@@ -470,55 +470,8 @@ export function ManifestacoesMap({
         markersRef.current.push(marker);
       });
 
-      // protocolos
-      valid.forEach(p => {
-        const el = document.createElement("div");
-        el.innerHTML = pinSvg(p.categoria);
-        el.style.cursor = "pointer";
-        const popupNode = document.createElement("div");
-        const root = createRoot(popupNode);
-        root.render(
-          <div className="space-y-1.5 min-w-[220px]">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-bold text-primary">{p.numero}</span>
-              {p.status && (
-                <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-muted">
-                  {p.status.replace(/_/g, " ")}
-                </span>
-              )}
-            </div>
-            {p.assunto && <p className="text-sm font-medium leading-snug">{p.assunto}</p>}
-            <div className="text-xs text-muted-foreground space-y-0.5">
-              {p.categoria && (<div><span className="font-medium text-foreground">Categoria: </span><span className="capitalize">{p.categoria.replace(/_/g, " ")}</span></div>)}
-              {p.tipo && (<div><span className="font-medium text-foreground">Tipo: </span>{p.tipo}</div>)}
-              {p.secretaria && (<div><span className="font-medium text-foreground">Secretaria: </span>{p.secretaria}</div>)}
-              {p.local && (<div><span className="font-medium text-foreground">Local: </span>{p.local}</div>)}
-              {p.endereco && (<div><span className="font-medium text-foreground">Endereço: </span>{p.endereco}</div>)}
-              {p.data_abertura && (<div><span className="font-medium text-foreground">Aberto em: </span>{formatLocalDate(p.data_abertura)}</div>)}
-              {p.data_conclusao && (<div><span className="font-medium text-foreground">Concluído em: </span>{formatLocalDate(p.data_conclusao)}</div>)}
-            </div>
-            {onOpenRef.current && (
-              <button
-                type="button"
-                onClick={() => onOpenRef.current?.(p.id)}
-                className="mt-2 w-full text-xs font-medium px-2 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 transition"
-              >
-                Abrir protocolo →
-              </button>
-            )}
-          </div>,
-        );
-        rootsRef.current.push(root);
-        const popup = new mapboxgl.Popup({ offset: 28, maxWidth: "320px" }).setDOMContent(popupNode);
-        const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
-          .setLngLat([p.lng, p.lat])
-          .setPopup(popup)
-          .addTo(map);
-        markersRef.current.push(marker);
-      });
-
       // fit bounds
-      const all = [...valid, ...validSecs, ...validLocais];
+      const all = [...validSecs, ...validLocais];
       if (all.length === 1) {
         map.flyTo({ center: [all[0].lng, all[0].lat], zoom: 15, duration: 0 });
       } else if (all.length > 1) {
@@ -549,9 +502,9 @@ export function ManifestacoesMap({
         ref={containerRef}
         style={{ height: "100%", width: "100%", borderRadius: 8, overflow: "hidden", contain: "paint" }}
       />
-      {!valid.length && (
+      {!validSecs.length && !validLocais.length && (
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          Nenhum protocolo com endereço georreferenciado ainda.
+          Nenhuma unidade cadastrada com coordenadas ainda.
         </p>
       )}
     </div>
