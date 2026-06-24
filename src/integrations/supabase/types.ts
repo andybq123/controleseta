@@ -434,6 +434,20 @@ export type Database = {
             referencedRelation: "secretarias"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "protocolos_triagem_concluida_por_fkey"
+            columns: ["triagem_concluida_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolos_triagem_lock_por_fkey"
+            columns: ["triagem_lock_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       secretarias: {
