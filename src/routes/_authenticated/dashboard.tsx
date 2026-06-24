@@ -55,6 +55,13 @@ const CAT_COLORS: Record<CategoriaProtocolo, string> = {
   outros: "hsl(215 16% 60%)",
 };
 
+function fmtDuracao(horas: number): string {
+  if (!Number.isFinite(horas) || horas < 0) return "—";
+  if (horas < 1) return `${Math.round(horas * 60)} min`;
+  if (horas < 48) return `${horas.toFixed(1)} h`;
+  return `${Math.round(horas / 24)} dias`;
+}
+
 function Dashboard() {
   const navigate = useNavigate();
   const [drill, setDrill] = useState<{ title: string; items: any[] } | null>(null);
