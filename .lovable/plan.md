@@ -1,36 +1,59 @@
 ## Objetivo
+Salvar lat/lng nos 25 locais da Saúde enviados e exibir como pontos clicáveis no mapa que abrem a lista de protocolos vinculados ao local.
 
-Fazer com que o `protocolo-ingest` use o número real da Ouvidoria que vem no assunto do e-mail (ex.: `Ouvidoria 2.078/2026: Poluição Ambiental` → `2.078/2026`) em vez de gerar um número novo aleatório (`5.602/2026`, `6.971/2026`).
+## 1. Banco — adicionar coordenadas ao `locais`
+Migração:
+- `ALTER TABLE public.locais ADD COLUMN latitude double precision, ADD COLUMN longitude double precision;`
+- `UPDATE` em cada um dos 25 locais usando o `id` já identificado, com o mapeamento:
 
-## O que muda
+| Local cadastrado | Lat / Lng |
+|---|---|
+| Águas Claras | -27.14451, -48.90327 |
+| Azambuja/ 1º de Maio | -27.10651, -48.91755 |
+| Bateas | -27.04552, -48.89299 |
+| Cedrinho | -27.15098, -48.92665 |
+| Dom Joaquim | -27.14659, -48.96102 |
+| Emma II | -27.05230, -48.88049 |
+| Guarani | -27.10455, -48.94298 |
+| Limeira | -27.07897, -48.86158 |
+| Limeira Alta | -27.10882, -48.85265 |
+| Nova Brasília | -27.08311, -48.89206 |
+| Paquetá | -27.14067, -48.92083 |
+| Planalto | -27.04944, -48.86873 |
+| Poço Fundo | -27.12570, -48.87522 |
+| Ponta Russa | -27.14757, -48.88048 |
+| Rio Branco | -27.12274, -48.94991 |
+| Santa Luzia | -27.15999, -48.89339 |
+| Santa Rita | -27.07980, -48.89869 |
+| Santa Terezinha | -27.07553, -48.88863 |
+| São João | -27.16941, -48.96027 |
+| São Luiz | -27.08087, -48.91640 |
+| São Pedro | -27.07288, -48.93773 |
+| Souza Cruz – Maluche | -27.10654, -48.92275 |
+| Steffen | -27.07411, -48.90533 |
+| Volta Grande | -27.02247, -48.88487 |
+| Zantão | -27.16431, -48.90771 |
 
-### 1. `src/lib/protocolo-ingest.server.ts`
+Mantém RLS atual; só adiciona colunas opcionais.
 
-- Adicionar uma função `extrairNumeroDoAssunto(assunto, corpo)` que tenta achar o número no padrão `NNN(.NNN)?/AAAA` em:
-  1. `Ouvidoria <num>:`
-  2. `Ouvidoria Nº/N° <num>` ou `Protocolo <num>`
-  3. `e-SIC <num>` / `LAI <num>`
-  4. Fallback: primeira ocorrência de `\d{1,3}(\.\d{3})*\/20\d{2}` no assunto, depois no corpo.
-- Usar esse número como **fonte autoritativa**: passa a ter prioridade sobre o `extr.numero` vindo da IA (a IA continua usada para os demais campos).
-- Aplicar `normalizarNumero` para já fazer a checagem de duplicidade considerando variações com/sem ponto de milhar — se já existir protocolo com aquele número, segue o fluxo de "atualização/baixa" já implementado (não cria duplicado).
-- Só cai no `gerarNumeroProtocolo(extr.tipo)` quando nenhum número for encontrado nem no assunto, nem no corpo, nem pela IA. Isso evita gerar números sintéticos quando o e-mail claramente traz o número da Ouvidoria.
+## 2. Mapa (`/mapa`) — pontos de locais com lista de protocolos
+No `mapa.tsx`:
+- Buscar `locais` com `latitude/longitude not null` (id, nome, lat, lng, secretaria_id, secretarias(nome, icone)).
+- Aplicar filtro de Secretaria já existente.
 
-### 2. Correção dos 2 protocolos já criados de forma incorreta
+No `ManifestacoesMap` (`src/components/manifestacoes-map.tsx`):
+- Adicionar nova prop `locais: LocalPoint[]` com marker próprio (ícone 🏥 menor, cor branca com borda do tema saúde) para diferenciar dos pins de protocolo e do "shield" da secretaria.
+- Popup do local mostra: nome, secretaria, contagem de protocolos e **lista clicável** (número + assunto, status). Cada item chama `onOpenProtocolo(id)` reaproveitando o `ProtocoloDetailDialog`.
+- Lista derivada em tempo real cruzando `points` (já carregados no mapa) por `local` (já vem no MapPoint) — sem novo fetch. Limita visualmente a ~20 itens com scroll interno e um total no topo.
 
-Migração única para renumerar:
-- `5.602/2026` → `2.078/2026` (Poluição Ambiental, Fundema)
-- `6.971/2026` → `2.084/2026` (Poda de árvores de rua, Secretaria de Obras)
-
-Antes de atualizar, a migração checa se já não existe outro protocolo com o número de destino para não estourar a unique constraint. O trigger `log_protocolo_changes` vai registrar a mudança no histórico automaticamente.
-
-## O que NÃO muda
-
-- Lógica de roteamento por secretaria (catálogo `assuntos` + fallback hard-coded) permanece igual.
-- Extração de demais campos pela IA permanece igual.
-- Fluxo de detecção de "baixa/atualização" para protocolos já existentes permanece igual — só passa a casar mais cedo porque o número correto será extraído do assunto.
+## 3. Saúde (`/saude`)
+Reaproveitar o mesmo componente para que os locais da Saúde apareçam automaticamente lá também (já consome `ManifestacoesMap`). Sem mudança extra de UI.
 
 ## Detalhes técnicos
+- Tipos regenerados pela migração; após isso, ajusto query em `mapa.tsx` e `saude.tsx` (se aplicável) e adiciono o tipo `LocalPoint` em `manifestacoes-map.tsx`.
+- Sem mudanças em RLS/policies (colunas só leitura via policy já existente em `locais`).
+- Nenhum geocoding novo — coordenadas vêm fixas do usuário.
 
-- Regex principal: `/Ouvidoria\s+(?:n[ºo°]\s*)?(\d{1,3}(?:\.\d{3})*\/20\d{2})/i`
-- Regex genérica de fallback: `/(\d{1,3}(?:\.\d{3})*\/20\d{2})/`
-- A função roda **antes** do bloco de detecção de existente (linhas 203-247), substituindo o `extr.numero` quando encontra match — assim o lookup `IN (variantes)` já encontra o protocolo certo na próxima vez que o mesmo e-mail chegar.
+## Fora do escopo
+- UI de admin para editar lat/lng de locais (posso adicionar depois se quiser).
+- Coordenadas de locais de outras secretarias.

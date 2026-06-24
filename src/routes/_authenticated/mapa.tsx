@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ManifestacoesMap, type MapPoint, type SecretariaPoint } from "@/components/manifestacoes-map";
+import { ManifestacoesMap, type MapPoint, type SecretariaPoint, type LocalPoint } from "@/components/manifestacoes-map";
 import { Map as MapIcon, Sparkles, Loader2 } from "lucide-react";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { geocodarProtocolosPendentes } from "@/lib/geocode-bulk.functions";
@@ -32,7 +32,7 @@ function MapaPage() {
       fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
-          .select("id, numero, assunto, endereco, latitude, longitude, status, secretaria_id, categoria, tipo, data_abertura, data_conclusao, locais(nome), secretarias(nome)")
+          .select("id, numero, assunto, endereco, latitude, longitude, status, secretaria_id, local_id, categoria, tipo, data_abertura, data_conclusao, locais(nome), secretarias(nome)")
           .eq("triagem_pendente", false)
           .not("latitude", "is", null)
           .not("longitude", "is", null)
@@ -43,6 +43,32 @@ function MapaPage() {
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
     queryFn: async () => (await supabase.from("secretarias").select("id, nome, sigla, endereco, latitude, longitude, icone").order("nome")).data ?? [],
+  });
+
+  const { data: locaisComCoord = [] } = useQuery({
+    queryKey: ["locais-com-coordenadas"],
+    queryFn: async () => (
+      await supabase
+        .from("locais")
+        .select("id, nome, latitude, longitude, secretaria_id, secretarias(nome, icone)")
+        .not("latitude", "is", null)
+        .not("longitude", "is", null)
+        .order("nome")
+    ).data ?? [],
+  });
+
+  // Inclui TODOS os protocolos (mesmo sem coordenadas) para listar no popup do local.
+  const { data: protocolosTodos = [] } = useQuery({
+    queryKey: ["protocolos-por-local"],
+    queryFn: () =>
+      fetchAllPaginated((from, to) =>
+        supabase
+          .from("protocolos")
+          .select("id, numero, assunto, status, local_id, secretaria_id")
+          .eq("triagem_pendente", false)
+          .not("local_id", "is", null)
+          .range(from, to),
+      ),
   });
 
   const points = useMemo<MapPoint[]>(() => {
@@ -63,8 +89,25 @@ function MapaPage() {
         categoria: p.categoria,
         tipo: p.tipo,
         local: p.locais?.nome,
+        local_id: p.local_id,
       }));
   }, [protocolos, status, secretariaId]);
+
+  // Para popups dos locais: lista de protocolos por local_id (independe de coordenadas)
+  const pointsParaLocais = useMemo<MapPoint[]>(() => {
+    return (protocolosTodos as any[])
+      .filter(p => status === "todos" || p.status === status)
+      .filter(p => secretariaId === "todas" || p.secretaria_id === secretariaId)
+      .map(p => ({
+        id: p.id,
+        lat: NaN,
+        lng: NaN,
+        numero: p.numero,
+        assunto: p.assunto,
+        status: p.status,
+        local_id: p.local_id,
+      }));
+  }, [protocolosTodos, status, secretariaId]);
 
   const secretariaPoints = useMemo<SecretariaPoint[]>(() => {
     return (secretarias as any[])
@@ -75,6 +118,19 @@ function MapaPage() {
         sigla: s.sigla, endereco: s.endereco, icone: s.icone,
       }));
   }, [secretarias, secretariaId]);
+
+  const localPoints = useMemo<LocalPoint[]>(() => {
+    return (locaisComCoord as any[])
+      .filter(l => secretariaId === "todas" || l.secretaria_id === secretariaId)
+      .map(l => ({
+        id: l.id,
+        lat: l.latitude as number,
+        lng: l.longitude as number,
+        nome: l.nome,
+        secretaria: l.secretarias?.nome,
+        secretariaIcone: l.secretarias?.icone,
+      }));
+  }, [locaisComCoord, secretariaId]);
 
   const { data: pendentesCount } = useQuery({
     queryKey: ["protocolos-sem-coords"],
@@ -166,11 +222,13 @@ function MapaPage() {
       <Card>
         <CardContent className="p-3">
           <ManifestacoesMap
-            points={points}
+            points={[...points, ...pointsParaLocais.filter(pp => !points.some(p => p.id === pp.id))]}
             height={600}
             secretarias={secretariaPoints}
+            locais={localPoints}
             onOpenProtocolo={(id) => {
-              const p = (protocolos as any[]).find((x) => x.id === id);
+              const p = (protocolos as any[]).find((x) => x.id === id)
+                ?? (protocolosTodos as any[]).find((x) => x.id === id);
               if (p) setDetail(p);
             }}
           />
