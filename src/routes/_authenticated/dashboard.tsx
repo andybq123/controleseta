@@ -130,6 +130,18 @@ function Dashboard() {
     },
   });
 
+  const { data: locaisComCoord = [] } = useQuery({
+    queryKey: ["locais-com-coordenadas"],
+    queryFn: async () => (
+      await supabase
+        .from("locais")
+        .select("id, nome, latitude, longitude, secretaria_id, secretarias(nome, icone)")
+        .not("latitude", "is", null)
+        .not("longitude", "is", null)
+        .order("nome")
+    ).data ?? [],
+  });
+
   const enriched = useMemo(
     () => protocolos.map(p => ({ ...p, _s: situacaoProtocolo(p as any) })),
     [protocolos],
