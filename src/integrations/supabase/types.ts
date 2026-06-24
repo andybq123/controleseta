@@ -655,6 +655,7 @@ export type Database = {
         | "denuncia"
         | "solicitacao"
         | "outros"
+        | "sugestao"
       protocolo_status: "aberto" | "em_andamento" | "concluido"
       protocolo_tipo: "ouvidoria" | "lai" | "esic"
     }
@@ -792,6 +793,7 @@ export const Constants = {
         "denuncia",
         "solicitacao",
         "outros",
+        "sugestao",
       ],
       protocolo_status: ["aberto", "em_andamento", "concluido"],
       protocolo_tipo: ["ouvidoria", "lai", "esic"],
