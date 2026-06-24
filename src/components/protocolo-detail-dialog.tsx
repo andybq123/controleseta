@@ -436,8 +436,19 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             <Field2 label="Assunto">
               <Input value={form.assunto} onChange={e => setForm({ ...form, assunto: e.target.value })} />
             </Field2>
-            <Field2 label="Descrição">
-              <Textarea rows={4} value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })} />
+            <Field2 label={protocolo.triagem_pendente ? "Descrição (breve relato) *" : "Descrição"}>
+              <Textarea
+                rows={4}
+                value={form.descricao}
+                onChange={e => setForm({ ...form, descricao: e.target.value })}
+                placeholder={protocolo.triagem_pendente ? "Descreva brevemente o relato desta manifestação para a secretaria responsável." : undefined}
+                className={protocolo.triagem_pendente && !form.descricao.trim() ? "border-amber-500 focus-visible:ring-amber-500" : undefined}
+              />
+              {protocolo.triagem_pendente && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Obrigatório para concluir a triagem.
+                </p>
+              )}
             </Field2>
             <div className="grid grid-cols-2 gap-3">
               <Field2 label="Solicitante">
