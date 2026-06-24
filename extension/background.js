@@ -174,10 +174,10 @@ async function processarLista(protocolos) {
   const {
     backend = "", token = "", autoCloseTab = true,
     coletarDetalhes = true, delayDetalheMs = 1500, maxDetalhes = 200,
-    apenasJaCumprido = true,
+    apenasArquivado = true,
   } = await chrome.storage.local.get([
     "backend", "token", "autoCloseTab", "coletarDetalhes",
-    "delayDetalheMs", "maxDetalhes", "apenasJaCumprido",
+    "delayDetalheMs", "maxDetalhes", "apenasArquivado",
   ]);
   if (!backend || !token) return { ok: false, msg: "Configure backend e token." };
   if (!Array.isArray(protocolos) || protocolos.length === 0) {
@@ -189,12 +189,12 @@ async function processarLista(protocolos) {
     const totalBruto = protocolos.length;
     let lista = protocolos;
 
-    if (apenasJaCumprido !== false) {
-      lista = lista.filter((p) => p.status === "ja_cumprido");
-      await setProgress({ totalBruto, filtrados: lista.length, filtro: "ja_cumprido" });
+    if (apenasArquivado !== false) {
+      lista = lista.filter((p) => p.status === "arquivado_marcador");
+      await setProgress({ totalBruto, filtrados: lista.length, filtro: "arquivado_marcador" });
       if (lista.length === 0) {
         await setProgress({ rodando: false, fase: "vazio" });
-        return { ok: true, novos: 0, ignorados: 0, total: 0, msg: `Nenhum 'já cumprido' (de ${totalBruto}).` };
+        return { ok: true, novos: 0, ignorados: 0, total: 0, msg: `Nenhum 'Arquivado✅' (de ${totalBruto}).` };
       }
     }
 
