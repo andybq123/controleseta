@@ -14,12 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide-react";
-import { MapPin, Inbox, Lock } from "lucide-react";
+import { Inbox, Lock } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useServerFn } from "@tanstack/react-start";
-import { geocodeAddress } from "@/lib/geocode.functions";
-import { AddressAutocomplete } from "@/components/address-autocomplete";
-import { MapPointPicker } from "@/components/map-point-picker";
 import {
   situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
   PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass,
@@ -40,13 +36,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     | { kind: "reservada"; por: string; em: string }
     | { kind: "concluida"; por: string; em: string }
   >({ kind: "idle" });
-  const [enderecoCoords, setEnderecoCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [enderecoTemNumero, setEnderecoTemNumero] = useState<boolean>(false);
-  const [enderecoExact, setEnderecoExact] = useState<boolean>(false);
-  const [confirmImprecise, setConfirmImprecise] = useState<null | { patch: any }>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pendingPatch, setPendingPatch] = useState<any | null>(null);
-  const geocode = useServerFn(geocodeAddress);
 
   const { data: protocoloFresh } = useQuery({
     queryKey: ["protocolo", protocoloProp?.id],
@@ -133,7 +122,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
       });
       // Força modo edição em triagem para que o triador preencha a descrição obrigatória
       setEditing(!!protocolo.triagem_pendente);
-      setEnderecoCoords(null);
     }
   }, [protocolo]);
 
@@ -170,11 +158,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const locaisFiltrados = locais.filter((l: any) => !form.secretaria_id || l.secretaria_id === form.secretaria_id);
 
   function handleSave() {
-    void runSave(false);
-  }
-
-  async function runSave(forceNoCoords: boolean) {
-      const patch: any = {
+    const patch: any = {
       numero: form.numero,
       tipo: form.tipo,
       categoria: form.categoria,
@@ -188,40 +172,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
       data_conclusao: form.data_conclusao || null,
       data_prorrogacao: form.data_prorrogacao || null,
       prorrogado: form.prorrogado,
-        endereco: form.endereco || null,
-      };
-      const enderecoChanged = (form.endereco ?? "") !== (protocolo.endereco ?? "");
-      // Se o usuário ajustou o pino manualmente (enderecoCoords definido),
-      // sempre persiste — mesmo que o texto do endereço não tenha mudado.
-      if (enderecoCoords) {
-        patch.latitude = enderecoCoords.lat;
-        patch.longitude = enderecoCoords.lng;
-      } else if (enderecoChanged) {
-        if (forceNoCoords) {
-          patch.latitude = null;
-          patch.longitude = null;
-        } else if (form.endereco && form.endereco.trim()) {
-          try {
-            const r = await geocode({ data: { endereco: form.endereco } });
-            if (r.lat != null && r.exact) {
-              patch.latitude = r.lat;
-              patch.longitude = r.lng;
-            } else {
-              // Refused: street centroid or no result → ask the user to confirm.
-              setConfirmImprecise({ patch });
-              return;
-            }
-          } catch {
-            toast.warning("Falha ao geocodificar o endereço.");
-            patch.latitude = null;
-            patch.longitude = null;
-          }
-        } else {
-          patch.latitude = null;
-          patch.longitude = null;
-        }
-      }
-      update.mutate(patch, { onSuccess: () => setEditing(false) });
+    };
+    update.mutate(patch, { onSuccess: () => setEditing(false) });
   }
 
   function handleConcluir() {
