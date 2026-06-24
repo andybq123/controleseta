@@ -183,6 +183,7 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
                 status: "concluido",
                 data_conclusao: dataConclusao,
                 url: p.url ?? null,
+                ...(det.assunto ? { descricao: String(det.assunto) } : {}),
               })
               .eq("id", match.id);
             if (errUpd) throw new Error(`Erro ao atualizar ${p.numero}: ${errUpd.message}`);
