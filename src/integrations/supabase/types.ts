@@ -84,29 +84,41 @@ export type Database = {
       }
       coletas: {
         Row: {
+          atualizados: number
           duracao_ms: number | null
           erro: string | null
           executado_em: string
           id: string
+          ignorados_detalhes: Json
+          ja_concluidos: number
           novos: number
+          sem_correspondencia: number
           sucesso: boolean
           total: number
         }
         Insert: {
+          atualizados?: number
           duracao_ms?: number | null
           erro?: string | null
           executado_em?: string
           id?: string
+          ignorados_detalhes?: Json
+          ja_concluidos?: number
           novos?: number
+          sem_correspondencia?: number
           sucesso?: boolean
           total?: number
         }
         Update: {
+          atualizados?: number
           duracao_ms?: number | null
           erro?: string | null
           executado_em?: string
           id?: string
+          ignorados_detalhes?: Json
+          ja_concluidos?: number
           novos?: number
+          sem_correspondencia?: number
           sucesso?: boolean
           total?: number
         }
