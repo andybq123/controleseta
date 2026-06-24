@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide-react";
-import { MapPin, Inbox } from "lucide-react";
+import { MapPin, Inbox, Lock } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useServerFn } from "@tanstack/react-start";
 import { geocodeAddress } from "@/lib/geocode.functions";
@@ -34,6 +34,12 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [lockState, setLockState] = useState<
+    | { kind: "idle" }
+    | { kind: "mine" }
+    | { kind: "reservada"; por: string; em: string }
+    | { kind: "concluida"; por: string; em: string }
+  >({ kind: "idle" });
   const [enderecoCoords, setEnderecoCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [enderecoTemNumero, setEnderecoTemNumero] = useState<boolean>(false);
   const [enderecoExact, setEnderecoExact] = useState<boolean>(false);
@@ -56,6 +62,32 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     enabled: open && !!protocoloProp?.id,
   });
   const protocolo = protocoloFresh ?? protocoloProp;
+
+  // Tenta reservar a triagem ao abrir; libera ao fechar
+  useEffect(() => {
+    if (!open || !protocolo?.id || !protocolo?.triagem_pendente) {
+      setLockState({ kind: "idle" });
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.rpc("reservar_triagem", { p_id: protocolo.id });
+      if (cancelled) return;
+      const r = data as any;
+      if (r?.ok) setLockState({ kind: "mine" });
+      else if (r?.motivo === "concluida") setLockState({ kind: "concluida", por: r.por, em: r.em });
+      else if (r?.motivo === "reservada") setLockState({ kind: "reservada", por: r.por, em: r.em });
+    })();
+    return () => {
+      cancelled = true;
+      // só libera se a reserva é nossa
+      if (protocolo?.id) {
+        void supabase.rpc("liberar_triagem", { p_id: protocolo.id });
+      }
+    };
+  }, [open, protocolo?.id, protocolo?.triagem_pendente]);
+
+  const lockBloqueia = lockState.kind === "reservada" || lockState.kind === "concluida";
 
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
@@ -224,6 +256,20 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           </DialogTitle>
         </DialogHeader>
 
+        {lockState.kind === "reservada" && (
+          <div className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-900 dark:text-blue-200 flex items-center gap-2">
+            <Lock className="h-4 w-4" />
+            Esta tarefa está em triagem por <strong>{lockState.por}</strong>
+            {" "}desde {new Date(lockState.em).toLocaleString("pt-BR")}. Você pode visualizar, mas não salvar enquanto a reserva estiver ativa (10 min).
+          </div>
+        )}
+        {lockState.kind === "concluida" && (
+          <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            Esta tarefa já foi triada por <strong>{lockState.por}</strong> em {new Date(lockState.em).toLocaleString("pt-BR")}.
+          </div>
+        )}
+
         {/* Ações rápidas */}
         <div className="flex flex-wrap gap-2 border-y py-3">
           {protocolo.triagem_pendente && (
@@ -236,39 +282,57 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                   toast.error("Defina a secretaria antes de concluir a triagem.");
                   return;
                 }
-                update.mutate({ triagem_pendente: false }, {
-                  onSuccess: () => {
+                (async () => {
+                  const { data, error } = await supabase.rpc("concluir_triagem", {
+                    p_id: protocolo.id,
+                    p_secretaria: protocolo.secretaria_id,
+                    p_local: (protocolo.local_id ?? null) as any,
+                  });
+                  if (error) { toast.error(error.message); return; }
+                  const r = data as any;
+                  if (r?.ok) {
                     toast.success("Triagem concluída. Protocolo enviado ao módulo correspondente.");
+                    qc.invalidateQueries({ queryKey: ["protocolos"] });
+                    qc.invalidateQueries({ queryKey: ["protocolos-triagem"] });
+                    qc.invalidateQueries({ queryKey: ["triagem-stats"] });
                     onOpenChange(false);
-                  },
-                });
+                  } else if (r?.motivo === "concluida") {
+                    toast.error(`Já triada por ${r.por} em ${new Date(r.em).toLocaleString("pt-BR")}.`);
+                    setLockState({ kind: "concluida", por: r.por, em: r.em });
+                  } else if (r?.motivo === "reservada") {
+                    toast.error(`Reservada por ${r.por} desde ${new Date(r.em).toLocaleString("pt-BR")}.`);
+                    setLockState({ kind: "reservada", por: r.por, em: r.em });
+                  } else {
+                    toast.error("Não foi possível concluir a triagem.");
+                  }
+                })();
               }}
-              disabled={update.isPending}
+              disabled={update.isPending || lockBloqueia}
             >
               <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
             </Button>
           )}
           {protocolo.status !== "concluido" ? (
-            <Button size="sm" onClick={handleConcluir} disabled={update.isPending}>
+            <Button size="sm" onClick={handleConcluir} disabled={update.isPending || lockBloqueia}>
               <CheckCircle2 className="h-4 w-4 mr-1" /> Concluir
             </Button>
           ) : (
-            <Button size="sm" variant="outline" onClick={handleReabrir} disabled={update.isPending}>
+            <Button size="sm" variant="outline" onClick={handleReabrir} disabled={update.isPending || lockBloqueia}>
               Reabrir
             </Button>
           )}
           {protocolo.status === "aberto" && (
-            <Button size="sm" variant="secondary" onClick={handleIniciar} disabled={update.isPending}>
+            <Button size="sm" variant="secondary" onClick={handleIniciar} disabled={update.isPending || lockBloqueia}>
               Iniciar atendimento
             </Button>
           )}
           {protocolo.status !== "concluido" && !protocolo.prorrogado && (
-            <Button size="sm" variant="outline" onClick={handleProrrogar} disabled={update.isPending}>
+            <Button size="sm" variant="outline" onClick={handleProrrogar} disabled={update.isPending || lockBloqueia}>
               <RotateCw className="h-4 w-4 mr-1" /> Prorrogar prazo
             </Button>
           )}
           {!editing ? (
-            <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="ml-auto">
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="ml-auto" disabled={lockBloqueia}>
               <Pencil className="h-4 w-4 mr-1" /> Editar
             </Button>
           ) : (
