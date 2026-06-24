@@ -120,7 +120,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         categoria: protocolo.categoria,
         status: protocolo.status,
         assunto: protocolo.assunto ?? "",
-        descricao: protocolo.descricao ?? "",
+        // Em triagem, o relato deve ser preenchido por quem está triando
+        descricao: protocolo.triagem_pendente ? "" : (protocolo.descricao ?? ""),
         solicitante: protocolo.solicitante ?? "",
         secretaria_id: protocolo.secretaria_id ?? "",
         local_id: protocolo.local_id ?? "",
@@ -130,7 +131,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         prorrogado: !!protocolo.prorrogado,
         endereco: protocolo.endereco ?? "",
       });
-      setEditing(false);
+      // Força modo edição em triagem para que o triador preencha a descrição obrigatória
+      setEditing(!!protocolo.triagem_pendente);
       setEnderecoCoords(null);
     }
   }, [protocolo]);
