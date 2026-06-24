@@ -438,13 +438,14 @@ function EditarDialog({
 
   const salvar = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("protocolos").update({
-        assunto: assunto || null,
+      const payload: Record<string, unknown> = {
+        assunto: (assunto || "Ouvidoria").slice(0, 500),
         descricao: descricao || null,
         solicitante: solicitante || null,
-        status: (status as any) || null,
         secretaria_id: secretariaId || null,
-      }).eq("id", protocolo.id);
+      };
+      if (status) payload.status = status;
+      const { error } = await supabase.from("protocolos").update(payload).eq("id", protocolo.id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Protocolo atualizado"); onSaved(); },
