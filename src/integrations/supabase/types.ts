@@ -344,6 +344,8 @@ export type Database = {
           solicitante: string | null
           status: Database["public"]["Enums"]["protocolo_status"]
           tipo: Database["public"]["Enums"]["protocolo_tipo"]
+          triagem_concluida_em: string | null
+          triagem_concluida_por: string | null
           triagem_pendente: boolean
           updated_at: string
         }
@@ -374,6 +376,8 @@ export type Database = {
           solicitante?: string | null
           status?: Database["public"]["Enums"]["protocolo_status"]
           tipo: Database["public"]["Enums"]["protocolo_tipo"]
+          triagem_concluida_em?: string | null
+          triagem_concluida_por?: string | null
           triagem_pendente?: boolean
           updated_at?: string
         }
@@ -404,6 +408,8 @@ export type Database = {
           solicitante?: string | null
           status?: Database["public"]["Enums"]["protocolo_status"]
           tipo?: Database["public"]["Enums"]["protocolo_tipo"]
+          triagem_concluida_em?: string | null
+          triagem_concluida_por?: string | null
           triagem_pendente?: boolean
           updated_at?: string
         }

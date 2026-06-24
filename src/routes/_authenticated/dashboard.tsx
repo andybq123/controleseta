@@ -18,6 +18,7 @@ import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestacoes-map";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { Inbox } from "lucide-react";
 import ouvidoriasData from "@/data/ouvidorias.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
 import { inferCategoriaFromTexto } from "@/lib/inferCategoria";
@@ -54,6 +55,13 @@ const CAT_COLORS: Record<CategoriaProtocolo, string> = {
   outros: "hsl(215 16% 60%)",
 };
 
+function fmtDuracao(horas: number): string {
+  if (!Number.isFinite(horas) || horas < 0) return "—";
+  if (horas < 1) return `${Math.round(horas * 60)} min`;
+  if (horas < 48) return `${horas.toFixed(1)} h`;
+  return `${Math.round(horas / 24)} dias`;
+}
+
 function Dashboard() {
   const navigate = useNavigate();
   const [drill, setDrill] = useState<{ title: string; items: any[] } | null>(null);
@@ -81,6 +89,36 @@ function Dashboard() {
           .order("data_abertura", { ascending: false })
           .range(from, to),
       ),
+  });
+
+  const { data: triagemStats } = useQuery({
+    queryKey: ["triagem-stats"],
+    queryFn: async () => {
+      const { count: pendentes } = await supabase
+        .from("protocolos")
+        .select("id", { count: "exact", head: true })
+        .eq("triagem_pendente", true);
+      const desdeIso = new Date(Date.now() - 30 * 86400000).toISOString();
+      const { data: concluidas } = await supabase
+        .from("protocolos")
+        .select("created_at, triagem_concluida_em")
+        .not("triagem_concluida_em", "is", null)
+        .gte("triagem_concluida_em", desdeIso);
+      const horas = (concluidas ?? [])
+        .map((r: any) => (new Date(r.triagem_concluida_em).getTime() - new Date(r.created_at).getTime()) / 3600000)
+        .filter((h) => h >= 0 && Number.isFinite(h));
+      const media = horas.length ? horas.reduce((a, b) => a + b, 0) / horas.length : 0;
+      const { data: maisAntiga } = await supabase
+        .from("protocolos")
+        .select("created_at")
+        .eq("triagem_pendente", true)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const esperaH = maisAntiga ? (Date.now() - new Date((maisAntiga as any).created_at).getTime()) / 3600000 : 0;
+      return { pendentes: pendentes ?? 0, mediaHoras: media, esperaMaiorHoras: esperaH, amostra: horas.length };
+    },
+    refetchInterval: 60000,
   });
 
   const { data: secretarias = [] } = useQuery({
@@ -423,6 +461,38 @@ function Dashboard() {
       </div>
 
       {/* KPI Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      </div>
+
+      {/* Triagem widget */}
+      <Card className="border-amber-500/40 bg-amber-50/40 dark:bg-amber-950/10">
+        <CardContent className="py-3 px-4 flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+            <Inbox className="h-5 w-5 text-amber-600" />
+            <div>
+              <div className="text-xs text-muted-foreground">Triagem pendente</div>
+              <div className="text-2xl font-bold leading-tight">{triagemStats?.pendentes ?? 0}</div>
+            </div>
+          </div>
+          <div className="border-l pl-4">
+            <div className="text-xs text-muted-foreground">Tempo médio (últimos 30d)</div>
+            <div className="text-lg font-semibold">
+              {triagemStats && triagemStats.amostra > 0 ? fmtDuracao(triagemStats.mediaHoras) : "—"}
+            </div>
+            <div className="text-[10px] text-muted-foreground">{triagemStats?.amostra ?? 0} triadas</div>
+          </div>
+          <div className="border-l pl-4">
+            <div className="text-xs text-muted-foreground">Mais antiga na fila</div>
+            <div className={`text-lg font-semibold ${(triagemStats?.esperaMaiorHoras ?? 0) > 24 ? "text-red-600" : ""}`}>
+              {triagemStats && triagemStats.pendentes > 0 ? fmtDuracao(triagemStats.esperaMaiorHoras) : "—"}
+            </div>
+          </div>
+          <Link to="/tarefas" className="ml-auto">
+            <Button size="sm" variant="outline">Abrir fila de triagem</Button>
+          </Link>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard icon={FileText} tone="primary" label="Total de Protocolos" value={total} hint="100% do período"
           onClick={() => openDrill("Todos os protocolos", () => true)} />
