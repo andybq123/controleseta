@@ -164,7 +164,20 @@ $("coletar").addEventListener("click", async () => {
     pollProgress();
     const res = await chrome.runtime.sendMessage({ type: "processar-lista", protocolos: lista });
     if (res?.ok) {
-      log(`OK: ${res.novos} novos / ${res.ignorados || 0} já existiam${res.msg ? `\n${res.msg}` : ""}`, "ok");
+      const partes = [
+        `Processados: ${res.novos || 0}`,
+        `Já concluídos (ignorados): ${res.jaConcluidos || 0}`,
+        `Sem correspondência: ${res.ignorados || 0}`,
+      ];
+      log(partes.join(" • "), "ok");
+      const ja = res.jaConcluidosLista || [];
+      if (ja.length > 0) {
+        const amostra = ja.slice(0, 10).map((x) => x.numero).join(", ");
+        const extra = ja.length > 10 ? ` … (+${ja.length - 10})` : "";
+        alert(
+          `${ja.length} protocolo(s) já estavam concluídos no sistema e foram ignorados:\n\n${amostra}${extra}`,
+        );
+      }
     } else {
       log(`Falha: ${res?.msg || "erro"}`, "err");
     }
