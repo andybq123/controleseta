@@ -18,6 +18,7 @@ import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 import { ManifestacoesMap, type SecretariaPoint } from "@/components/manifestacoes-map";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { Inbox } from "lucide-react";
 import ouvidoriasData from "@/data/ouvidorias.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
 import { inferCategoriaFromTexto } from "@/lib/inferCategoria";
