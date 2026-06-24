@@ -231,6 +231,32 @@ function MapaPage() {
                 ?? (protocolosTodos as any[]).find((x) => x.id === id);
               if (p) setDetail(p);
             }}
+            onMoveLocal={async (id, lat, lng) => {
+              const local = (locaisComCoord as any[]).find(l => l.id === id);
+              const { error } = await supabase
+                .from("locais")
+                .update({ latitude: lat, longitude: lng })
+                .eq("id", id);
+              if (error) {
+                toast.error(`Falha ao mover ${local?.nome ?? "local"}: ${error.message}`);
+              } else {
+                toast.success(`${local?.nome ?? "Local"} reposicionado.`);
+                await qc.invalidateQueries({ queryKey: ["locais-com-coordenadas"] });
+              }
+            }}
+            onMoveSecretaria={async (id, lat, lng) => {
+              const sec = (secretarias as any[]).find(s => s.id === id);
+              const { error } = await supabase
+                .from("secretarias")
+                .update({ latitude: lat, longitude: lng })
+                .eq("id", id);
+              if (error) {
+                toast.error(`Falha ao mover ${sec?.nome ?? "secretaria"}: ${error.message}`);
+              } else {
+                toast.success(`${sec?.nome ?? "Secretaria"} reposicionada.`);
+                await qc.invalidateQueries({ queryKey: ["secretarias"] });
+              }
+            }}
           />
         </CardContent>
       </Card>
