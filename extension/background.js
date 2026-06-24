@@ -84,33 +84,58 @@ function scrapeDetalhe() {
   }
 
   // Último despacho: localiza todos os blocos cujo cabeçalho contenha
-  // "Despacho" (timeline do 1doc) e captura o texto do último.
+  // "Despacho" (timeline do 1doc) e captura o texto COMPLETO do último.
+  const MAX_DESPACHO = 20000;
+  const normMultiline = (s) =>
+    (s || "")
+      .replace(/\r/g, "")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim();
   try {
-    const candidatos = [];
-    // 1) Elementos cujo próprio texto começa com "Despacho"
-    document.querySelectorAll("h1,h2,h3,h4,h5,strong,b,.titulo,.label,.cabecalho,div,li,section,article").forEach((el) => {
+    // 1) Cabeçalhos cujo próprio texto começa com "Despacho"
+    const headers = [];
+    document.querySelectorAll(
+      "h1,h2,h3,h4,h5,h6,strong,b,.titulo,.label,.cabecalho,legend,summary"
+    ).forEach((el) => {
       const t = norm(el.innerText || "");
       if (!t) return;
-      if (/^Despacho(\s|:|$)/i.test(t) && t.length < 400) {
-        candidatos.push(el);
+      if (/^Despacho(\s|:|$|\s*n[ºo°])/i.test(t) && t.length < 400) {
+        headers.push(el);
       }
     });
-    if (candidatos.length) {
-      // pega o último em ordem do documento
-      const ultimo = candidatos[candidatos.length - 1];
-      // sobe até um container razoável e pega o texto
-      const bloco = ultimo.closest("li,article,section,.timeline-item,.despacho,.item,.box,.card,div") || ultimo.parentElement || ultimo;
-      let texto = norm(bloco.innerText || "");
-      // limita tamanho
-      texto = texto.slice(0, 4000);
+
+    const pegarBlocoCompleto = (header) => {
+      // sobe até um container razoavelmente grande
+      let bloco = header.closest(
+        ".despacho,.timeline-item,.timeline__item,.item-timeline,article,section,li,.card,.box,.panel,.well,.row"
+      );
+      if (!bloco) bloco = header.parentElement || header;
+      // se o bloco ficou pequeno demais, sobe mais um nível
+      let tentativas = 0;
+      while (bloco && bloco.innerText && bloco.innerText.length < 200 && tentativas < 4) {
+        bloco = bloco.parentElement;
+        tentativas++;
+      }
+      return bloco;
+    };
+
+    if (headers.length) {
+      const ultimo = headers[headers.length - 1];
+      const bloco = pegarBlocoCompleto(ultimo);
+      const texto = normMultiline(bloco?.innerText || "").slice(0, MAX_DESPACHO);
       if (texto) padronizado.despacho = texto;
     }
-    // 2) Fallback: regex sobre o texto bruto
+
+    // 2) Fallback: regex sobre o texto bruto da página – pega tudo após
+    //    o último "Despacho" até o próximo marcador conhecido.
     if (!padronizado.despacho) {
-      const re = /Despacho[^\n]{0,200}\n([\s\S]{20,4000}?)(?=\n\s*Despacho\b|\n\s*Anexos?\b|\n\s*Histórico\b|$)/gi;
+      const txt = document.body.innerText || "";
+      const re = /Despacho\b[\s\S]*?(?=\n\s*(?:Despacho\b|Anexos?\b|Hist[óo]rico\b|Tramita[çc][ãa]o\b|Encaminhament|Resposta\b|$))/gi;
       let m, last = null;
-      while ((m = re.exec(bodyText)) !== null) last = m[1];
-      if (last) padronizado.despacho = norm(last).slice(0, 4000);
+      while ((m = re.exec(txt)) !== null) last = m[0];
+      if (last) padronizado.despacho = normMultiline(last).slice(0, MAX_DESPACHO);
     }
   } catch {}
 
