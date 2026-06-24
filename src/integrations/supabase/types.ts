@@ -346,6 +346,8 @@ export type Database = {
           tipo: Database["public"]["Enums"]["protocolo_tipo"]
           triagem_concluida_em: string | null
           triagem_concluida_por: string | null
+          triagem_lock_em: string | null
+          triagem_lock_por: string | null
           triagem_pendente: boolean
           updated_at: string
         }
@@ -378,6 +380,8 @@ export type Database = {
           tipo: Database["public"]["Enums"]["protocolo_tipo"]
           triagem_concluida_em?: string | null
           triagem_concluida_por?: string | null
+          triagem_lock_em?: string | null
+          triagem_lock_por?: string | null
           triagem_pendente?: boolean
           updated_at?: string
         }
@@ -410,6 +414,8 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["protocolo_tipo"]
           triagem_concluida_em?: string | null
           triagem_concluida_por?: string | null
+          triagem_lock_em?: string | null
+          triagem_lock_por?: string | null
           triagem_pendente?: boolean
           updated_at?: string
         }
@@ -495,6 +501,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      concluir_triagem: {
+        Args: { p_id: string; p_local: string; p_secretaria: string }
+        Returns: Json
+      }
       consultar_protocolo_publico: {
         Args: { p_hash: string; p_numero: string }
         Returns: {
@@ -529,6 +539,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      liberar_triagem: { Args: { p_id: string }; Returns: undefined }
+      reservar_triagem: { Args: { p_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"
