@@ -75,22 +75,6 @@ function scrapeDetalhe() {
   // --- Heurísticas extras para o layout do 1doc ---
   const bodyText = document.body.innerText || "";
 
-  // Solicitante: nome próximo do email/CPF no cabeçalho do protocolo
-  if (!padronizado.solicitante) {
-    const emailEl = document.querySelector('a[href^="mailto:"]');
-    if (emailEl) {
-      const container = emailEl.closest("div,li,td,section,header,aside") || emailEl.parentElement;
-      if (container) {
-        const lines = (container.innerText || "")
-          .split("\n").map((s) => s.trim()).filter(Boolean);
-        const nome = lines.find((l) =>
-          /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ' .-]{2,}$/.test(l) && !l.includes("@") && !/CPF/i.test(l)
-        );
-        if (nome) padronizado.solicitante = nome;
-      }
-    }
-  }
-
   // Finalidade: "Finalidade*: Reclamação"
   if (!padronizado.finalidade) {
     const mFin = bodyText.match(/Finalidade\s*\*?\s*:?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ /\-]{2,40})/);
@@ -99,15 +83,36 @@ function scrapeDetalhe() {
     }
   }
 
-  // Relato completo: bloco "Assunto: ..." no corpo principal
-  const rawMain = main.innerText || "";
-  const idxA = rawMain.indexOf("Assunto:");
-  if (idxA >= 0) {
-    const trecho = rawMain.slice(idxA, Math.min(rawMain.length, idxA + 8000)).trim();
-    padronizado.relato_completo = trecho;
-    // Sobrescreve descricao com o texto completo (Assunto + corpo)
-    padronizado.descricao = trecho;
-  }
+  // Último despacho: localiza todos os blocos cujo cabeçalho contenha
+  // "Despacho" (timeline do 1doc) e captura o texto do último.
+  try {
+    const candidatos = [];
+    // 1) Elementos cujo próprio texto começa com "Despacho"
+    document.querySelectorAll("h1,h2,h3,h4,h5,strong,b,.titulo,.label,.cabecalho,div,li,section,article").forEach((el) => {
+      const t = norm(el.innerText || "");
+      if (!t) return;
+      if (/^Despacho(\s|:|$)/i.test(t) && t.length < 400) {
+        candidatos.push(el);
+      }
+    });
+    if (candidatos.length) {
+      // pega o último em ordem do documento
+      const ultimo = candidatos[candidatos.length - 1];
+      // sobe até um container razoável e pega o texto
+      const bloco = ultimo.closest("li,article,section,.timeline-item,.despacho,.item,.box,.card,div") || ultimo.parentElement || ultimo;
+      let texto = norm(bloco.innerText || "");
+      // limita tamanho
+      texto = texto.slice(0, 4000);
+      if (texto) padronizado.despacho = texto;
+    }
+    // 2) Fallback: regex sobre o texto bruto
+    if (!padronizado.despacho) {
+      const re = /Despacho[^\n]{0,200}\n([\s\S]{20,4000}?)(?=\n\s*Despacho\b|\n\s*Anexos?\b|\n\s*Histórico\b|$)/gi;
+      let m, last = null;
+      while ((m = re.exec(bodyText)) !== null) last = m[1];
+      if (last) padronizado.despacho = norm(last).slice(0, 4000);
+    }
+  } catch {}
 
   const semAcentos = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const alvo = "deu baixa manualmente no prazo";
@@ -124,9 +129,9 @@ function scrapeDetalhe() {
     detalhes: padronizado,
     setor: padronizado.setor || null,
     status: padronizado.status || null,
-    relato: padronizado.relato_completo || padronizado.descricao || padronizado.mensagem || padronizado.relato || textoCompleto,
-    solicitante: padronizado.solicitante || null,
+    relato: padronizado.descricao || padronizado.mensagem || padronizado.relato || textoCompleto,
     finalidade: padronizado.finalidade || null,
+    despacho: padronizado.despacho || null,
     data_protocolo: padronizado.data || padronizado.data_abertura || padronizado.data_cadastro || null,
   };
 }

@@ -195,11 +195,7 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
                 status: "concluido",
                 data_conclusao: dataConclusao,
                 url: p.url ?? null,
-                ...(det.assunto ? { assunto: String(det.assunto) } : {}),
-                ...(det.relato_completo || det.descricao
-                  ? { descricao: String(det.relato_completo || det.descricao) }
-                  : {}),
-                ...(det.solicitante ? { solicitante: String(det.solicitante) } : {}),
+                ...(det.despacho ? { resolucao: String(det.despacho) } : {}),
                 ...(mapCategoria(det.finalidade as string | undefined)
                   ? { categoria: mapCategoria(det.finalidade as string | undefined) as any }
                   : {}),

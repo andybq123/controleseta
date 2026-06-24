@@ -349,6 +349,12 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 </a>
               </div>
             )}
+            {(protocolo as any).resolucao && (
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <div className="text-muted-foreground mb-1 font-medium">Resolução (último despacho)</div>
+                <p className="whitespace-pre-wrap">{(protocolo as any).resolucao}</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-3">

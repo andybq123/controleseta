@@ -389,6 +389,7 @@ export type Database = {
           numero: string
           origem: string | null
           prorrogado: boolean
+          resolucao: string | null
           secretaria_id: string | null
           sigilo: string
           solicitante: string | null
@@ -426,6 +427,7 @@ export type Database = {
           numero: string
           origem?: string | null
           prorrogado?: boolean
+          resolucao?: string | null
           secretaria_id?: string | null
           sigilo?: string
           solicitante?: string | null
@@ -463,6 +465,7 @@ export type Database = {
           numero?: string
           origem?: string | null
           prorrogado?: boolean
+          resolucao?: string | null
           secretaria_id?: string | null
           sigilo?: string
           solicitante?: string | null
