@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { createRoot, type Root } from "react-dom/client";
@@ -122,6 +122,146 @@ function localSvg(count: number) {
     </div>`;
 }
 
+// Cluster marker for multiple health units at the same coordinates
+function clusterSvg(unitCount: number, totalProtocolos: number) {
+  const c = loadColor(totalProtocolos);
+  const badge = unitCount > 99 ? "99+" : String(unitCount);
+  const badgeW = badge.length >= 3 ? 22 : badge.length === 2 ? 18 : 16;
+  return `
+    <div style="position:relative;width:44px;height:44px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" style="position:absolute;inset:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45));">
+        <rect x="6" y="10" width="32" height="28" rx="6" fill="#ffffff" stroke="${c.fill}" stroke-width="2.5" opacity="0.85"/>
+        <rect x="3" y="6" width="32" height="28" rx="6" fill="${c.fill}" stroke="#ffffff" stroke-width="2.5"/>
+        <path d="M15 13 H23 V18 H28 V24 H23 V29 H15 V24 H10 V18 H15 Z" fill="#ffffff"/>
+      </svg>
+      <div style="position:absolute;top:-4px;right:-6px;min-width:${badgeW}px;height:18px;padding:0 4px;border-radius:9px;background:#0f172a;color:#ffffff;font:700 11px/18px ui-sans-serif,system-ui,sans-serif;text-align:center;border:2px solid #ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.35);box-sizing:border-box;">${badge}</div>
+    </div>`;
+}
+
+// Interactive popup content for a single health unit (used by both single & cluster markers)
+function UnitProtocolList({
+  local,
+  protocolos,
+  onOpen,
+  onBack,
+}: {
+  local: LocalPoint;
+  protocolos: MapPoint[];
+  onOpen?: (id: string) => void;
+  onBack?: () => void;
+}) {
+  const count = protocolos.length;
+  const load = loadColor(count);
+  return (
+    <div className="space-y-2 min-w-[260px] max-w-[320px]">
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-[11px] text-primary hover:underline"
+        >
+          ← Voltar à lista de unidades
+        </button>
+      )}
+      <div>
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
+            style={{ background: load.fill }}
+            aria-hidden
+          >+</span>
+          <span className="text-sm font-bold">{local.nome}</span>
+        </div>
+        {local.secretaria && <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{local.secretaria}</p>}
+        <p className="text-xs mt-1">
+          <strong>{count}</strong> protocolo(s) ·{" "}
+          <span style={{ color: load.fill }} className="font-semibold">{load.label}</span>
+        </p>
+      </div>
+      {protocolos.length > 0 && (
+        <div className="max-h-[240px] overflow-y-auto -mx-1 pr-1 space-y-1">
+          {protocolos.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onOpen?.(p.id)}
+              className="w-full text-left text-xs px-2 py-1.5 rounded border border-border hover:bg-muted/60 transition"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono font-semibold text-primary">{p.numero}</span>
+                {p.status && (
+                  <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted">
+                    {p.status.replace(/_/g, " ")}
+                  </span>
+                )}
+              </div>
+              {p.assunto && <p className="mt-0.5 line-clamp-2 text-foreground">{p.assunto}</p>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClusterPopup({
+  locais,
+  protocolosPorLocal,
+  onOpen,
+}: {
+  locais: LocalPoint[];
+  protocolosPorLocal: Map<string, MapPoint[]>;
+  onOpen?: (id: string) => void;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const sel = locais.find(l => l.id === selected);
+  if (sel) {
+    return (
+      <UnitProtocolList
+        local={sel}
+        protocolos={protocolosPorLocal.get(sel.id) ?? []}
+        onOpen={onOpen}
+        onBack={() => setSelected(null)}
+      />
+    );
+  }
+  const totalProtos = locais.reduce((acc, l) => acc + (protocolosPorLocal.get(l.id)?.length ?? 0), 0);
+  return (
+    <div className="space-y-2 min-w-[260px] max-w-[320px]">
+      <div>
+        <p className="text-sm font-bold">{locais.length} unidades neste endereço</p>
+        <p className="text-[11px] text-muted-foreground">Total: {totalProtos} protocolo(s). Selecione uma unidade.</p>
+      </div>
+      <div className="max-h-[280px] overflow-y-auto -mx-1 pr-1 space-y-1">
+        {locais.map(l => {
+          const count = (protocolosPorLocal.get(l.id) ?? []).length;
+          const load = loadColor(count);
+          return (
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => setSelected(l.id)}
+              className="w-full text-left text-xs px-2 py-2 rounded border border-border hover:bg-muted/60 transition flex items-center justify-between gap-2"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                  style={{ background: load.fill }}
+                  aria-hidden
+                >+</span>
+                <span className="font-medium truncate">{l.nome}</span>
+              </div>
+              <span className="text-[10px] font-semibold shrink-0" style={{ color: load.fill }}>
+                {count} prot.
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function ManifestacoesMap({
   points,
   height = 400,
@@ -153,6 +293,17 @@ export function ManifestacoesMap({
     () => locais.filter(l => typeof l.lat === "number" && typeof l.lng === "number"),
     [locais],
   );
+  // Group health units that share the same (rounded) coordinates so they become a cluster
+  const localGroups = useMemo(() => {
+    const map = new Map<string, LocalPoint[]>();
+    validLocais.forEach(l => {
+      const key = `${l.lat.toFixed(5)},${l.lng.toFixed(5)}`;
+      const arr = map.get(key) ?? [];
+      arr.push(l);
+      map.set(key, arr);
+    });
+    return Array.from(map.values());
+  }, [validLocais]);
   const protocolosPorLocal = useMemo(() => {
     const map = new Map<string, MapPoint[]>();
     points.forEach(p => {
@@ -260,11 +411,36 @@ export function ManifestacoesMap({
         markersRef.current.push(marker);
       });
 
-      // locais (UBS / pontos de atendimento)
-      validLocais.forEach(l => {
+      // locais (UBS / pontos de atendimento) — render single OR cluster marker
+      localGroups.forEach(group => {
+        // CLUSTER: multiple unidades sharing the same coordinate
+        if (group.length > 1) {
+          const totalProtos = group.reduce((acc, l) => acc + (protocolosPorLocal.get(l.id)?.length ?? 0), 0);
+          const el = document.createElement("div");
+          el.innerHTML = clusterSvg(group.length, totalProtos);
+          el.style.cursor = "pointer";
+          const popupNode = document.createElement("div");
+          const root = createRoot(popupNode);
+          root.render(
+            <ClusterPopup
+              locais={group}
+              protocolosPorLocal={protocolosPorLocal}
+              onOpen={(id) => onOpenRef.current?.(id)}
+            />,
+          );
+          rootsRef.current.push(root);
+          const popup = new mapboxgl.Popup({ offset: 24, maxWidth: "340px" }).setDOMContent(popupNode);
+          const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+            .setLngLat([group[0].lng, group[0].lat])
+            .setPopup(popup)
+            .addTo(map);
+          markersRef.current.push(marker);
+          return;
+        }
+        // SINGLE
+        const l = group[0];
         const lista = protocolosPorLocal.get(l.id) ?? [];
         const count = lista.length;
-        const load = loadColor(count);
         const el = document.createElement("div");
         el.innerHTML = localSvg(count);
         el.style.cursor = onMoveLocalRef.current ? "grab" : "pointer";
@@ -272,45 +448,7 @@ export function ManifestacoesMap({
         const popupNode = document.createElement("div");
         const root = createRoot(popupNode);
         root.render(
-          <div className="space-y-2 min-w-[260px] max-w-[320px]">
-            <div>
-              <div className="flex items-center gap-2">
-                <span
-                  className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                  style={{ background: load.fill }}
-                  aria-hidden
-                >+</span>
-                <span className="text-sm font-bold">{l.nome}</span>
-              </div>
-              {l.secretaria && <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{l.secretaria}</p>}
-              <p className="text-xs mt-1">
-                <strong>{count}</strong> protocolo(s) ·{" "}
-                <span style={{ color: load.fill }} className="font-semibold">{load.label}</span>
-              </p>
-            </div>
-            {lista.length > 0 && (
-              <div className="max-h-[260px] overflow-y-auto -mx-1 pr-1 space-y-1">
-                {lista.map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => onOpenRef.current?.(p.id)}
-                    className="w-full text-left text-xs px-2 py-1.5 rounded border border-border hover:bg-muted/60 transition"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono font-semibold text-primary">{p.numero}</span>
-                      {p.status && (
-                        <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted">
-                          {p.status.replace(/_/g, " ")}
-                        </span>
-                      )}
-                    </div>
-                    {p.assunto && <p className="mt-0.5 line-clamp-2 text-foreground">{p.assunto}</p>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>,
+          <UnitProtocolList local={l} protocolos={lista} onOpen={(id) => onOpenRef.current?.(id)} />,
         );
         rootsRef.current.push(root);
         const popup = new mapboxgl.Popup({ offset: 22, maxWidth: "340px" }).setDOMContent(popupNode);
@@ -392,11 +530,25 @@ export function ManifestacoesMap({
 
     if (map.isStyleLoaded()) apply();
     else map.once("load", apply);
-  }, [valid, validSecs, validLocais, protocolosPorLocal]);
+  }, [valid, validSecs, validLocais, localGroups, protocolosPorLocal]);
 
   return (
-    <div className={className} style={{ height, width: "100%", isolation: "isolate", position: "relative", zIndex: 0 }}>
-      <div ref={containerRef} style={{ height: "100%", width: "100%", borderRadius: 8, overflow: "hidden" }} />
+    <div
+      className={className}
+      style={{
+        height,
+        width: "100%",
+        isolation: "isolate",
+        position: "relative",
+        zIndex: 0,
+        borderRadius: 8,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        ref={containerRef}
+        style={{ height: "100%", width: "100%", borderRadius: 8, overflow: "hidden", contain: "paint" }}
+      />
       {!valid.length && (
         <p className="text-xs text-muted-foreground mt-2 text-center">
           Nenhum protocolo com endereço georreferenciado ainda.
