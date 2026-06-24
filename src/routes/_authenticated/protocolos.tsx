@@ -63,6 +63,15 @@ function ProtocolosPage() {
     queryFn: async () => (await supabase.from("secretarias").select("*").order("nome")).data ?? [],
   });
 
+  // ID da secretaria de Saúde — protocolos dessa secretaria aparecem só na aba Saúde
+  const { data: saudeSecId } = useQuery({
+    queryKey: ["secretaria-saude-id"],
+    queryFn: async () => {
+      const { data } = await supabase.from("secretarias").select("id").eq("nome", "Saúde").maybeSingle();
+      return data?.id ?? null;
+    },
+  });
+
   const { data: locais = [] } = useQuery({
     queryKey: ["locais"],
     queryFn: async () => (await supabase.from("locais").select("*").order("nome")).data ?? [],
