@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -206,7 +206,7 @@ function ColetorPage() {
 
 function Field({
   label, value, onCopy, trailing,
-}: { label: string; value: string; onCopy: () => void; trailing?: React.ReactNode }) {
+}: { label: string; value: string; onCopy: () => void; trailing?: ReactNode }) {
   return (
     <div className="space-y-1.5">
       <label className="text-xs font-medium text-muted-foreground">{label}</label>
