@@ -120,7 +120,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         categoria: protocolo.categoria,
         status: protocolo.status,
         assunto: protocolo.assunto ?? "",
-        descricao: protocolo.descricao ?? "",
+        // Em triagem, o relato deve ser preenchido por quem está triando
+        descricao: protocolo.triagem_pendente ? "" : (protocolo.descricao ?? ""),
         solicitante: protocolo.solicitante ?? "",
         secretaria_id: protocolo.secretaria_id ?? "",
         local_id: protocolo.local_id ?? "",
@@ -130,7 +131,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         prorrogado: !!protocolo.prorrogado,
         endereco: protocolo.endereco ?? "",
       });
-      setEditing(false);
+      // Força modo edição em triagem para que o triador preencha a descrição obrigatória
+      setEditing(!!protocolo.triagem_pendente);
       setEnderecoCoords(null);
     }
   }, [protocolo]);
@@ -282,7 +284,18 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                   toast.error("Defina a secretaria antes de concluir a triagem.");
                   return;
                 }
+                const relato = (form.descricao ?? "").trim();
+                if (relato.length < 5) {
+                  toast.error("Informe uma descrição (breve relato) antes de concluir a triagem.");
+                  return;
+                }
                 (async () => {
+                  // Persiste o relato da triagem antes de concluir
+                  const { error: upErr } = await supabase
+                    .from("protocolos")
+                    .update({ descricao: relato })
+                    .eq("id", protocolo.id);
+                  if (upErr) { toast.error(upErr.message); return; }
                   const { data, error } = await supabase.rpc("concluir_triagem", {
                     p_id: protocolo.id,
                     p_secretaria: protocolo.secretaria_id,
@@ -423,8 +436,19 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             <Field2 label="Assunto">
               <Input value={form.assunto} onChange={e => setForm({ ...form, assunto: e.target.value })} />
             </Field2>
-            <Field2 label="Descrição">
-              <Textarea rows={4} value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })} />
+            <Field2 label={protocolo.triagem_pendente ? "Descrição (breve relato) *" : "Descrição"}>
+              <Textarea
+                rows={4}
+                value={form.descricao}
+                onChange={e => setForm({ ...form, descricao: e.target.value })}
+                placeholder={protocolo.triagem_pendente ? "Descreva brevemente o relato desta manifestação para a secretaria responsável." : undefined}
+                className={protocolo.triagem_pendente && !form.descricao.trim() ? "border-amber-500 focus-visible:ring-amber-500" : undefined}
+              />
+              {protocolo.triagem_pendente && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Obrigatório para concluir a triagem.
+                </p>
+              )}
             </Field2>
             <div className="grid grid-cols-2 gap-3">
               <Field2 label="Solicitante">
