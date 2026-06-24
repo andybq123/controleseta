@@ -198,7 +198,7 @@ async function processarLista(protocolos) {
       }
     }
 
-    // Dedup: pergunta ao backend quais já existem
+    // Buscamos no backend quais protocolos JÁ EXISTEM (são esses que vamos concluir).
     await setProgress({ fase: "verificando_duplicados" });
     const numeros = lista.map((p) => p.numero);
     let existentes = new Set();
@@ -213,13 +213,13 @@ async function processarLista(protocolos) {
         existentes = new Set(d.existentes || []);
       }
     } catch {}
-    const jaSalvos = existentes.size;
-    lista = lista.filter((p) => !existentes.has(p.numero));
-    await setProgress({ jaSalvos, novos: lista.length });
+    const semCorrespondencia = lista.length - existentes.size;
+    lista = lista.filter((p) => existentes.has(p.numero));
+    await setProgress({ jaSalvos: semCorrespondencia, novos: lista.length });
 
     if (lista.length === 0) {
       await setProgress({ rodando: false, fase: "concluido", total: 0, novos: 0 });
-      return { ok: true, novos: 0, ignorados: jaSalvos, total: 0, msg: `Todos os ${jaSalvos} já estavam salvos.` };
+      return { ok: true, novos: 0, ignorados: semCorrespondencia, total: 0, msg: `Nenhum dos ${semCorrespondencia} corresponde a protocolos do sistema.` };
     }
 
     if (coletarDetalhes) {
@@ -258,8 +258,8 @@ async function processarLista(protocolos) {
       await setProgress({ rodando: false, fase: "erro" });
       return { ok: false, msg: data.error || `Falha ${res.status}` };
     }
-    await setProgress({ rodando: false, fase: "concluido", novos: data.novos, total: data.total });
-    return { ok: true, novos: data.novos, ignorados: (data.ignorados || 0) + jaSalvos, total: data.total };
+    await setProgress({ rodando: false, fase: "concluido", novos: data.atualizados ?? data.novos ?? 0, total: data.total });
+    return { ok: true, novos: data.atualizados ?? data.novos ?? 0, ignorados: (data.ignorados || 0) + semCorrespondencia, total: data.total };
   } catch (e) {
     await setProgress({ rodando: false, fase: "erro" });
     return { ok: false, msg: e.message };
