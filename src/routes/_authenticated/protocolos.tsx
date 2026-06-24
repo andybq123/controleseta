@@ -95,6 +95,7 @@ function ProtocolosPage() {
   });
 
   const filtrados = protocolos.filter(p => {
+    if (saudeSecId && p.secretaria_id === saudeSecId) return false;
     if (filtroStatus !== "todos" && p.status !== filtroStatus) return false;
     if (filtroTipo !== "todos" && p.tipo !== filtroTipo) return false;
     if (filtroCategoria !== "todos" && p.categoria !== filtroCategoria) return false;
