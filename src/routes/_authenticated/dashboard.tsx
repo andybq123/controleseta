@@ -840,16 +840,23 @@ function Dashboard() {
                 id: s.id, lat: s.latitude, lng: s.longitude, nome: s.nome,
                 sigla: s.sigla, endereco: s.endereco, icone: s.icone,
               }))}
+            locais={(locaisComCoord as any[]).map<LocalPoint>((l) => ({
+              id: l.id,
+              lat: l.latitude,
+              lng: l.longitude,
+              nome: l.nome,
+              secretaria: l.secretarias?.nome,
+              secretariaIcone: l.secretarias?.icone,
+            }))}
             onOpenProtocolo={(id) => {
               const p = enriched.find((x: any) => x.id === id);
               if (p) setDetail(p);
             }}
             points={filtrados
-              .filter((p: any) => p.latitude != null && p.longitude != null)
               .map((p: any) => ({
                 id: p.id,
-                lat: p.latitude,
-                lng: p.longitude,
+                lat: p.latitude ?? NaN,
+                lng: p.longitude ?? NaN,
                 numero: p.numero,
                 assunto: p.assunto,
                 endereco: p.endereco,
@@ -860,6 +867,7 @@ function Dashboard() {
                 categoria: p.categoria,
                 tipo: p.tipo,
                 local: p.locais?.nome,
+                local_id: p.local_id,
               }))}
           />
         </CardContent>
