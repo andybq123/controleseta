@@ -26,6 +26,7 @@ import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
 import { Route as AuthenticatedEmailInboxRouteImport } from './routes/_authenticated/email-inbox'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedColetorRouteImport } from './routes/_authenticated/coletor'
 import { Route as AuthenticatedAtrasadosRouteImport } from './routes/_authenticated/atrasados'
 import { Route as AuthenticatedAssuntosRouteImport } from './routes/_authenticated/assuntos'
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
@@ -123,6 +124,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedColetorRoute = AuthenticatedColetorRouteImport.update({
+  id: '/coletor',
+  path: '/coletor',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAtrasadosRoute = AuthenticatedAtrasadosRouteImport.update({
   id: '/atrasados',
   path: '/atrasados',
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/assuntos': typeof AuthenticatedAssuntosRoute
   '/atrasados': typeof AuthenticatedAtrasadosRoute
+  '/coletor': typeof AuthenticatedColetorRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
   '/mapa': typeof AuthenticatedMapaRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/assuntos': typeof AuthenticatedAssuntosRoute
   '/atrasados': typeof AuthenticatedAtrasadosRoute
+  '/coletor': typeof AuthenticatedColetorRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
   '/mapa': typeof AuthenticatedMapaRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/assuntos': typeof AuthenticatedAssuntosRoute
   '/_authenticated/atrasados': typeof AuthenticatedAtrasadosRoute
+  '/_authenticated/coletor': typeof AuthenticatedColetorRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/email-inbox': typeof AuthenticatedEmailInboxRoute
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/assuntos'
     | '/atrasados'
+    | '/coletor'
     | '/dashboard'
     | '/email-inbox'
     | '/mapa'
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/assuntos'
     | '/atrasados'
+    | '/coletor'
     | '/dashboard'
     | '/email-inbox'
     | '/mapa'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/assuntos'
     | '/_authenticated/atrasados'
+    | '/_authenticated/coletor'
     | '/_authenticated/dashboard'
     | '/_authenticated/email-inbox'
     | '/_authenticated/mapa'
@@ -501,6 +513,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/coletor': {
+      id: '/_authenticated/coletor'
+      path: '/coletor'
+      fullPath: '/coletor'
+      preLoaderRoute: typeof AuthenticatedColetorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/atrasados': {
       id: '/_authenticated/atrasados'
       path: '/atrasados'
@@ -601,6 +620,7 @@ const AuthenticatedRelatoriosRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAssuntosRoute: typeof AuthenticatedAssuntosRoute
   AuthenticatedAtrasadosRoute: typeof AuthenticatedAtrasadosRoute
+  AuthenticatedColetorRoute: typeof AuthenticatedColetorRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmailInboxRoute: typeof AuthenticatedEmailInboxRoute
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
@@ -617,6 +637,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAssuntosRoute: AuthenticatedAssuntosRoute,
   AuthenticatedAtrasadosRoute: AuthenticatedAtrasadosRoute,
+  AuthenticatedColetorRoute: AuthenticatedColetorRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmailInboxRoute: AuthenticatedEmailInboxRoute,
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
