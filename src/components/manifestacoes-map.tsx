@@ -126,7 +126,7 @@ export function ManifestacoesMap({
   locais?: LocalPoint[];
 }) {
   const valid = useMemo(
-    () => points.filter(p => typeof p.lat === "number" && typeof p.lng === "number"),
+    () => points.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng)),
     [points],
   );
   const validSecs = useMemo(
