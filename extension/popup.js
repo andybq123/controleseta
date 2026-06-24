@@ -74,7 +74,7 @@ async function loadCfg() {
   $("token").value = cfg.token || "";
   $("autoCloseTab").checked = cfg.autoCloseTab !== false;
   $("coletarDetalhes").checked = cfg.coletarDetalhes !== false;
-  $("delayDetalheMs").value = cfg.delayDetalheMs || 1500;
+  $("delayDetalheMs").value = cfg.delayDetalheMs || 500;
   $("maxDetalhes").value = cfg.maxDetalhes || 200;
   $("apenasArquivado").checked = cfg.apenasArquivado !== false;
   pollProgress();
@@ -92,7 +92,7 @@ $("salvar-opts").addEventListener("click", async () => {
   await chrome.storage.local.set({
     autoCloseTab: $("autoCloseTab").checked,
     coletarDetalhes: $("coletarDetalhes").checked,
-    delayDetalheMs: Math.max(500, Number($("delayDetalheMs").value) || 1500),
+    delayDetalheMs: Math.max(100, Number($("delayDetalheMs").value) || 500),
     maxDetalhes: Math.max(1, Number($("maxDetalhes").value) || 200),
     apenasArquivado: $("apenasArquivado").checked,
   });
