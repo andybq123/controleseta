@@ -52,6 +52,7 @@ const CAT_COLORS: Record<CategoriaProtocolo, string> = {
   elogio: "hsl(142 71% 45%)",
   denuncia: "hsl(0 84% 60%)",
   pedido_informacao: "hsl(262 83% 58%)",
+  sugestao: "hsl(199 89% 48%)",
   outros: "hsl(215 16% 60%)",
 };
 
