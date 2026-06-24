@@ -384,16 +384,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               {protocolo.locais && <Field label="Local" value={protocolo.locais.nome} />}
               <Field label="Solicitante" value={protocolo.solicitante ?? "—"} />
             </div>
-            <div className="pt-2">
-              <Button type="button" size="sm" variant="outline" onClick={() => { setPendingPatch({}); setPickerOpen(true); }}>
-                <MapPin className="h-3 w-3 mr-1" /> Ajustar ponto no mapa
-              </Button>
-              {protocolo.latitude != null && protocolo.longitude != null && (
-                <span className="ml-2 text-[11px] text-muted-foreground">
-                  Atual: {Number(protocolo.latitude).toFixed(5)}, {Number(protocolo.longitude).toFixed(5)}
-                </span>
-              )}
-            </div>
           </div>
         ) : (
           <div className="space-y-3">
@@ -479,29 +469,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 <Input type="date" value={form.data_conclusao ?? ""} onChange={e => setForm({ ...form, data_conclusao: e.target.value })} />
               </Field2>
             </div>
-            <Field2 label="Endereço (para mapa)">
-              <AddressAutocomplete
-                value={form.endereco ?? ""}
-                onChange={(v) => { setForm({ ...form, endereco: v }); setEnderecoCoords(null); setEnderecoTemNumero(false); setEnderecoExact(false); }}
-                onSelect={(s) => {
-                  setForm({ ...form, endereco: s.label });
-                  setEnderecoCoords({ lat: s.lat, lng: s.lng });
-                  setEnderecoTemNumero(!!s.houseNumber);
-                  setEnderecoExact(s.exact !== false && !!s.houseNumber);
-                  if (!s.houseNumber) {
-                    toast.warning("Sugestão sem número do imóvel. Inclua o número (ex.: \"Rua X, 174\") para um pino preciso.");
-                  }
-                }}
-                placeholder="Digite e selecione uma rua de Brusque…"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Sugestões automáticas de ruas em Brusque/SC. A localização é atualizada ao salvar.
-              </p>
-              <Button type="button" size="sm" variant="outline" onClick={() => { setPendingPatch(null); setPickerOpen(true); }}>
-                <MapPin className="h-3 w-3 mr-1" /> Ajustar ponto no mapa
-              </Button>
-            </Field2>
-
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditing(false)}>Cancelar</Button>
               <Button onClick={handleSave} disabled={update.isPending}>
