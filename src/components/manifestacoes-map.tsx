@@ -100,13 +100,25 @@ function formatLocalDate(s: string) {
 // Brusque center [lng, lat]
 const BRUSQUE: [number, number] = [-48.9114, -27.0978];
 
-function localSvg(emoji: string) {
+// Color by protocol load: green (light), yellow (attention), red (heavy)
+function loadColor(count: number) {
+  if (count >= 6) return { fill: "#dc2626", stroke: "#7f1d1d", label: "Alta demanda" };   // red-600
+  if (count >= 3) return { fill: "#f59e0b", stroke: "#78350f", label: "Atenção" };        // amber-500
+  return { fill: "#16a34a", stroke: "#14532d", label: "Tranquilo" };                       // green-600
+}
+
+// Health-unit marker: medical cross + count badge, colored by load
+function localSvg(count: number) {
+  const c = loadColor(count);
+  const badge = count > 99 ? "99+" : String(count);
+  const badgeW = badge.length >= 3 ? 22 : badge.length === 2 ? 18 : 16;
   return `
-    <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" style="position:absolute;inset:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.35));">
-        <circle cx="16" cy="16" r="14" fill="#ffffff" stroke="#10b981" stroke-width="2.5"/>
+    <div style="position:relative;width:40px;height:40px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" style="position:absolute;inset:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.4));">
+        <circle cx="20" cy="20" r="17" fill="${c.fill}" stroke="#ffffff" stroke-width="3"/>
+        <path d="M16 10 H24 V16 H30 V24 H24 V30 H16 V24 H10 V16 H16 Z" fill="#ffffff"/>
       </svg>
-      <div style="position:relative;font-size:16px;line-height:1;">${emoji}</div>
+      <div style="position:absolute;top:-4px;right:-6px;min-width:${badgeW}px;height:18px;padding:0 4px;border-radius:9px;background:#0f172a;color:#ffffff;font:700 11px/18px ui-sans-serif,system-ui,sans-serif;text-align:center;border:2px solid #ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.35);box-sizing:border-box;">${badge}</div>
     </div>`;
 }
 
@@ -250,23 +262,31 @@ export function ManifestacoesMap({
 
       // locais (UBS / pontos de atendimento)
       validLocais.forEach(l => {
-        const emoji = SECRETARIA_ICONES[l.secretariaIcone ?? "administracao"]?.emoji ?? "📍";
+        const lista = protocolosPorLocal.get(l.id) ?? [];
+        const count = lista.length;
+        const load = loadColor(count);
         const el = document.createElement("div");
-        el.innerHTML = localSvg(emoji);
+        el.innerHTML = localSvg(count);
         el.style.cursor = onMoveLocalRef.current ? "grab" : "pointer";
         el.title = onMoveLocalRef.current ? "Arraste para reposicionar" : "";
-        const lista = protocolosPorLocal.get(l.id) ?? [];
         const popupNode = document.createElement("div");
         const root = createRoot(popupNode);
         root.render(
           <div className="space-y-2 min-w-[260px] max-w-[320px]">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base leading-none">{emoji}</span>
+                <span
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                  style={{ background: load.fill }}
+                  aria-hidden
+                >+</span>
                 <span className="text-sm font-bold">{l.nome}</span>
               </div>
               {l.secretaria && <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{l.secretaria}</p>}
-              <p className="text-xs mt-1"><strong>{lista.length}</strong> protocolo(s) neste local</p>
+              <p className="text-xs mt-1">
+                <strong>{count}</strong> protocolo(s) ·{" "}
+                <span style={{ color: load.fill }} className="font-semibold">{load.label}</span>
+              </p>
             </div>
             {lista.length > 0 && (
               <div className="max-h-[260px] overflow-y-auto -mx-1 pr-1 space-y-1">
