@@ -380,6 +380,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
         solicitante: extr.solicitante || remetente || null,
         secretaria_id: secretariaId, local_id: localId,
         data_abertura: dataAbertura, created_by: account.created_by,
+        triagem_pendente: extr.tipo === "ouvidoria",
       })
       .select("id, numero").single();
     if (errIns) throw errIns;

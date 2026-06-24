@@ -33,6 +33,7 @@ function MapaPage() {
         supabase
           .from("protocolos")
           .select("id, numero, assunto, endereco, latitude, longitude, status, secretaria_id, categoria, tipo, data_abertura, data_conclusao, locais(nome), secretarias(nome)")
+          .eq("triagem_pendente", false)
           .not("latitude", "is", null)
           .not("longitude", "is", null)
           .range(from, to),

@@ -344,6 +344,7 @@ export type Database = {
           solicitante: string | null
           status: Database["public"]["Enums"]["protocolo_status"]
           tipo: Database["public"]["Enums"]["protocolo_tipo"]
+          triagem_pendente: boolean
           updated_at: string
         }
         Insert: {
@@ -373,6 +374,7 @@ export type Database = {
           solicitante?: string | null
           status?: Database["public"]["Enums"]["protocolo_status"]
           tipo: Database["public"]["Enums"]["protocolo_tipo"]
+          triagem_pendente?: boolean
           updated_at?: string
         }
         Update: {
@@ -402,6 +404,7 @@ export type Database = {
           solicitante?: string | null
           status?: Database["public"]["Enums"]["protocolo_status"]
           tipo?: Database["public"]["Enums"]["protocolo_tipo"]
+          triagem_pendente?: boolean
           updated_at?: string
         }
         Relationships: [

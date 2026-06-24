@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide-react";
-import { MapPin } from "lucide-react";
+import { MapPin, Inbox } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useServerFn } from "@tanstack/react-start";
 import { geocodeAddress } from "@/lib/geocode.functions";
@@ -226,6 +226,28 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
 
         {/* Ações rápidas */}
         <div className="flex flex-wrap gap-2 border-y py-3">
+          {protocolo.triagem_pendente && (
+            <Button
+              size="sm"
+              variant="default"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={() => {
+                if (!protocolo.secretaria_id) {
+                  toast.error("Defina a secretaria antes de concluir a triagem.");
+                  return;
+                }
+                update.mutate({ triagem_pendente: false }, {
+                  onSuccess: () => {
+                    toast.success("Triagem concluída. Protocolo enviado ao módulo correspondente.");
+                    onOpenChange(false);
+                  },
+                });
+              }}
+              disabled={update.isPending}
+            >
+              <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
+            </Button>
+          )}
           {protocolo.status !== "concluido" ? (
             <Button size="sm" onClick={handleConcluir} disabled={update.isPending}>
               <CheckCircle2 className="h-4 w-4 mr-1" /> Concluir
