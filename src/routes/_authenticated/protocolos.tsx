@@ -50,6 +50,7 @@ function ProtocolosPage() {
         supabase
           .from("protocolos")
           .select("*, secretarias(nome, sigla), locais(nome)")
+          .eq("triagem_pendente", false)
           .order("data_abertura", { ascending: false })
           .range(from, to),
       );
