@@ -34,7 +34,7 @@ export const getColetorInfo = createServerFn({ method: "GET" })
       supabaseAdmin
         .from("protocolos")
         .select("id", { count: "exact", head: true })
-        .eq("origem", "1doc-coletor"),
+        .ilike("url", "%1doc%"),
       supabaseAdmin
         .from("coletas")
         .select("id, executado_em, total, novos, sucesso, erro, duracao_ms")
@@ -47,8 +47,8 @@ export const getColetorInfo = createServerFn({ method: "GET" })
     const { count: novosHoje } = await supabaseAdmin
       .from("protocolos")
       .select("id", { count: "exact", head: true })
-      .eq("origem", "1doc-coletor")
-      .gte("coletado_em", inicioHoje.toISOString());
+      .ilike("url", "%1doc%")
+      .gte("updated_at", inicioHoje.toISOString());
 
     const coletas = (ultimas ?? []) as ColetorInfo["coletas"];
     const ultimaColeta = coletas.find((c) => c.sucesso)?.executado_em ?? coletas[0]?.executado_em ?? null;

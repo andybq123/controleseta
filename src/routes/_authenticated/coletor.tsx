@@ -143,8 +143,8 @@ function ProtocolosColetados() {
       const { data, error } = await supabase
         .from("protocolos")
         .select("id, numero, assunto, descricao, status, solicitante, data_abertura, data_conclusao, secretaria_id, url, coletado_em, detalhes, secretarias(nome)")
-        .eq("origem", "1doc-coletor")
-        .order("coletado_em", { ascending: false })
+        .ilike("url", "%1doc%")
+        .order("data_conclusao", { ascending: false, nullsFirst: false })
         .limit(1000);
       if (error) throw error;
       return (data || []) as unknown as ProtocoloRow[];
