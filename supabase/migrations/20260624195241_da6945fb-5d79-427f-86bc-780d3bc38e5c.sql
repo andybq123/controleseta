@@ -1,0 +1,1 @@
+ALTER TYPE public.protocolo_categoria ADD VALUE IF NOT EXISTS 'sugestao';
