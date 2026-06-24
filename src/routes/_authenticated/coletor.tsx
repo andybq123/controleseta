@@ -443,7 +443,7 @@ function EditarDialog({
         descricao: descricao || null,
         solicitante: solicitante || null,
         secretaria_id: secretariaId || null,
-        ...(status ? { status: status as "em_andamento" | "concluido" | "cancelado" } : {}),
+        ...(status ? { status: status as "aberto" | "em_andamento" | "concluido" } : {}),
       }).eq("id", protocolo.id);
       if (error) throw error;
     },
@@ -473,9 +473,9 @@ function EditarDialog({
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">—</option>
+                <option value="aberto">aberto</option>
                 <option value="em_andamento">em_andamento</option>
                 <option value="concluido">concluido</option>
-                <option value="cancelado">cancelado</option>
               </select>
             </Labeled>
           </div>
