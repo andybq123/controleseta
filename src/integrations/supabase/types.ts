@@ -82,6 +82,36 @@ export type Database = {
           },
         ]
       }
+      coletas: {
+        Row: {
+          duracao_ms: number | null
+          erro: string | null
+          executado_em: string
+          id: string
+          novos: number
+          sucesso: boolean
+          total: number
+        }
+        Insert: {
+          duracao_ms?: number | null
+          erro?: string | null
+          executado_em?: string
+          id?: string
+          novos?: number
+          sucesso?: boolean
+          total?: number
+        }
+        Update: {
+          duracao_ms?: number | null
+          erro?: string | null
+          executado_em?: string
+          id?: string
+          novos?: number
+          sucesso?: boolean
+          total?: number
+        }
+        Relationships: []
+      }
       email_inbox_accounts: {
         Row: {
           ativo: boolean
@@ -326,6 +356,7 @@ export type Database = {
         Row: {
           assunto: string
           categoria: Database["public"]["Enums"]["protocolo_categoria"]
+          coletado_em: string | null
           contato_solicitante: string | null
           created_at: string
           created_by: string | null
@@ -333,6 +364,7 @@ export type Database = {
           data_conclusao: string | null
           data_prorrogacao: string | null
           descricao: string | null
+          detalhes: Json | null
           endereco: string | null
           hash_consulta: string | null
           id: string
@@ -356,10 +388,12 @@ export type Database = {
           triagem_lock_por: string | null
           triagem_pendente: boolean
           updated_at: string
+          url: string | null
         }
         Insert: {
           assunto: string
           categoria?: Database["public"]["Enums"]["protocolo_categoria"]
+          coletado_em?: string | null
           contato_solicitante?: string | null
           created_at?: string
           created_by?: string | null
@@ -367,6 +401,7 @@ export type Database = {
           data_conclusao?: string | null
           data_prorrogacao?: string | null
           descricao?: string | null
+          detalhes?: Json | null
           endereco?: string | null
           hash_consulta?: string | null
           id?: string
@@ -390,10 +425,12 @@ export type Database = {
           triagem_lock_por?: string | null
           triagem_pendente?: boolean
           updated_at?: string
+          url?: string | null
         }
         Update: {
           assunto?: string
           categoria?: Database["public"]["Enums"]["protocolo_categoria"]
+          coletado_em?: string | null
           contato_solicitante?: string | null
           created_at?: string
           created_by?: string | null
@@ -401,6 +438,7 @@ export type Database = {
           data_conclusao?: string | null
           data_prorrogacao?: string | null
           descricao?: string | null
+          detalhes?: Json | null
           endereco?: string | null
           hash_consulta?: string | null
           id?: string
@@ -424,6 +462,7 @@ export type Database = {
           triagem_lock_por?: string | null
           triagem_pendente?: boolean
           updated_at?: string
+          url?: string | null
         }
         Relationships: [
           {
