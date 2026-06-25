@@ -1,66 +1,116 @@
-## Implementação — Worker Playwright no Railway
+## Coletor 1Doc local em Python
 
-Confirmado: 1Doc só usa usuário + senha, sem 2FA. Como Lovable não cria repositórios no seu GitHub, eu vou montar todos os arquivos do worker dentro do projeto, numa pasta `worker/`. Depois você só copia essa pasta pra um repositório novo no GitHub e conecta no Railway (passo a passo no fim do plano).
-
----
-
-### O que vou criar / alterar
-
-**1. Pasta `worker/` (novo subprojeto, isolado do app Lovable)**
-- `worker/Dockerfile` — base `mcr.microsoft.com/playwright:v1.49.0-jammy`, instala deps e roda `node dist/index.js`.
-- `worker/package.json` — `playwright`, `zod`, `tsx`, `typescript`.
-- `worker/tsconfig.json`.
-- `worker/src/index.ts` — orquestra: login → lista arquivados → para cada um, abre detalhe → POST no backend.
-- `worker/src/onedoc.ts` — login no 1Doc com `page.fill` + `page.click`, salva `storageState` em memória.
-- `worker/src/scrape.ts` — porta a heurística atual do `extension/background.js` (último despacho, finalidade, status, link, número).
-- `worker/src/ingest.ts` — POST `${BACKEND_URL}/api/public/ingest-protocolos` com `Authorization: Bearer ${INGEST_TOKEN}` e `{ protocolos: [...], origem: "worker" }`.
-- `worker/railway.json` — define cron `0 7,13,19 * * *` e comando de execução.
-- `worker/.env.example` — documenta as variáveis.
-- `worker/README.md` — como subir no Railway.
-
-**2. Pequena migração no app Lovable** (executo via tool de migration):
-- `ALTER TABLE coletas ADD COLUMN origem text NOT NULL DEFAULT 'extensao'`.
-
-**3. Ajuste em `src/routes/api/public/ingest-protocolos.ts`**
-- Aceitar campo opcional `origem: "extensao" | "worker"` no body.
-- Gravar esse valor na linha de `coletas` ao final.
-
-**4. Ajuste em `src/routes/_authenticated/coletor.tsx`**
-- Aba **Histórico**: nova coluna "Origem" (badge azul `worker` / cinza `extensão`).
-- Aba **Auditoria**: mostrar a origem da última execução.
+Trocamos a pasta `worker/` (Node/TypeScript) por um script Python que roda na sua máquina, usa Playwright em Python pra abrir o 1Doc, e posta os arquivados no endpoint `/api/public/ingest-protocolos` que já existe no Lovable.
 
 ---
 
-### Variáveis que você vai configurar no Railway
+### Como vai funcionar
 
-| Variável | Valor |
-| --- | --- |
-| `ONEDOC_BASE` | `https://brusque.1doc.com.br` |
-| `ONEDOC_USER` | seu login |
-| `ONEDOC_PASS` | sua senha |
-| `BACKEND_URL` | `https://controleseta.lovable.app` |
-| `INGEST_TOKEN` | mesmo que está nos secrets do projeto |
-| `MAX_PROTOCOLOS` | `200` (opcional) |
-| `DELAY_MS` | `500` (opcional) |
-| `HEADLESS` | `true` |
+```text
+Sua máquina
+    │
+    │ python coletor.py
+    ▼
+Playwright Python + Chromium local
+    │
+    ▼
+brusque.1doc.com.br ──▶ filtra Arquivado✅, paginação, último despacho
+    │
+    ▼
+POST https://controleseta.lovable.app/api/public/ingest-protocolos
+    │ Authorization: Bearer ${INGEST_TOKEN}
+    │ body: { protocolos: [...], origem: "worker" }
+    ▼
+Lovable atualiza protocolos + grava em "coletas"
+```
 
----
-
-### Passo a passo pra você depois que eu terminar
-
-1. Criar repositório vazio no GitHub (ex.: `coletor-1doc-worker`).
-2. Copiar o conteúdo da pasta `worker/` deste projeto pra dentro do repositório novo e dar `git push`.
-3. No Railway → **New Project → Deploy from GitHub** e selecionar o repositório.
-4. Em **Variables**, colar as variáveis da tabela acima.
-5. Em **Settings → Cron Schedule**, colar `0 7,13,19 * * *` (3x ao dia).
-6. Rodar manualmente uma vez pelo botão **Deploy** pra validar — o log vai mostrar quantos arquivados encontrou e quantos o backend atualizou; também aparece na aba **Coletor → Auditoria** com origem `worker`.
+Mesmo backend, mesma tabela `coletas`, mesma aba **Coletor → Histórico** com badge `worker`. Você só troca a tecnologia da execução local.
 
 ---
 
-### Riscos previstos
+### O que vou criar
 
-- Se o seletor de login do 1Doc mudar, o worker quebra no login — eu deixo log claro nesse passo pra você identificar rápido.
-- Se uma execução voltar 0 arquivados (e antes vinha vindo), provavelmente a sessão expirou ou o layout mudou; ajustamos o seletor.
-- Railway Hobby (5 USD grátis/mês) cobre essa carga sobrando.
+Nova pasta **`coletor-py/`** no projeto, com:
 
-Confirma que pode seguir nessa estrutura? Assim que aprovar, eu implemento tudo de uma vez.
+1. **`coletor.py`** — script único, fácil de ler:
+   - Lê `.env` com `python-dotenv`.
+   - Abre Chromium via `playwright.sync_api`.
+   - Loga no 1Doc (`page.fill` / `page.click`).
+   - Navega na lista filtrando Arquivado✅, paginando até `MAX_PROTOCOLOS`.
+   - Para cada item: abre o detalhe, extrai número (`X.XXX/AAAA`, ignora `1/30`), URL, último despacho.
+   - Envia o lote ao endpoint do Lovable e imprime resumo: `coletados=X atualizados=Y ignorados=Z`.
+
+2. **`requirements.txt`**:
+   ```
+   playwright==1.49.0
+   httpx==0.27.2
+   python-dotenv==1.0.1
+   ```
+
+3. **`.env.example`**:
+   ```env
+   ONEDOC_BASE=https://brusque.1doc.com.br
+   ONEDOC_USER=seu_login
+   ONEDOC_PASS=sua_senha
+   BACKEND_URL=https://controleseta.lovable.app
+   INGEST_TOKEN=<mesmo dos secrets do Lovable>
+   MAX_PROTOCOLOS=200
+   DELAY_MS=500
+   HEADLESS=false
+   ```
+
+4. **`README.md`** — passo a passo Windows/Mac/Linux (instalar Python, criar venv, `pip install`, `playwright install chromium`, copiar `.env`, `python coletor.py`).
+
+5. **`run.bat`** (Windows) e **`run.sh`** (Mac/Linux) — clica e roda, ativa a venv e chama o script.
+
+6. **`SCHEDULE.md`** (opcional) — como agendar 3x ao dia no Agendador de Tarefas do Windows ou no `cron` Linux/Mac.
+
+A pasta antiga `worker/` (Node) eu **removo** pra não confundir, já que você escolheu Python. Se quiser manter pra referência, me avisa.
+
+---
+
+### O que você instala uma vez só
+
+1. **Python 3.11+** (https://www.python.org/downloads/ — marcar "Add to PATH" no Windows).
+2. Abrir terminal dentro de `coletor-py/`:
+   ```bash
+   python -m venv .venv
+   # Windows
+   .venv\Scripts\activate
+   # Mac/Linux
+   source .venv/bin/activate
+
+   pip install -r requirements.txt
+   playwright install chromium
+   cp .env.example .env
+   ```
+3. Editar `.env` com seu login do 1Doc e o `INGEST_TOKEN`.
+4. Rodar: `python coletor.py` (ou clicar em `run.bat`).
+
+Da segunda vez em diante: só clicar no script.
+
+---
+
+### Vantagens da abordagem Python local
+
+- **Custo zero** — nada na nuvem.
+- Você vê a janela do Chromium na primeira execução (`HEADLESS=false`) e confirma login + filtro.
+- Python é mais fácil de você abrir e ajustar uma linha se precisar.
+- Mesmos dados → dashboard, triagem, Saúde, mapa: tudo continua igual.
+
+### Limitações
+
+- Só roda quando seu computador está ligado e conectado.
+- O `INGEST_TOKEN` fica no `.env` local — só você acessa.
+- 2FA / captcha no 1Doc continua sendo um problema potencial, mas você confirmou que é só usuário/senha.
+
+---
+
+### O que preciso de você antes de implementar
+
+1. Seu **sistema operacional** (Windows, Mac ou Linux) — pra eu priorizar o `run.bat` ou `run.sh`.
+2. Confirmar se já tem **Python 3.11+** instalado (`python --version`) ou se vai instalar agora.
+3. Se quer já incluir as instruções de **agendamento automático** (3x ao dia) ou prefere rodar manual quando precisar.
+4. Se posso **apagar a pasta `worker/`** (Node) ou prefere manter as duas.
+
+Assim que responder, eu crio a `coletor-py/` completa e te entrego pronto pra rodar.
