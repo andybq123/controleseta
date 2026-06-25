@@ -159,6 +159,33 @@ function detectarAcao(assunto: string, corpo: string): "conclusao" | "atualizaca
   return "atualizacao";
 }
 
+// Extrai o link "Acompanhar online" do corpo do e-mail do 1Doc.
+// Procura primeiro pelo padrão "Acompanhar online" seguido de URL próxima,
+// e cai para qualquer URL de 1doc.com.br como fallback.
+function extrairLinkAcompanhar(corpo: string): string | null {
+  if (!corpo) return null;
+  const texto = corpo.replace(/\r\n/g, "\n");
+  const urlRe = /https?:\/\/[^\s<>"')]+/i;
+
+  // 1) URL imediatamente após "Acompanhar online" (mesmo se houver tags/quebras)
+  const idx = texto.search(/Acompanhar\s+online/i);
+  if (idx >= 0) {
+    const trecho = texto.slice(idx, idx + 2000);
+    const m = trecho.match(urlRe);
+    if (m) return m[0].replace(/[).,;]+$/, "");
+  }
+
+  // 2) Padrão href="...">Acompanhar online</a>
+  const mHref = texto.match(/href=["']([^"']+)["'][^>]*>\s*Acompanhar\s+online/i);
+  if (mHref?.[1]) return mHref[1];
+
+  // 3) Fallback: qualquer URL contendo 1doc
+  const m1doc = texto.match(/https?:\/\/[^\s<>"')]*1doc[^\s<>"')]*/i);
+  if (m1doc) return m1doc[0].replace(/[).,;]+$/, "");
+
+  return null;
+}
+
 async function extrairComIA(texto: string) {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
@@ -244,6 +271,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
 
       if (existente) {
         const acao = detectarAcao(assunto, corpo);
+        const linkAcomp = extrairLinkAcompanhar(corpo);
         const resumoEmail = [
           `E-mail recebido em ${new Date().toLocaleString("pt-BR")}`,
           `De: ${remetente}`,
@@ -256,8 +284,15 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
           const hoje = new Date().toISOString().slice(0, 10);
           await supabaseAdmin
             .from("protocolos")
-            .update({ status: "concluido", data_conclusao: hoje })
+            .update({ status: "concluido", data_conclusao: hoje, ...(linkAcomp ? { url: linkAcomp } : {}) })
             .eq("id", existente.id);
+        } else if (linkAcomp) {
+          // Atualiza url se ainda não estiver preenchida
+          await supabaseAdmin
+            .from("protocolos")
+            .update({ url: linkAcomp })
+            .eq("id", existente.id)
+            .is("url", null);
         }
 
         await supabaseAdmin.from("protocolo_historico").insert({
@@ -424,6 +459,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
         secretaria_id: secretariaId, local_id: localId,
         data_abertura: dataAbertura, created_by: account.created_by,
         triagem_pendente: precisaTriagem,
+        url: extrairLinkAcompanhar(corpo),
       })
       .select("id, numero").single();
     if (errIns) throw errIns;
