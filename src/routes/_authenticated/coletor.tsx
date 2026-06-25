@@ -694,6 +694,7 @@ function HistoricoColetas() {
             <TableHeader>
               <TableRow>
                 <TableHead>Quando</TableHead>
+                <TableHead>Origem</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Novos</TableHead>
                 <TableHead className="text-right">Duração</TableHead>
@@ -705,6 +706,11 @@ function HistoricoColetas() {
               {coletas.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="whitespace-nowrap">{new Date(c.executado_em).toLocaleString("pt-BR")}</TableCell>
+                  <TableCell>
+                    <Badge variant={(c as any).origem === "worker" ? "default" : "outline"} className="text-[10px]">
+                      {(c as any).origem === "worker" ? "worker" : "extensão"}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-right">{c.total}</TableCell>
                   <TableCell className="text-right font-medium">{c.novos}</TableCell>
                   <TableCell className="text-right text-muted-foreground">
