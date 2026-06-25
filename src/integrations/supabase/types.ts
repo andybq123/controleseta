@@ -92,6 +92,7 @@ export type Database = {
           ignorados_detalhes: Json
           ja_concluidos: number
           novos: number
+          origem: string
           sem_correspondencia: number
           sucesso: boolean
           total: number
@@ -105,6 +106,7 @@ export type Database = {
           ignorados_detalhes?: Json
           ja_concluidos?: number
           novos?: number
+          origem?: string
           sem_correspondencia?: number
           sucesso?: boolean
           total?: number
@@ -118,6 +120,7 @@ export type Database = {
           ignorados_detalhes?: Json
           ja_concluidos?: number
           novos?: number
+          origem?: string
           sem_correspondencia?: number
           sucesso?: boolean
           total?: number

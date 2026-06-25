@@ -13,6 +13,7 @@ const ProtocoloSchema = z.object({
 
 const BodySchema = z.object({
   protocolos: z.array(ProtocoloSchema).max(2000),
+  origem: z.enum(["extensao", "worker"]).optional(),
 });
 
 function corsHeaders(): Record<string, string> {
@@ -91,13 +92,13 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
           );
         }
 
-        const { protocolos } = parsed.data;
+        const { protocolos, origem = "extensao" } = parsed.data;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         try {
           if (protocolos.length === 0) {
             await supabaseAdmin.from("coletas").insert({
-              total: 0, novos: 0, sucesso: true,
+              total: 0, novos: 0, sucesso: true, origem,
               erro: "Coleta via extensão (vazia)", duracao_ms: Date.now() - inicio,
             });
             return Response.json({ sucesso: true, total: 0, atualizados: 0, ignorados: 0 }, { headers: corsHeaders() });
@@ -226,6 +227,7 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
             sucesso: true,
             erro: null,
             duracao_ms: Date.now() - inicio,
+            origem,
           });
 
           return Response.json(
@@ -245,7 +247,7 @@ export const Route = createFileRoute("/api/public/ingest-protocolos")({
         } catch (e: unknown) {
           const msg = e instanceof Error ? e.message : String(e);
           await supabaseAdmin.from("coletas").insert({
-            total: 0, novos: 0, sucesso: false,
+            total: 0, novos: 0, sucesso: false, origem,
             erro: `Extensão: ${msg}`, duracao_ms: Date.now() - inicio,
           });
           return Response.json({ sucesso: false, erro: msg }, { status: 500, headers: corsHeaders() });
