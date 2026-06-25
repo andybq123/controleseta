@@ -521,9 +521,15 @@ function extractBody(payload: any): string {
   };
   walk(payload);
   const plain = parts.find(p => p.mime === "text/plain");
-  if (plain) return decodeB64Url(plain.data);
   const html = parts.find(p => p.mime === "text/html");
-  if (html) return stripHtml(decodeB64Url(html.data));
+  const htmlRaw = html ? decodeB64Url(html.data) : "";
+  if (plain) {
+    // Preserva o HTML bruto no final para que a extração de links
+    // (ex.: "Acompanhar online" → href) ainda funcione.
+    const plainTxt = decodeB64Url(plain.data);
+    return htmlRaw ? `${plainTxt}\n\n<!--HTML-->\n${htmlRaw}` : plainTxt;
+  }
+  if (htmlRaw) return `${stripHtml(htmlRaw)}\n\n<!--HTML-->\n${htmlRaw}`;
   if (parts[0]) return decodeB64Url(parts[0].data);
   return "";
 }
