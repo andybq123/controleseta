@@ -232,7 +232,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               variant="default"
               className="bg-amber-600 hover:bg-amber-700 text-white"
               onClick={() => {
-                if (!protocolo.secretaria_id) {
+                if (!form.secretaria_id) {
                   toast.error("Defina a secretaria antes de concluir a triagem.");
                   return;
                 }
