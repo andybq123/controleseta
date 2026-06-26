@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Inbox, Eye, CheckCheck, Lock, ExternalLink } from "lucide-react";
+import { Inbox, Eye, CheckCheck, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
@@ -252,13 +252,6 @@ function TarefasPage() {
                   <Eye className="h-4 w-4 mr-1" />
                   {isLockAtivo(p) && p.triagem_lock_por !== meId ? "Visualizar" : "Triar"}
                 </Button>
-                {p.url && (
-                  <Button asChild size="sm" variant="outline">
-                    <a href={p.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                      <ExternalLink className="h-4 w-4 mr-1" /> 1doc
-                    </a>
-                  </Button>
-                )}
               </CardContent>
             </Card>
           ))}
