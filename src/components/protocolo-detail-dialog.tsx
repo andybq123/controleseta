@@ -226,6 +226,13 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
 
         {/* Ações rápidas */}
         <div className="flex flex-wrap gap-2 border-y py-3">
+          {protocolo.url && (
+            <Button asChild size="sm" variant="outline">
+              <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1doc
+              </a>
+            </Button>
+          )}
           {protocolo.triagem_pendente && (
             <Button
               size="sm"
