@@ -203,6 +203,7 @@ function RelatoriosPage() {
     pedido_informacao: { base: "#9333ea", light: "#c084fc" }, // purple-600 → purple-400
     denuncia:          { base: "#0a0a0a", light: "#404040" }, // black → neutral-700
     solicitacao:       { base: "#facc15", light: "#fde047" }, // yellow-400 → yellow-300
+    sugestao:          { base: "#2563eb", light: "#60a5fa" }, // blue-600 → blue-400
     outros:            { base: "#64748b", light: "#94a3b8" }, // slate-500 → slate-400
   };
 
