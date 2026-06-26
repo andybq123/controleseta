@@ -226,20 +226,13 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
 
         {/* Ações rápidas */}
         <div className="flex flex-wrap gap-2 border-y py-3">
-          {protocolo.url && (
-            <Button asChild size="sm" variant="outline">
-              <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1doc
-              </a>
-            </Button>
-          )}
           {protocolo.triagem_pendente && (
             <Button
               size="sm"
               variant="default"
               className="bg-amber-600 hover:bg-amber-700 text-white"
               onClick={() => {
-                if (!protocolo.secretaria_id) {
+                if (!form.secretaria_id) {
                   toast.error("Defina a secretaria antes de concluir a triagem.");
                   return;
                 }
@@ -249,16 +242,20 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                   return;
                 }
                 (async () => {
-                  // Persiste o relato da triagem antes de concluir
+                  // Persiste o relato + secretaria/local selecionados na triagem antes de concluir
                   const { error: upErr } = await supabase
                     .from("protocolos")
-                    .update({ descricao: relato })
+                    .update({
+                      descricao: relato,
+                      secretaria_id: form.secretaria_id || null,
+                      local_id: form.local_id || null,
+                    })
                     .eq("id", protocolo.id);
                   if (upErr) { toast.error(upErr.message); return; }
                   const { data, error } = await supabase.rpc("concluir_triagem", {
                     p_id: protocolo.id,
-                    p_secretaria: protocolo.secretaria_id,
-                    p_local: (protocolo.local_id ?? null) as any,
+                    p_secretaria: form.secretaria_id,
+                    p_local: (form.local_id || null) as any,
                   });
                   if (error) { toast.error(error.message); return; }
                   const r = data as any;
