@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Pencil, Trash2, Tag, ArrowLeft, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Tag, ArrowLeft, Search, Inbox } from "lucide-react";
 import { toast } from "sonner";
 
 const searchSchema = z.object({
@@ -72,8 +72,10 @@ function AssuntosPage() {
   const semSec = (assuntos as any[]).filter(a => !a.secretaria_id && a.ativo).length;
 
   const updSec = useMutation({
-    mutationFn: async ({ id, secretaria_id }: { id: string; secretaria_id: string | null }) => {
-      const { error } = await supabase.from("assuntos").update({ secretaria_id }).eq("id", id);
+    mutationFn: async ({ id, secretaria_id, forcar_triagem }: { id: string; secretaria_id: string | null; forcar_triagem?: boolean }) => {
+      const patch: any = { secretaria_id };
+      if (typeof forcar_triagem === "boolean") patch.forcar_triagem = forcar_triagem;
+      const { error } = await supabase.from("assuntos").update(patch).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["assuntos"] }); toast.success("Vínculo atualizado"); },
@@ -181,17 +183,28 @@ function AssuntosPage() {
                   </td>
                   <td className="py-2 px-3">
                     <Select
-                      value={a.secretaria_id ?? "none"}
-                      onValueChange={(v) => updSec.mutate({ id: a.id, secretaria_id: v === "none" ? null : v })}
+                      value={a.forcar_triagem ? "triagem" : (a.secretaria_id ?? "none")}
+                      onValueChange={(v) => {
+                        if (v === "triagem") {
+                          updSec.mutate({ id: a.id, secretaria_id: null, forcar_triagem: true });
+                        } else {
+                          updSec.mutate({ id: a.id, secretaria_id: v === "none" ? null : v, forcar_triagem: false });
+                        }
+                      }}
                     >
                       <SelectTrigger className="h-8 w-[240px]">
                         <SelectValue>
-                          {a.secretaria_id ? (secMap[a.secretaria_id]?.nome ?? "—") : (
+                          {a.forcar_triagem ? (
+                            <span className="text-amber-700 dark:text-amber-300 inline-flex items-center gap-1">
+                              <Inbox className="h-3 w-3" /> Triagem manual
+                            </span>
+                          ) : a.secretaria_id ? (secMap[a.secretaria_id]?.nome ?? "—") : (
                             <span className="text-amber-600">Sem vínculo</span>
                           )}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="triagem">🔍 Triagem manual (sempre cair na fila)</SelectItem>
                         <SelectItem value="none">Sem vínculo</SelectItem>
                         {secretarias.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
                       </SelectContent>

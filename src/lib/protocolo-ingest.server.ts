@@ -316,6 +316,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     }
 
     let secretariaId: string | null = account.secretaria_id;
+    let forcarTriagemAssunto = false;
     if (!secretariaId) {
       const { data: secs } = await supabaseAdmin.from("secretarias").select("id, nome, sigla");
 
@@ -334,10 +335,11 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
         const alvoAssunto = norm(extr.assunto_categoria);
         const { data: matches } = await supabaseAdmin
           .from("assuntos")
-          .select("nome, secretaria_id")
+          .select("nome, secretaria_id, forcar_triagem")
           .eq("ativo", true)
-          .not("secretaria_id", "is", null);
+          ;
         const hit = (matches ?? []).find((a: any) => norm(a.nome) === alvoAssunto);
+        if (hit?.forcar_triagem) forcarTriagemAssunto = true;
         if (hit?.secretaria_id) secretariaId = hit.secretaria_id;
 
         // 3) Último fallback: mapa hard-coded (compat para assuntos ainda não cadastrados)
@@ -349,6 +351,20 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
             if (hitSec) secretariaId = hitSec.id;
           }
         }
+      }
+    }
+
+    // Mesmo quando a conta de e-mail já amarra a secretaria, ainda assim
+    // respeita a flag forcar_triagem do catálogo de assuntos.
+    if (!forcarTriagemAssunto && extr.assunto_categoria) {
+      const alvoAssunto = norm(extr.assunto_categoria);
+      const { data: matchFlag } = await supabaseAdmin
+        .from("assuntos")
+        .select("nome, forcar_triagem")
+        .eq("ativo", true)
+        .eq("forcar_triagem", true);
+      if ((matchFlag ?? []).some((a: any) => norm(a.nome) === alvoAssunto)) {
+        forcarTriagemAssunto = true;
       }
     }
 
@@ -447,7 +463,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     const assuntoNorm = norm(extr.assunto_categoria || extr.assunto || "");
     const precisaTriagem =
       extr.tipo === "ouvidoria" &&
-      (!secretariaId || ASSUNTOS_SAUDE_TRIAGEM.has(assuntoNorm));
+      (forcarTriagemAssunto || !secretariaId || ASSUNTOS_SAUDE_TRIAGEM.has(assuntoNorm));
 
     const { data: novo, error: errIns } = await supabaseAdmin
       .from("protocolos")
