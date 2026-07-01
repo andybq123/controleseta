@@ -713,6 +713,104 @@ async function sincronizarGmailContasComJanela(q: string, pageSize: number, maxP
 // ============ IMAP (senha de app) ============
 
 export async function sincronizarImapContas(): Promise<{ contas: number; novos: number; erros: number; detalhes: any[] }> {
+  return _sincronizarImapContas();
+}
+
+/**
+ * Backfill APENAS da URL do 1Doc em protocolos já existentes.
+ * - Varre o Gmail em uma janela ampla (dias), sem usar IA.
+ * - Não cria protocolos, não altera status, não altera nenhum outro campo.
+ * - Só atualiza `protocolos.url` onde estiver NULL, quando o e-mail
+ *   correspondente ao mesmo número tiver um link do 1Doc.
+ */
+export async function backfillUrl1DocViaGmail(dias = 180): Promise<{
+  contas: number;
+  emails_lidos: number;
+  atualizados: number;
+  ja_com_url: number;
+  sem_link: number;
+  sem_numero: number;
+  sem_protocolo: number;
+  erros: number;
+}> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const q = `newer_than:${Math.min(Math.max(dias, 1), 365)}d`;
+
+  const { data: contas } = await supabaseAdmin
+    .from("email_inbox_accounts")
+    .select("*")
+    .eq("ativo", true)
+    .eq("provider", "gmail");
+
+  let emails_lidos = 0, atualizados = 0, ja_com_url = 0;
+  let sem_link = 0, sem_numero = 0, sem_protocolo = 0, erros = 0;
+
+  for (const conta of contas ?? []) {
+    try {
+      const todasMsgs: { id: string }[] = [];
+      let pageToken: string | undefined;
+      let pagesRead = 0;
+      do {
+        const qStr = encodeURIComponent(`in:anywhere ${q}`);
+        const url = `${GMAIL_GATEWAY}/users/me/messages?maxResults=100&q=${qStr}${pageToken ? `&pageToken=${pageToken}` : ""}`;
+        const listRes = await fetch(url, { headers: gmailHeaders() });
+        if (!listRes.ok) throw new Error(`Gmail list ${listRes.status}: ${(await listRes.text()).slice(0, 200)}`);
+        const listJson = await listRes.json();
+        const msgs: { id: string }[] = listJson.messages ?? [];
+        todasMsgs.push(...msgs);
+        pageToken = listJson.nextPageToken;
+        pagesRead++;
+      } while (pageToken && pagesRead < 60);
+
+      for (const m of todasMsgs) {
+        emails_lidos++;
+        try {
+          const mr = await fetch(`${GMAIL_GATEWAY}/users/me/messages/${m.id}?format=full`, { headers: gmailHeaders() });
+          if (!mr.ok) { erros++; continue; }
+          const mj = await mr.json();
+          const hdrs = mj.payload?.headers ?? [];
+          const subject = header(hdrs, "Subject");
+          const body = extractBody(mj.payload) || mj.snippet || "";
+
+          const numero = extrairNumeroDoAssunto(subject, body);
+          if (!numero) { sem_numero++; continue; }
+          const link = extrairLinkAcompanhar(body);
+          if (!link) { sem_link++; continue; }
+
+          const variantes = normalizarNumero(numero);
+          const { data: proto } = await supabaseAdmin
+            .from("protocolos")
+            .select("id, url")
+            .in("numero", variantes)
+            .limit(1)
+            .maybeSingle();
+          if (!proto) { sem_protocolo++; continue; }
+          if (proto.url) { ja_com_url++; continue; }
+
+          const { error: errUpd } = await supabaseAdmin
+            .from("protocolos")
+            .update({ url: link })
+            .eq("id", proto.id)
+            .is("url", null);
+          if (errUpd) { erros++; continue; }
+          atualizados++;
+        } catch {
+          erros++;
+        }
+      }
+    } catch {
+      erros++;
+    }
+  }
+
+  return {
+    contas: contas?.length ?? 0,
+    emails_lidos, atualizados, ja_com_url,
+    sem_link, sem_numero, sem_protocolo, erros,
+  };
+}
+
+async function _sincronizarImapContas(): Promise<{ contas: number; novos: number; erros: number; detalhes: any[] }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { ImapFlow } = await import("imapflow");
   const { simpleParser } = await import("mailparser");
