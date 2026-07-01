@@ -94,12 +94,29 @@ function ProtocolosPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["protocolos"] }); toast.success("Protocolo removido"); },
   });
 
+  const isLegado = (p: any) =>
+    typeof p.origem === "string" && p.origem.startsWith("antigo:");
+
+  // remove pontos entre dígitos: "1.991/2026" -> "1991/2026"
+  const stripDots = (s: string) => s.replace(/(\d)\.(?=\d)/g, "$1");
+  const normalize = (s: string) =>
+    stripDots(
+      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+    );
+
   const filtrados = protocolos.filter(p => {
     if (saudeSecId && p.secretaria_id === saudeSecId) return false;
+    // Protocolos legados só aparecem quando o mês "antigos" está selecionado
+    // ou quando pesquisados/filtrados por período explícito.
+    if (mes === "antigos") {
+      if (!isLegado(p)) return false;
+    } else if (isLegado(p) && !busca.trim() && !(dataIni || dataFim)) {
+      return false;
+    }
     // Concluídos só aparecem quando filtrados explicitamente ou buscados pelo número.
     if (p.status === "concluido"
         && filtroStatus !== "concluido"
-        && !(busca.trim() && p.numero?.toLowerCase().includes(busca.trim().toLowerCase()))) {
+        && !(busca.trim() && normalize(String(p.numero ?? "")).includes(normalize(busca.trim())))) {
       return false;
     }
     if (filtroStatus !== "todos" && p.status !== filtroStatus) return false;
@@ -109,12 +126,14 @@ function ProtocolosPage() {
     if (dataIni || dataFim) {
       if (dataIni && (p.data_abertura ?? "") < dataIni) return false;
       if (dataFim && (p.data_abertura ?? "") > dataFim) return false;
-    } else if (mes !== "all") {
+    } else if (mes !== "all" && mes !== "antigos") {
       if (!isInMonth(p.data_abertura, mes)) return false;
     }
     if (busca) {
-      const s = busca.toLowerCase();
-      const txt = `${p.numero} ${p.assunto} ${p.solicitante ?? ""}`.toLowerCase();
+      const s = normalize(busca);
+      const txt = normalize(
+        `${p.numero ?? ""} ${p.assunto ?? ""} ${p.solicitante ?? ""} ${p.descricao ?? ""}`,
+      );
       if (!txt.includes(s)) return false;
     }
     return true;
@@ -173,6 +192,7 @@ function ProtocolosPage() {
           <SelectTrigger className="w-[170px]"><SelectValue placeholder="Mês" /></SelectTrigger>
           <SelectContent className="max-h-[320px]">
             <SelectItem value="all">Todos os meses</SelectItem>
+            <SelectItem value="antigos">Protocolos Antigos</SelectItem>
             {opcoesMes.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
           </SelectContent>
         </Select>
