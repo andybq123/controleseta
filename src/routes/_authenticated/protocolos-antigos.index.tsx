@@ -68,6 +68,102 @@ export const Route = createFileRoute("/_authenticated/protocolos-antigos/")({
 
 type Tab = "Saúde" | "Outros" | "Todos";
 
+function ImportacaoControls() {
+  const importar = useServerFn(importarProtocolosAntigos);
+  const reverter = useServerFn(reverterImportacaoAntigos);
+  const contar = useServerFn(contarProtocolosAntigosImportados);
+  const [total, setTotal] = useState<number | null>(null);
+  const [loading, setLoading] = useState<null | "import" | "revert">(null);
+
+  useEffect(() => {
+    contar().then((r) => setTotal(r.total)).catch(() => setTotal(null));
+  }, []);
+
+  async function refresh() {
+    try {
+      const r = await contar();
+      setTotal(r.total);
+    } catch { /* noop */ }
+  }
+
+  async function handleImport() {
+    setLoading("import");
+    try {
+      const r = await importar();
+      toast.success(
+        `Importados ${r.inseridos} protocolos (${r.pulados_duplicados} já existiam, ${r.pulados_junho} de jun/2026 ignorados).`,
+      );
+      if (r.erros?.length) toast.error(`Erros em lotes: ${r.erros.join("; ")}`);
+      await refresh();
+    } catch (e: any) {
+      toast.error(`Falha ao importar: ${e?.message ?? e}`);
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleRevert() {
+    setLoading("revert");
+    try {
+      const r = await reverter();
+      toast.success(`Removidos ${r.removidos} protocolos legados.`);
+      await refresh();
+    } catch (e: any) {
+      toast.error(`Falha ao reverter: ${e?.message ?? e}`);
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-2">
+      <div className="text-xs text-slate-500">
+        Legados no banco: <strong>{total ?? "—"}</strong>
+      </div>
+      <div className="flex gap-2">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" disabled={loading !== null}>
+              {loading === "import" ? "Importando..." : "Importar para protocolos"}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Importar protocolos antigos?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Isso inserirá os registros históricos na tabela principal de protocolos, respeitando o mesmo padrão de numeração. Duplicatas serão ignoradas. A operação é reversível.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleImport}>Importar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" variant="outline" disabled={loading !== null || (total ?? 0) === 0}>
+              {loading === "revert" ? "Revertendo..." : "Reverter importação"}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reverter importação?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Todos os protocolos com origem "antigo:*" serão apagados do sistema. Esta ação não afeta o JSON histórico exibido aqui.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleRevert}>Reverter</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("Todos");
