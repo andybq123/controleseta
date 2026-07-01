@@ -1,5 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  importarProtocolosAntigos,
+  reverterImportacaoAntigos,
+  contarProtocolosAntigosImportados,
+} from "@/lib/protocolos-antigos-import.functions";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import ouvidorias from "@/data/ouvidorias.json";
 import atrasadasOficiais from "@/data/ouvidorias-atrasadas.json";
 import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
@@ -228,12 +240,17 @@ function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-          Protocolos Antigos — Ouvidorias
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Consolidação de {ALL.length.toLocaleString("pt-BR")} registros históricos de ouvidoria para exportação e análise.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+              Protocolos Antigos — Ouvidorias
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Consolidação de {ALL.length.toLocaleString("pt-BR")} registros históricos de ouvidoria para exportação e análise.
+            </p>
+          </div>
+          <ImportacaoControls />
+        </div>
       </div>
 
       <section className="grid grid-cols-3 gap-3">
