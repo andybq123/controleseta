@@ -37,6 +37,11 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     | { kind: "concluida"; por: string; em: string }
   >({ kind: "idle" });
 
+  const isLegacyProp =
+    protocoloProp?.__antigo === true ||
+    protocoloProp?.detalhes?.legacy === true ||
+    (typeof protocoloProp?.origem === "string" && protocoloProp.origem.startsWith("antigo:"));
+
   const { data: protocoloFresh } = useQuery({
     queryKey: ["protocolo", protocoloProp?.id],
     queryFn: async () => {
@@ -48,9 +53,13 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
       if (error) throw error;
       return data;
     },
-    enabled: open && !!protocoloProp?.id,
+    enabled: open && !!protocoloProp?.id && !isLegacyProp,
   });
   const protocolo = protocoloFresh ?? protocoloProp;
+  const isLegacy =
+    protocolo?.__antigo === true ||
+    protocolo?.detalhes?.legacy === true ||
+    (typeof protocolo?.origem === "string" && protocolo.origem.startsWith("antigo:"));
 
   // Tenta reservar a triagem ao abrir; libera ao fechar
   useEffect(() => {
@@ -98,7 +107,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         .order("created_at", { ascending: false });
       return (data as any[]) ?? [];
     },
-    enabled: open && !!protocolo?.id,
+    enabled: open && !!protocolo?.id && !isLegacy,
   });
 
   useEffect(() => {
@@ -226,7 +235,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
 
         {/* Ações rápidas */}
         <div className="flex flex-wrap gap-2 border-y py-3">
-          {protocolo.triagem_pendente && (
+          {!isLegacy && protocolo.triagem_pendente && (
             <Button
               size="sm"
               variant="default"
@@ -281,7 +290,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
             </Button>
           )}
-          {protocolo.status !== "concluido" ? (
+          {!isLegacy && (protocolo.status !== "concluido" ? (
             <Button size="sm" onClick={handleConcluir} disabled={update.isPending || lockBloqueia}>
               <CheckCircle2 className="h-4 w-4 mr-1" /> Concluir
             </Button>
@@ -289,18 +298,18 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             <Button size="sm" variant="outline" onClick={handleReabrir} disabled={update.isPending || lockBloqueia}>
               Reabrir
             </Button>
-          )}
-          {protocolo.status === "aberto" && (
+          ))}
+          {!isLegacy && protocolo.status === "aberto" && (
             <Button size="sm" variant="secondary" onClick={handleIniciar} disabled={update.isPending || lockBloqueia}>
               Iniciar atendimento
             </Button>
           )}
-          {protocolo.status !== "concluido" && !protocolo.prorrogado && (
+          {!isLegacy && protocolo.status !== "concluido" && !protocolo.prorrogado && (
             <Button size="sm" variant="outline" onClick={handleProrrogar} disabled={update.isPending || lockBloqueia}>
               <RotateCw className="h-4 w-4 mr-1" /> Prorrogar prazo
             </Button>
           )}
-          {!editing ? (
+          {!isLegacy && (!editing ? (
             <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="ml-auto" disabled={lockBloqueia}>
               <Pencil className="h-4 w-4 mr-1" /> Editar
             </Button>
@@ -308,11 +317,13 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             <Button size="sm" variant="ghost" onClick={() => setEditing(false)} className="ml-auto">
               <X className="h-4 w-4 mr-1" /> Cancelar
             </Button>
+          ))}
+          {!isLegacy && (
+            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
+              onClick={() => { if (confirm("Excluir este protocolo permanentemente?")) del.mutate(); }}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
           )}
-          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
-            onClick={() => { if (confirm("Excluir este protocolo permanentemente?")) del.mutate(); }}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
         </div>
 
         <Tabs defaultValue="detalhes" className="w-full">
@@ -338,6 +349,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               {protocolo.data_conclusao && <Field label="Data conclusão" value={formatDate(protocolo.data_conclusao)} />}
               <Field label="Secretaria" value={protocolo.secretarias?.nome ?? "—"} />
               {protocolo.locais && <Field label="Local" value={protocolo.locais.nome} />}
+              {isLegacy && <Field label="Origem" value={(protocolo as any).__source ?? protocolo.origem ?? "Histórico"} />}
+              {isLegacy && <Field label="Setor original" value={(protocolo as any).__setor ?? protocolo.assunto ?? "—"} />}
               <Field label="Solicitante" value={protocolo.solicitante ?? "—"} />
             </div>
             {(protocolo as any).resolucao && (
@@ -477,7 +490,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         </Tabs>
 
         {(() => {
-          const isLegacy =
+          const isLegacyFooter =
+            protocolo?.__antigo === true ||
             protocolo?.detalhes?.legacy === true ||
             (typeof protocolo?.origem === "string" && protocolo.origem.startsWith("antigo:"));
           if (protocolo.url) {
@@ -491,7 +505,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               </DialogFooter>
             );
           }
-          if (isLegacy) {
+          if (isLegacyFooter) {
             return (
               <DialogFooter className="border-t pt-3">
                 <div className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
