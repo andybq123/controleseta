@@ -30,3 +30,11 @@ export const sincronizarImap = createServerFn({ method: "POST" })
     const { sincronizarImapContas } = await import("@/lib/protocolo-ingest.server");
     return await sincronizarImapContas();
   });
+
+export const backfillUrls1Doc = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { dias?: number }) => ({ dias: Math.min(Math.max(d?.dias ?? 180, 1), 365) }))
+  .handler(async ({ data }) => {
+    const { backfillUrl1DocViaGmail } = await import("@/lib/protocolo-ingest.server");
+    return await backfillUrl1DocViaGmail(data.dias);
+  });
