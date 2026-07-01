@@ -37,10 +37,9 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     | { kind: "concluida"; por: string; em: string }
   >({ kind: "idle" });
 
-  const isLegacyProp =
-    protocoloProp?.__antigo === true ||
-    protocoloProp?.detalhes?.legacy === true ||
-    (typeof protocoloProp?.origem === "string" && protocoloProp.origem.startsWith("antigo:"));
+  // "Legado in-memory": só marcado quando o protocolo vem do JSON de antigos (sem row no banco).
+  // Após a importação, antigos passam a ser rows normais e devem ser plenamente editáveis.
+  const isLegacyProp = protocoloProp?.__antigo === true;
 
   const { data: protocoloFresh } = useQuery({
     queryKey: ["protocolo", protocoloProp?.id],
@@ -56,10 +55,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     enabled: open && !!protocoloProp?.id && !isLegacyProp,
   });
   const protocolo = protocoloFresh ?? protocoloProp;
-  const isLegacy =
-    protocolo?.__antigo === true ||
-    protocolo?.detalhes?.legacy === true ||
-    (typeof protocolo?.origem === "string" && protocolo.origem.startsWith("antigo:"));
+  const isLegacy = protocolo?.__antigo === true;
 
   // Tenta reservar a triagem ao abrir; libera ao fechar
   useEffect(() => {

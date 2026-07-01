@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, FileText, Building2, LogOut, AlertTriangle, BarChart3, Mail, Users, HeartPulse, Map as MapIcon, Archive, Settings, ChevronDown, PanelLeft, PanelTop, Tag, Inbox, Download } from "lucide-react";
+import { LayoutDashboard, FileText, Building2, LogOut, AlertTriangle, BarChart3, Mail, Users, HeartPulse, Map as MapIcon, Settings, ChevronDown, PanelLeft, PanelTop, Tag, Inbox, Download } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -56,7 +56,6 @@ function AuthLayout() {
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/tarefas", label: "Tarefas", icon: Inbox },
     { to: "/protocolos", label: "Protocolos", icon: FileText },
-    { to: "/protocolos-antigos", label: "Protocolos Antigos", icon: Archive },
     { to: "/saude", label: "Saúde", icon: HeartPulse },
     { to: "/mapa", label: "Mapa", icon: MapIcon },
     { to: "/atrasados", label: "Atrasados", icon: AlertTriangle },
