@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type TipoProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
-import { Plus, Calendar, RotateCw, CheckCircle2, Trash2, Sparkles, Eye } from "lucide-react";
+import { Plus, Calendar, RotateCw, CheckCircle2, Trash2, Sparkles, Eye, Download } from "lucide-react";
 import { toast } from "sonner";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { extrairProtocolo } from "@/lib/protocolo-extract.functions";
@@ -26,7 +26,7 @@ import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { MapPointPicker } from "@/components/map-point-picker";
 import { currentMonthValue, monthOptionsFromDates, isInMonth } from "@/lib/month-filter";
-import { buildProtocolosAntigos } from "@/lib/protocolos-antigos-merge";
+import { importarProtocolosAntigos } from "@/lib/protocolos-antigos-import.functions";
 
 export const Route = createFileRoute("/_authenticated/protocolos")({
   component: ProtocolosPage,
@@ -45,18 +45,48 @@ function ProtocolosPage() {
   const [mes, setMes] = useState<string>(currentMonthValue());
 
   const { data: protocolos = [] } = useQuery({
-    queryKey: ["protocolos"],
+    queryKey: ["protocolos", "atuais"],
     queryFn: async () => {
       const rows = await fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
           .select("*, secretarias(nome, sigla), locais(nome)")
           .eq("triagem_pendente", false)
+          .or("origem.is.null,origem.not.like.antigo:%")
           .order("data_abertura", { ascending: false })
           .range(from, to),
       );
       return [...rows].sort(sortProtocolosPorNumero);
     },
+  });
+
+  // Antigos só carregam sob demanda (mês "antigos"), para manter a listagem principal rápida.
+  const carregarAntigos = mes === "antigos";
+  const { data: antigos = [], isFetching: antigosFetching } = useQuery({
+    queryKey: ["protocolos", "antigos"],
+    enabled: carregarAntigos,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const rows = await fetchAllPaginated((from, to) =>
+        supabase
+          .from("protocolos")
+          .select("*, secretarias(nome, sigla), locais(nome)")
+          .like("origem", "antigo:%")
+          .order("data_abertura", { ascending: false })
+          .range(from, to),
+      );
+      return [...rows].sort(sortProtocolosPorNumero);
+    },
+  });
+
+  const importar = useServerFn(importarProtocolosAntigos);
+  const importMutation = useMutation({
+    mutationFn: async () => importar({}),
+    onSuccess: (r: any) => {
+      toast.success(`Importados ${r.inseridos} protocolos antigos`);
+      qc.invalidateQueries({ queryKey: ["protocolos"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha ao importar"),
   });
 
   const { data: secretarias = [] } = useQuery({
@@ -96,12 +126,12 @@ function ProtocolosPage() {
   });
 
   const protocolosComAntigos = useMemo(
-    () => [...protocolos, ...buildProtocolosAntigos(secretarias)],
-    [protocolos, secretarias],
+    () => (carregarAntigos ? antigos : protocolos),
+    [carregarAntigos, protocolos, antigos],
   );
 
-  const isLegado = (p: any) =>
-    p?.__antigo === true || (typeof p.origem === "string" && p.origem.startsWith("antigo:"));
+  const isAntigo = (p: any) =>
+    typeof p?.origem === "string" && p.origem.startsWith("antigo:");
 
   // remove pontos entre dígitos: "1.991/2026" -> "1991/2026"
   const stripDots = (s: string) => s.replace(/(\d)\.(?=\d)/g, "$1");
@@ -111,14 +141,7 @@ function ProtocolosPage() {
     );
 
   const filtrados = protocolosComAntigos.filter(p => {
-    if (!isLegado(p) && saudeSecId && p.secretaria_id === saudeSecId) return false;
-    // Protocolos legados só aparecem quando o mês "antigos" está selecionado
-    // ou quando pesquisados/filtrados por período explícito.
-    if (mes === "antigos") {
-      if (!isLegado(p)) return false;
-    } else if (isLegado(p) && !busca.trim() && !(dataIni || dataFim)) {
-      return false;
-    }
+    if (!isAntigo(p) && saudeSecId && p.secretaria_id === saudeSecId) return false;
     // Concluídos só aparecem quando filtrados explicitamente, buscados pelo número
     // ou quando estamos vendo os Protocolos Antigos (a maioria já está concluída).
     if (p.status === "concluido"
@@ -140,7 +163,7 @@ function ProtocolosPage() {
     if (busca) {
       const s = normalize(busca);
       const txt = normalize(
-        `${p.numero ?? ""} ${p.assunto ?? ""} ${p.solicitante ?? ""} ${p.descricao ?? ""} ${(p as any).__source ?? ""} ${(p as any).__setor ?? ""}`,
+        `${p.numero ?? ""} ${p.assunto ?? ""} ${p.solicitante ?? ""} ${p.descricao ?? ""}`,
       );
       if (!txt.includes(s)) return false;
     }
@@ -156,7 +179,15 @@ function ProtocolosPage() {
           <h1 className="text-2xl font-bold tracking-tight">Protocolos</h1>
           <p className="text-sm text-muted-foreground">{filtrados.length} de {protocolosComAntigos.length}</p>
         </div>
-        <NovoProtocoloDialog secretarias={secretarias} locais={locais} />
+        <div className="flex items-center gap-2">
+          {mes === "antigos" && !antigosFetching && antigos.length === 0 && (
+            <Button variant="secondary" onClick={() => importMutation.mutate()} disabled={importMutation.isPending}>
+              <Download className="h-4 w-4 mr-1" />
+              {importMutation.isPending ? "Importando…" : "Importar antigos"}
+            </Button>
+          )}
+          <NovoProtocoloDialog secretarias={secretarias} locais={locais} />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -267,29 +298,27 @@ function ProtocolosPage() {
                     <Button size="sm" variant="outline" onClick={() => setDetail(p)}>
                       <Eye className="h-3 w-3 mr-1" /> Detalhes
                     </Button>
-                    {!isLegado(p) && p.status !== "concluido" && !p.prorrogado && (
+                    {p.status !== "concluido" && !p.prorrogado && (
                       <Button size="sm" variant="outline"
                         onClick={() => updateMutation.mutate({ id: p.id, patch: { prorrogado: true, data_prorrogacao: new Date().toISOString().slice(0, 10) } })}>
                         <RotateCw className="h-3 w-3 mr-1" /> Prorrogar
                       </Button>
                     )}
-                    {!isLegado(p) && p.status !== "concluido" && (
+                    {p.status !== "concluido" && (
                       <Button size="sm"
                         onClick={() => updateMutation.mutate({ id: p.id, patch: { status: "concluido", data_conclusao: new Date().toISOString().slice(0, 10) } })}>
                         <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir
                       </Button>
                     )}
-                    {!isLegado(p) && p.status === "aberto" && (
+                    {p.status === "aberto" && (
                       <Button size="sm" variant="secondary"
                         onClick={() => updateMutation.mutate({ id: p.id, patch: { status: "em_andamento" } })}>
                         Iniciar
                       </Button>
                     )}
-                    {!isLegado(p) && (
-                      <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir protocolo?")) deleteMutation.mutate(p.id); }}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
+                    <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir protocolo?")) deleteMutation.mutate(p.id); }}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
