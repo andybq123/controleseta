@@ -113,8 +113,10 @@ function ProtocolosPage() {
     } else if (isLegado(p) && !busca.trim() && !(dataIni || dataFim)) {
       return false;
     }
-    // Concluídos só aparecem quando filtrados explicitamente ou buscados pelo número.
+    // Concluídos só aparecem quando filtrados explicitamente, buscados pelo número
+    // ou quando estamos vendo os Protocolos Antigos (a maioria já está concluída).
     if (p.status === "concluido"
+        && mes !== "antigos"
         && filtroStatus !== "concluido"
         && !(busca.trim() && normalize(String(p.numero ?? "")).includes(normalize(busca.trim())))) {
       return false;
