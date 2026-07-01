@@ -126,7 +126,7 @@ function ProtocolosPage() {
     if (dataIni || dataFim) {
       if (dataIni && (p.data_abertura ?? "") < dataIni) return false;
       if (dataFim && (p.data_abertura ?? "") > dataFim) return false;
-    } else if (mes !== "all" && mes !== "antigos") {
+    } else if (mes !== "all" && mes !== "antigos" && !busca.trim()) {
       if (!isInMonth(p.data_abertura, mes)) return false;
     }
     if (busca) {
