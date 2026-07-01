@@ -476,15 +476,35 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           </TabsContent>
         </Tabs>
 
-        {protocolo.url && (
-          <DialogFooter className="border-t pt-3">
-            <Button asChild variant="outline" size="sm" className="gap-1">
-              <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
-                Abrir no 1Doc <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            </Button>
-          </DialogFooter>
-        )}
+        {(() => {
+          const isLegacy =
+            protocolo?.detalhes?.legacy === true ||
+            (typeof protocolo?.origem === "string" && protocolo.origem.startsWith("antigo:"));
+          if (protocolo.url) {
+            return (
+              <DialogFooter className="border-t pt-3">
+                <Button asChild variant="outline" size="sm" className="gap-1">
+                  <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+                    Abrir no 1Doc <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              </DialogFooter>
+            );
+          }
+          if (isLegacy) {
+            return (
+              <DialogFooter className="border-t pt-3">
+                <div className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  <Badge variant="outline" className="mr-2 border-slate-300 bg-white text-slate-600">
+                    Protocolo legado
+                  </Badge>
+                  Link do 1Doc não disponível para este protocolo (importado do histórico).
+                </div>
+              </DialogFooter>
+            );
+          }
+          return null;
+        })()}
       </DialogContent>
     </Dialog>
   );
