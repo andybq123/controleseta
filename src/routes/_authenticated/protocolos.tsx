@@ -81,7 +81,7 @@ function ProtocolosPage() {
 
   const importar = useServerFn(importarProtocolosAntigos);
   const importMutation = useMutation({
-    mutationFn: async () => importar({}),
+    mutationFn: async () => importar(),
     onSuccess: (r: any) => {
       toast.success(`Importados ${r.inseridos} protocolos antigos`);
       qc.invalidateQueries({ queryKey: ["protocolos"] });
