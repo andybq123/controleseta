@@ -12,6 +12,7 @@ import { AlertTriangle, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
+import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 
 export const Route = createFileRoute("/_authenticated/atrasados")({
   component: AtrasadosPage,
@@ -21,6 +22,7 @@ function AtrasadosPage() {
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
   const [filtroSec, setFiltroSec] = useState<string>("todos");
   const [busca, setBusca] = useState("");
+  const [selected, setSelected] = useState<any | null>(null);
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
@@ -133,7 +135,11 @@ function AtrasadosPage() {
           const dias = Math.abs(p._s.dias);
           const cls = dias > 30 ? "border-destructive bg-destructive/5" : dias > 20 ? "border-destructive/60" : dias > 10 ? "border-[var(--warning)]/60" : "";
           return (
-            <Card key={p.id} className={cls}>
+            <Card
+              key={p.id}
+              className={`${cls} cursor-pointer hover:bg-accent/40 transition-colors`}
+              onClick={() => setSelected(p)}
+            >
               <CardContent className="p-3 flex flex-wrap items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -161,6 +167,12 @@ function AtrasadosPage() {
           );
         })}
       </div>
+
+      <ProtocoloDetailDialog
+        protocolo={selected}
+        open={!!selected}
+        onOpenChange={(v) => { if (!v) setSelected(null); }}
+      />
     </div>
   );
 }
