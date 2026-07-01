@@ -1,116 +1,33 @@
-## Coletor 1Doc local em Python
+## Situação
 
-Trocamos a pasta `worker/` (Node/TypeScript) por um script Python que roda na sua máquina, usa Playwright em Python pra abrir o 1Doc, e posta os arquivados no endpoint `/api/public/ingest-protocolos` que já existe no Lovable.
+Confirmei no banco: os 4 usuários cadastrados (`dclaudiovinicius`, `anderdonenator`, `camilapetermann`, `setamonitoramento75`) têm role `admin`. Como as policies endurecidas no último ajuste liberam tudo para admins, **na prática nenhuma funcionalidade quebra hoje**.
 
----
+Ainda assim, vale blindar o sistema para evitar quebra futura caso um usuário comum (`user`) seja criado — hoje ele entraria e ficaria sem ver protocolos, triagem, etc.
 
-### Como vai funcionar
+## Plano de validação e proteção
 
-```text
-Sua máquina
-    │
-    │ python coletor.py
-    ▼
-Playwright Python + Chromium local
-    │
-    ▼
-brusque.1doc.com.br ──▶ filtra Arquivado✅, paginação, último despacho
-    │
-    ▼
-POST https://controleseta.lovable.app/api/public/ingest-protocolos
-    │ Authorization: Bearer ${INGEST_TOKEN}
-    │ body: { protocolos: [...], origem: "worker" }
-    ▼
-Lovable atualiza protocolos + grava em "coletas"
-```
+### 1. Validação rápida (sem mudanças)
+- Rodar checagem nas policies/funções para garantir que toda leitura/escrita crítica passa por `has_role(auth.uid(), 'admin')` ou pelo próprio usuário.
+- Conferir áreas sensíveis em produção via Playwright logado:
+  - `/tarefas` (triagem: reservar, concluir, liberar)
+  - `/protocolos` (listar, abrir, editar local/secretaria)
+  - `/dashboard` e `/relatorios` (agregações)
+  - Realtime na triagem (lock entre usuários)
+- Verificar `profiles`: como passou a ser "dono ou admin", todos enxergam tudo (admins veem todos os profiles), então telas que mostram "quem concluiu a triagem" seguem funcionando.
 
-Mesmo backend, mesma tabela `coletas`, mesma aba **Coletor → Histórico** com badge `worker`. Você só troca a tecnologia da execução local.
+### 2. Proteção contra criação acidental de usuário não-admin
+Hoje a tela `/users` permite escolher role `admin` ou `user`. Para evitar que alguém crie um `user` comum e fique órfão de permissões, faríamos uma destas opções (a escolher):
 
----
+- **A. Forçar admin no cadastro:** ocultar o select de role na UI `/users` e gravar sempre `admin` no `allowed_emails`/`user_roles`. Simples e alinhado ao uso atual.
+- **B. Manter o select, mas alertar:** deixar a UI como está e apenas adicionar um aviso visual ("usuários comuns têm acesso limitado").
+- **C. Ampliar policies para `user`:** reverter parte da restrição e permitir que role `user` também leia/edite protocolos não-públicos. **Não recomendado**, pois enfraquece o ganho de segurança recém-aplicado.
 
-### O que vou criar
+### 3. Detalhes técnicos
+- A função `has_role` já é `SECURITY DEFINER` e estável — segura para uso nas policies.
+- A RPC `concluir_triagem` / `reservar_triagem` exige `auth.uid()` (qualquer autenticado), não admin — segue funcionando para todos os 4 usuários.
+- O `protocolo_historico` exibe `autor_nome` via `profiles`; como todo mundo é admin, a policy "owner OR admin" devolve todos os nomes corretamente.
 
-Nova pasta **`coletor-py/`** no projeto, com:
+## O que preciso de você
 
-1. **`coletor.py`** — script único, fácil de ler:
-   - Lê `.env` com `python-dotenv`.
-   - Abre Chromium via `playwright.sync_api`.
-   - Loga no 1Doc (`page.fill` / `page.click`).
-   - Navega na lista filtrando Arquivado✅, paginando até `MAX_PROTOCOLOS`.
-   - Para cada item: abre o detalhe, extrai número (`X.XXX/AAAA`, ignora `1/30`), URL, último despacho.
-   - Envia o lote ao endpoint do Lovable e imprime resumo: `coletados=X atualizados=Y ignorados=Z`.
-
-2. **`requirements.txt`**:
-   ```
-   playwright==1.49.0
-   httpx==0.27.2
-   python-dotenv==1.0.1
-   ```
-
-3. **`.env.example`**:
-   ```env
-   ONEDOC_BASE=https://brusque.1doc.com.br
-   ONEDOC_USER=seu_login
-   ONEDOC_PASS=sua_senha
-   BACKEND_URL=https://controleseta.lovable.app
-   INGEST_TOKEN=<mesmo dos secrets do Lovable>
-   MAX_PROTOCOLOS=200
-   DELAY_MS=500
-   HEADLESS=false
-   ```
-
-4. **`README.md`** — passo a passo Windows/Mac/Linux (instalar Python, criar venv, `pip install`, `playwright install chromium`, copiar `.env`, `python coletor.py`).
-
-5. **`run.bat`** (Windows) e **`run.sh`** (Mac/Linux) — clica e roda, ativa a venv e chama o script.
-
-6. **`SCHEDULE.md`** (opcional) — como agendar 3x ao dia no Agendador de Tarefas do Windows ou no `cron` Linux/Mac.
-
-A pasta antiga `worker/` (Node) eu **removo** pra não confundir, já que você escolheu Python. Se quiser manter pra referência, me avisa.
-
----
-
-### O que você instala uma vez só
-
-1. **Python 3.11+** (https://www.python.org/downloads/ — marcar "Add to PATH" no Windows).
-2. Abrir terminal dentro de `coletor-py/`:
-   ```bash
-   python -m venv .venv
-   # Windows
-   .venv\Scripts\activate
-   # Mac/Linux
-   source .venv/bin/activate
-
-   pip install -r requirements.txt
-   playwright install chromium
-   cp .env.example .env
-   ```
-3. Editar `.env` com seu login do 1Doc e o `INGEST_TOKEN`.
-4. Rodar: `python coletor.py` (ou clicar em `run.bat`).
-
-Da segunda vez em diante: só clicar no script.
-
----
-
-### Vantagens da abordagem Python local
-
-- **Custo zero** — nada na nuvem.
-- Você vê a janela do Chromium na primeira execução (`HEADLESS=false`) e confirma login + filtro.
-- Python é mais fácil de você abrir e ajustar uma linha se precisar.
-- Mesmos dados → dashboard, triagem, Saúde, mapa: tudo continua igual.
-
-### Limitações
-
-- Só roda quando seu computador está ligado e conectado.
-- O `INGEST_TOKEN` fica no `.env` local — só você acessa.
-- 2FA / captcha no 1Doc continua sendo um problema potencial, mas você confirmou que é só usuário/senha.
-
----
-
-### O que preciso de você antes de implementar
-
-1. Seu **sistema operacional** (Windows, Mac ou Linux) — pra eu priorizar o `run.bat` ou `run.sh`.
-2. Confirmar se já tem **Python 3.11+** instalado (`python --version`) ou se vai instalar agora.
-3. Se quer já incluir as instruções de **agendamento automático** (3x ao dia) ou prefere rodar manual quando precisar.
-4. Se posso **apagar a pasta `worker/`** (Node) ou prefere manter as duas.
-
-Assim que responder, eu crio a `coletor-py/` completa e te entrego pronto pra rodar.
+1. Confirma a **opção A, B ou C** para o cadastro de usuários?
+2. Posso rodar o teste de fumaça com Playwright logado como `setamonitoramento75` (ou outro) para validar as telas em produção?
