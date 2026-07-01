@@ -466,8 +466,19 @@ function Dashboard() {
           onClick={() => openDrill("Protocolos em andamento", p => p.status !== "concluido")} />
         <KpiCard icon={CheckCircle2} tone="success" label="Concluídos" value={concluidos.length} hint={`${pctConcluidos}% do total`}
           onClick={() => openDrill("Protocolos concluídos", p => p.status === "concluido")} />
-        <KpiCard icon={AlertTriangle} tone="destructive" label="Atrasados" value={vencidos.length} hint={`${pctAtrasados}% do total`}
-          onClick={() => openDrill("Protocolos atrasados", p => p.status !== "concluido" && p._s.situacao === "vencido")} />
+        <KpiCard
+          icon={AlertTriangle}
+          tone="destructive"
+          label="Atrasados"
+          value={vencidos.length}
+          hint={mes === "all"
+            ? `${pctAtrasados}% do total geral`
+            : `${pctAtrasados}% em ${formatMonthLabel(mes)}`}
+          onClick={() => openDrill(
+            mes === "all" ? "Protocolos atrasados" : `Protocolos atrasados · ${formatMonthLabel(mes)}`,
+            p => p.status !== "concluido" && p._s.situacao === "vencido",
+          )}
+        />
         <KpiCard icon={Timer} tone="violet" label="Prazo Médio de Resposta" value={`${prazoMedio}`} suffix="dias" hint="Meta: 5 dias"
           onClick={() => openDrill("Protocolos concluídos (prazo médio)", p => p.status === "concluido" && !!p.data_conclusao)} />
         <KpiCard icon={Smile} tone="emerald" label="Satisfação do Usuário" value={`${satisfacao}%`}
