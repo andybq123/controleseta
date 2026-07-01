@@ -157,7 +157,7 @@ export const importarProtocolosAntigos = createServerFn({ method: "POST" })
         data_abertura: r.data,
         secretaria_id,
         origem: `antigo:${r.source}`,
-        sigilo: "nao",
+        sigilo: "publico",
         prorrogado: false,
         triagem_pendente: false,
         url: null,
