@@ -15,7 +15,7 @@ import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, Clock, RefreshCw, Shield
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { sincronizarGmail, ressincronizarGmail, reverificarEmails } from "@/lib/gmail-sync.functions";
+import { sincronizarGmail, ressincronizarGmail, reverificarEmails, backfillUrls1Doc } from "@/lib/gmail-sync.functions";
 
 const SYNC_INTERVAL_MIN = 3;
 
@@ -45,9 +45,11 @@ function EmailInboxPage() {
   const sincronizar = useServerFn(sincronizarGmail);
   const ressincronizar = useServerFn(ressincronizarGmail);
   const reverificar = useServerFn(reverificarEmails);
+  const backfillUrls = useServerFn(backfillUrls1Doc);
   const [sincronizando, setSincronizando] = useState(false);
   const [ressincronizando, setRessincronizando] = useState(false);
   const [reverificando, setReverificando] = useState(false);
+  const [backfillando, setBackfillando] = useState(false);
   useTick(1000);
 
   async function rodarSync() {
@@ -92,6 +94,27 @@ function EmailInboxPage() {
       toast.error(e?.message ?? "Falha ao reverificar");
     } finally {
       setReverificando(false);
+    }
+  }
+
+  async function rodarBackfillUrls() {
+    if (!confirm(
+      "Buscar nos últimos 180 dias do Gmail e preencher a URL do 1Doc nos protocolos existentes que ainda estão sem link?\n\n" +
+      "Não cria protocolos novos, não altera status nem nenhum outro campo — só preenche a URL quando estiver vazia."
+    )) return;
+    setBackfillando(true);
+    try {
+      const r = await backfillUrls({ data: { dias: 180 } }) as any;
+      toast.success(
+        `Backfill: ${r?.atualizados ?? 0} protocolo(s) atualizado(s). ` +
+        `Lidos ${r?.emails_lidos ?? 0} e-mails · ${r?.ja_com_url ?? 0} já tinham URL · ` +
+        `${r?.sem_link ?? 0} sem link · ${r?.sem_numero ?? 0} sem nº · ${r?.sem_protocolo ?? 0} sem protocolo.`
+      );
+      qc.invalidateQueries({ queryKey: ["protocolos"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha no backfill de URLs");
+    } finally {
+      setBackfillando(false);
     }
   }
 
@@ -168,6 +191,10 @@ function EmailInboxPage() {
           <p className="text-sm text-muted-foreground">Encaminhe e-mails para um endereço único e o sistema cria a ouvidoria automaticamente.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={rodarBackfillUrls} disabled={backfillando || reverificando || ressincronizando || sincronizando} title="Preenche a URL do 1Doc nos protocolos existentes sem link">
+            <RefreshCw className={`h-4 w-4 mr-1 ${backfillando ? "animate-spin" : ""}`} />
+            Backfill URLs 1Doc
+          </Button>
           <Button variant="outline" onClick={rodarReverificacao} disabled={reverificando || ressincronizando || sincronizando} title="Reverifica e-mails não protocolizados nos últimos 60 dias">
             <ShieldCheck className={`h-4 w-4 mr-1 ${reverificando ? "animate-spin" : ""}`} />
             Reverificar não-protocolados
