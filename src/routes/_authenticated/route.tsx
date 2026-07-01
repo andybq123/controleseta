@@ -56,7 +56,6 @@ function AuthLayout() {
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/tarefas", label: "Tarefas", icon: Inbox },
     { to: "/protocolos", label: "Protocolos", icon: FileText },
-    { to: "/protocolos-antigos", label: "Protocolos Antigos", icon: Archive },
     { to: "/saude", label: "Saúde", icon: HeartPulse },
     { to: "/mapa", label: "Mapa", icon: MapIcon },
     { to: "/atrasados", label: "Atrasados", icon: AlertTriangle },
