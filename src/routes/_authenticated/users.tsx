@@ -7,9 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Users as UsersIcon, Plus, Trash2, Pencil, ShieldCheck, ShieldOff } from "lucide-react";
+import { Users as UsersIcon, Plus, Trash2, Pencil, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
@@ -48,7 +47,7 @@ function UsersPage() {
             <UsersIcon className="h-6 w-6" /> Usuários
           </h1>
           <p className="text-sm text-muted-foreground">
-            Somente os e-mails listados aqui podem entrar no sistema (por senha ou Google).
+            Somente os e-mails listados aqui podem entrar no sistema (por senha ou Google). Todos os usuários são administradores.
           </p>
         </div>
         <UserDialog
@@ -76,13 +75,9 @@ function UsersPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium">{u.nome || u.email}</span>
-                  {u.role === "admin" ? (
-                    <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30" variant="outline">
-                      <ShieldCheck className="h-3 w-3 mr-1" /> Admin
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline"><ShieldOff className="h-3 w-3 mr-1" /> Usuário</Badge>
-                  )}
+                  <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30" variant="outline">
+                    <ShieldCheck className="h-3 w-3 mr-1" /> Admin
+                  </Badge>
                   {u.registered
                     ? <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30" variant="outline">Ativo</Badge>
                     : <Badge variant="secondary">Aguardando 1º login</Badge>}
@@ -130,7 +125,7 @@ function UserDialog({
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(initial?.email ?? "");
   const [nome, setNome] = useState(initial?.nome ?? "");
-  const [role, setRole] = useState<"admin" | "user">(initial?.role ?? "user");
+  const role: "admin" = "admin";
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -165,16 +160,9 @@ function UserDialog({
             <Label>Nome</Label>
             <Input value={nome} onChange={e => setNome(e.target.value)} />
           </div>
-          <div className="space-y-1.5">
-            <Label>Perfil</Label>
-            <Select value={role} onValueChange={(v: any) => setRole(v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user">Usuário</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Todos os usuários criados terão perfil de administrador.
+          </p>
           <div className="space-y-1.5">
             <Label>{isEdit ? "Nova senha (opcional)" : "Senha (opcional — deixe em branco para entrar só com Google)"}</Label>
             <Input type="password" value={senha} onChange={e => setSenha(e.target.value)} placeholder="mínimo 6 caracteres" />
