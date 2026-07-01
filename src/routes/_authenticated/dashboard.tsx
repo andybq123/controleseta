@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,6 @@ import { ManifestacoesMap, type SecretariaPoint, type LocalPoint } from "@/compo
 import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Inbox } from "lucide-react";
-import ouvidoriasData from "@/data/ouvidorias.json";
-import { getAllOverrides } from "@/lib/ouvidoriaOverrides";
-import { inferCategoriaFromTexto } from "@/lib/inferCategoria";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { currentMonthValue, monthOptionsFromDates, isInMonth, formatMonthLabel } from "@/lib/month-filter";
 import {
@@ -68,16 +65,6 @@ function Dashboard() {
   const [drill, setDrill] = useState<{ title: string; items: any[] } | null>(null);
   const [detail, setDetail] = useState<any | null>(null);
   const [mes, setMes] = useState<string>(currentMonthValue());
-  const [overridesVer, setOverridesVer] = useState(0);
-  useEffect(() => {
-    const handler = () => setOverridesVer(v => v + 1);
-    window.addEventListener("ouvidoria-overrides-changed", handler);
-    window.addEventListener("storage", handler);
-    return () => {
-      window.removeEventListener("ouvidoria-overrides-changed", handler);
-      window.removeEventListener("storage", handler);
-    };
-  }, []);
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
@@ -148,44 +135,10 @@ function Dashboard() {
     [protocolos],
   );
 
-  // Merge dos protocolos antigos (planilhas históricas) no dashboard.
-  const antigosEnriched = useMemo(() => {
-    const ov = getAllOverrides();
-    const saudeSec = (secretarias as any[]).find(s => /sa[uú]de/i.test(s.nome));
-    const ANTIGOS = (ouvidoriasData as Array<{
-      source: string; setor: string | null;
-      data: string; numero: number; situacao: string; comentario?: string | null;
-    }>).filter((r) => !r.data?.startsWith("2026-06"));
-    return ANTIGOS.map(r => {
-      const o = ov[`${r.source}|${r.numero}`];
-      const situacaoStr = o?.situacao || r.situacao;
-      const vencido = situacaoStr !== "Em dia";
-      const categoria = inferCategoriaFromTexto(`${r.comentario ?? ""} ${r.setor ?? ""}`);
-      return {
-        id: `antigo-${r.source}-${r.numero}`,
-        numero: String(r.numero),
-        tipo: "ouvidoria",
-        categoria,
-        status: "em_andamento",
-        assunto: r.setor ?? "Protocolo antigo",
-        data_abertura: r.data,
-        data_conclusao: null,
-        secretaria_id: r.source === "Saúde" ? (saudeSec?.id ?? null) : null,
-        secretarias: r.source === "Saúde"
-          ? { nome: saudeSec?.nome ?? "Saúde", sigla: saudeSec?.sigla ?? "SMS" }
-          : { nome: r.source, sigla: r.source.slice(0, 6) },
-        locais: r.setor ? { nome: r.setor } : null,
-        latitude: null,
-        longitude: null,
-        _antigo: true,
-        _s: { situacao: vencido ? "vencido" : "no_prazo" } as any,
-      } as any;
-    });
-  }, [secretarias, overridesVer]);
-
+  // Antigos já estão no banco (origem 'antigo:*') — não fazer merge do JSON aqui.
   const allEnriched = useMemo(
-    () => [...enriched, ...antigosEnriched].sort(sortProtocolosPorNumero),
-    [enriched, antigosEnriched],
+    () => [...enriched].sort(sortProtocolosPorNumero),
+    [enriched],
   );
 
   // Filtro de mês aplicado à maior parte das métricas. O gráfico
