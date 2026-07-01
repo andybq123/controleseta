@@ -340,19 +340,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               {protocolo.locais && <Field label="Local" value={protocolo.locais.nome} />}
               <Field label="Solicitante" value={protocolo.solicitante ?? "—"} />
             </div>
-            {protocolo.url && (
-              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">Origem 1doc</span>
-                <a
-                  href={protocolo.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-                >
-                  Abrir no 1doc <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </div>
-            )}
             {(protocolo as any).resolucao && (
               <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
                 <div className="text-muted-foreground mb-1 font-medium">Resolução (último despacho)</div>
@@ -488,6 +475,16 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             </div>
           </TabsContent>
         </Tabs>
+
+        {protocolo.url && (
+          <DialogFooter className="border-t pt-3">
+            <Button asChild variant="outline" size="sm" className="gap-1">
+              <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+                Abrir no 1Doc <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
