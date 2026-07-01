@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { MapPointPicker } from "@/components/map-point-picker";
 import { currentMonthValue, monthOptionsFromDates, isInMonth } from "@/lib/month-filter";
+import { buildProtocolosAntigos } from "@/lib/protocolos-antigos-merge";
 
 export const Route = createFileRoute("/_authenticated/protocolos")({
   component: ProtocolosPage,
@@ -94,8 +95,13 @@ function ProtocolosPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["protocolos"] }); toast.success("Protocolo removido"); },
   });
 
+  const protocolosComAntigos = useMemo(
+    () => [...protocolos, ...buildProtocolosAntigos(secretarias)],
+    [protocolos, secretarias],
+  );
+
   const isLegado = (p: any) =>
-    typeof p.origem === "string" && p.origem.startsWith("antigo:");
+    p?.__antigo === true || (typeof p.origem === "string" && p.origem.startsWith("antigo:"));
 
   // remove pontos entre dígitos: "1.991/2026" -> "1991/2026"
   const stripDots = (s: string) => s.replace(/(\d)\.(?=\d)/g, "$1");
@@ -104,8 +110,8 @@ function ProtocolosPage() {
       s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
     );
 
-  const filtrados = protocolos.filter(p => {
-    if (saudeSecId && p.secretaria_id === saudeSecId) return false;
+  const filtrados = protocolosComAntigos.filter(p => {
+    if (!isLegado(p) && saudeSecId && p.secretaria_id === saudeSecId) return false;
     // Protocolos legados só aparecem quando o mês "antigos" está selecionado
     // ou quando pesquisados/filtrados por período explícito.
     if (mes === "antigos") {
@@ -134,7 +140,7 @@ function ProtocolosPage() {
     if (busca) {
       const s = normalize(busca);
       const txt = normalize(
-        `${p.numero ?? ""} ${p.assunto ?? ""} ${p.solicitante ?? ""} ${p.descricao ?? ""}`,
+        `${p.numero ?? ""} ${p.assunto ?? ""} ${p.solicitante ?? ""} ${p.descricao ?? ""} ${(p as any).__source ?? ""} ${(p as any).__setor ?? ""}`,
       );
       if (!txt.includes(s)) return false;
     }
@@ -148,7 +154,7 @@ function ProtocolosPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Protocolos</h1>
-          <p className="text-sm text-muted-foreground">{filtrados.length} de {protocolos.length}</p>
+          <p className="text-sm text-muted-foreground">{filtrados.length} de {protocolosComAntigos.length}</p>
         </div>
         <NovoProtocoloDialog secretarias={secretarias} locais={locais} />
       </div>
@@ -261,27 +267,29 @@ function ProtocolosPage() {
                     <Button size="sm" variant="outline" onClick={() => setDetail(p)}>
                       <Eye className="h-3 w-3 mr-1" /> Detalhes
                     </Button>
-                    {p.status !== "concluido" && !p.prorrogado && (
+                    {!isLegado(p) && p.status !== "concluido" && !p.prorrogado && (
                       <Button size="sm" variant="outline"
                         onClick={() => updateMutation.mutate({ id: p.id, patch: { prorrogado: true, data_prorrogacao: new Date().toISOString().slice(0, 10) } })}>
                         <RotateCw className="h-3 w-3 mr-1" /> Prorrogar
                       </Button>
                     )}
-                    {p.status !== "concluido" && (
+                    {!isLegado(p) && p.status !== "concluido" && (
                       <Button size="sm"
                         onClick={() => updateMutation.mutate({ id: p.id, patch: { status: "concluido", data_conclusao: new Date().toISOString().slice(0, 10) } })}>
                         <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir
                       </Button>
                     )}
-                    {p.status === "aberto" && (
+                    {!isLegado(p) && p.status === "aberto" && (
                       <Button size="sm" variant="secondary"
                         onClick={() => updateMutation.mutate({ id: p.id, patch: { status: "em_andamento" } })}>
                         Iniciar
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir protocolo?")) deleteMutation.mutate(p.id); }}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    {!isLegado(p) && (
+                      <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir protocolo?")) deleteMutation.mutate(p.id); }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
