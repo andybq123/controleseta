@@ -83,7 +83,11 @@ function ProtocolosPage() {
   const importMutation = useMutation({
     mutationFn: async () => importar(),
     onSuccess: (r: any) => {
-      toast.success(`Importados ${r.inseridos} protocolos antigos`);
+      if (r.erros?.length) {
+        toast.error(`Importados ${r.inseridos}. Erros: ${r.erros.slice(0, 2).join(" | ")}`);
+      } else {
+        toast.success(`Importados ${r.inseridos} protocolos antigos (${r.pulados_duplicados} duplicados)`);
+      }
       qc.invalidateQueries({ queryKey: ["protocolos"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha ao importar"),
