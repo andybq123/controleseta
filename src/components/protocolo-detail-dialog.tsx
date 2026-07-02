@@ -483,7 +483,14 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 <Input type="date" value={form.data_conclusao ?? ""} onChange={e => setForm({ ...form, data_conclusao: e.target.value })} />
               </Field2>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2">
+              {protocolo?.url && (
+                <Button asChild variant="default" size="sm" className="gap-1 mr-auto">
+                  <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+                    Abrir no 1Doc <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setEditing(false)}>Cancelar</Button>
               <Button onClick={handleSave} disabled={update.isPending}>
                 <Save className="h-4 w-4 mr-1" /> Salvar alterações
@@ -533,18 +540,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             protocolo?.__antigo === true ||
             protocolo?.detalhes?.legacy === true ||
             (typeof protocolo?.origem === "string" && protocolo.origem.startsWith("antigo:"));
-          if (protocolo.url) {
-            return (
-              <DialogFooter className="border-t pt-3">
-                <Button asChild variant="outline" size="sm" className="gap-1">
-                  <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
-                    Abrir no 1Doc <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </Button>
-              </DialogFooter>
-            );
-          }
-          if (isLegacyFooter) {
+          if (!protocolo?.url && isLegacyFooter) {
             return (
               <DialogFooter className="border-t pt-3">
                 <div className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
