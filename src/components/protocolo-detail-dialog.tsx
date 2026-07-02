@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide-react";
@@ -84,6 +85,25 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   }, [open, protocolo?.id, protocolo?.triagem_pendente]);
 
   const lockBloqueia = lockState.kind === "reservada" || lockState.kind === "concluida";
+
+  // Atalhos de teclado no dialog
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && editing) {
+        e.stopPropagation();
+        setEditing(false);
+      }
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        if (protocolo?.triagem_pendente && editing && !lockBloqueia) {
+          e.preventDefault();
+          void handleConcluirTriagem();
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, editing, protocolo?.triagem_pendente, lockBloqueia]);
 
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
@@ -280,8 +300,15 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     }
   }
 
+  const wrapTooltip = (children: React.ReactNode, text: string) => (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="bottom">{text}</TooltipContent>
+    </Tooltip>
+  );
+
   return (
-    <>
+    <TooltipProvider delayDuration={200}>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -320,24 +347,30 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           {/* Grupo principal (ações positivas / fluxo) */}
           <div className="flex flex-wrap items-center gap-2">
             {!isLegacy && protocolo.triagem_pendente && editing && (
-              <Button
-                size="sm"
-                onClick={handleConcluirTriagem}
-                disabled={update.isPending || lockBloqueia}
-                className="bg-amber-600 text-white hover:bg-amber-700"
-              >
-                <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
-              </Button>
-            )}
-            {protocolo?.url && (
-              <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+              wrapTooltip(
                 <Button
                   size="sm"
-                  className="bg-sky-600 text-white hover:bg-sky-700"
+                  onClick={handleConcluirTriagem}
+                  disabled={update.isPending || lockBloqueia}
+                  className="bg-amber-600 text-white hover:bg-amber-700"
                 >
-                  <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1Doc
-                </Button>
-              </a>
+                  <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
+                </Button>,
+                "Finaliza a triagem encaminhando o protocolo à secretaria/local definidos (Ctrl + Enter)"
+              )
+            )}
+            {protocolo?.url && (
+              wrapTooltip(
+                <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+                  <Button
+                    size="sm"
+                    className="bg-sky-600 text-white hover:bg-sky-700"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1Doc
+                  </Button>
+                </a>,
+                "Abre o protocolo no sistema 1Doc em uma nova aba"
+              )
             )}
             {!isLegacy && protocolo.status === "concluido" && (
               <Button size="sm" variant="outline" onClick={handleReabrir} disabled={update.isPending || lockBloqueia}>
@@ -353,19 +386,25 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 <Pencil className="h-4 w-4 mr-1" /> Editar
               </Button>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
-                <X className="h-4 w-4 mr-1" /> Cancelar
-              </Button>
+              wrapTooltip(
+                <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                  <X className="h-4 w-4 mr-1" /> Cancelar
+                </Button>,
+                "Descarta as alterações feitas no formulário (Esc)"
+              )
             ))}
             {!isLegacy && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                onClick={() => { if (confirm("Excluir este protocolo permanentemente?")) del.mutate(); }}
-              >
-                <Trash2 className="h-4 w-4 mr-1" /> Excluir
-              </Button>
+              wrapTooltip(
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => { if (confirm("Excluir este protocolo permanentemente?")) del.mutate(); }}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" /> Excluir
+                </Button>,
+                "Remove permanentemente este protocolo e todo o seu histórico"
+              )
             )}
           </div>
         </div>
@@ -581,7 +620,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-    </>
+    </TooltipProvider>
   );
 }
 
