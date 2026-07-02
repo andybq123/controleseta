@@ -458,9 +458,23 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               </Field2>
             </div>
             <DialogFooter className="gap-2">
-              <Button onClick={handleSave} disabled={update.isPending}>
-                <Save className="h-4 w-4 mr-1" /> Salvar alterações
-              </Button>
+              {!isLegacy && protocolo.triagem_pendente && (
+                <Button
+                  variant="default"
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={handleConcluirTriagem}
+                  disabled={update.isPending || lockBloqueia}
+                >
+                  <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
+                </Button>
+              )}
+              {protocolo?.url && (
+                <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline">
+                    <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1Doc
+                  </Button>
+                </a>
+              )}
             </DialogFooter>
           </div>
         )}
