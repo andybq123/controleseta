@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type CategoriaProtocolo, type TipoProtocolo } from "@/lib/prazo";
+import { situacaoProtocolo, estavaAtrasadoNaData, endOfMonthOrNow, formatDate, PRAZOS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type CategoriaProtocolo, type TipoProtocolo } from "@/lib/prazo";
+import { currentMonthValue, monthOptionsFromDates, formatMonthLabel } from "@/lib/month-filter";
 import { AlertTriangle, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import { fetchAllPaginated } from "@/lib/fetch-all";
@@ -23,6 +24,7 @@ function AtrasadosPage() {
   const [filtroSec, setFiltroSec] = useState<string>("todos");
   const [busca, setBusca] = useState("");
   const [selected, setSelected] = useState<any | null>(null);
+  const [mes, setMes] = useState<string>(currentMonthValue());
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
@@ -32,7 +34,6 @@ function AtrasadosPage() {
           .from("protocolos")
           .select("*, secretarias(nome, sigla), locais(nome)")
           .eq("triagem_pendente", false)
-          .neq("status", "concluido")
           .order("data_abertura", { ascending: false })
           .range(from, to),
       ),
@@ -43,10 +44,18 @@ function AtrasadosPage() {
     queryFn: async () => (await supabase.from("secretarias").select("*").order("nome")).data ?? [],
   });
 
+  const refDate = useMemo(
+    () => (mes === "all" ? new Date() : endOfMonthOrNow(mes)),
+    [mes],
+  );
+
   const atrasados = useMemo(() => {
     return protocolos
-      .map(p => ({ ...p, _s: situacaoProtocolo(p as any) }))
-      .filter(p => p._s.situacao === "vencido")
+      .map(p => {
+        const r = estavaAtrasadoNaData(p as any, refDate);
+        return { ...p, _s: situacaoProtocolo(p as any), _atraso: r };
+      })
+      .filter(p => p._atraso.atrasado)
       .filter(p => filtroTipo === "todos" || p.tipo === filtroTipo)
       .filter(p => filtroSec === "todos" || p.secretaria_id === filtroSec)
       .filter(p => {
@@ -55,13 +64,18 @@ function AtrasadosPage() {
         return `${p.numero} ${p.assunto} ${p.solicitante ?? ""}`.toLowerCase().includes(s);
       })
       .sort(sortProtocolosPorNumero);
-  }, [protocolos, filtroTipo, filtroSec, busca]);
+  }, [protocolos, filtroTipo, filtroSec, busca, refDate]);
+
+  const opcoesMes = useMemo(
+    () => monthOptionsFromDates(protocolos.map(p => p.data_abertura)),
+    [protocolos],
+  );
 
   const buckets = {
-    "+30 dias": atrasados.filter(p => Math.abs(p._s.dias) > 30).length,
-    "+20 dias": atrasados.filter(p => Math.abs(p._s.dias) > 20 && Math.abs(p._s.dias) <= 30).length,
-    "+10 dias": atrasados.filter(p => Math.abs(p._s.dias) > 10 && Math.abs(p._s.dias) <= 20).length,
-    "Até 10 dias": atrasados.filter(p => Math.abs(p._s.dias) <= 10).length,
+    "+30 dias": atrasados.filter(p => p._atraso.diasAtraso > 30).length,
+    "+20 dias": atrasados.filter(p => p._atraso.diasAtraso > 20 && p._atraso.diasAtraso <= 30).length,
+    "+10 dias": atrasados.filter(p => p._atraso.diasAtraso > 10 && p._atraso.diasAtraso <= 20).length,
+    "Até 10 dias": atrasados.filter(p => p._atraso.diasAtraso <= 10).length,
   };
 
   function exportar() {
@@ -70,8 +84,8 @@ function AtrasadosPage() {
       "Tipo": PRAZOS[p.tipo as TipoProtocolo].label,
       "Categoria": categoriaLabel(p.categoria as CategoriaProtocolo),
       "Data Abertura": formatDate(p.data_abertura),
-      "Prazo Final": formatDate(p._s.prazoFinal),
-      "Dias em atraso": Math.abs(p._s.dias),
+      "Prazo Final": formatDate(p._atraso.prazoFinal),
+      "Dias em atraso": p._atraso.diasAtraso,
       "Status": p.status,
       "Prorrogado": p.prorrogado ? "Sim" : "Não",
       "Secretaria": (p as any).secretarias?.nome ?? "",
@@ -92,11 +106,22 @@ function AtrasadosPage() {
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <AlertTriangle className="h-6 w-6 text-destructive" /> Protocolos atrasados
           </h1>
-          <p className="text-sm text-muted-foreground">{atrasados.length} em atraso</p>
+          <p className="text-sm text-muted-foreground">
+            {atrasados.length} acumulados até {mes === "all" ? "hoje" : formatMonthLabel(mes)}
+          </p>
         </div>
-        <Button onClick={exportar} variant="outline" disabled={atrasados.length === 0}>
-          <Download className="h-4 w-4 mr-1" /> Exportar Excel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={mes} onValueChange={setMes}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+            <SelectContent className="max-h-[320px]">
+              <SelectItem value="all">Até hoje</SelectItem>
+              {opcoesMes.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button onClick={exportar} variant="outline" disabled={atrasados.length === 0}>
+            <Download className="h-4 w-4 mr-1" /> Exportar Excel
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -132,7 +157,7 @@ function AtrasadosPage() {
           <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Nenhum protocolo em atraso. 🎉</CardContent></Card>
         )}
         {atrasados.map(p => {
-          const dias = Math.abs(p._s.dias);
+          const dias = p._atraso.diasAtraso;
           const cls = dias > 30 ? "border-destructive bg-destructive/5" : dias > 20 ? "border-destructive/60" : dias > 10 ? "border-[var(--warning)]/60" : "";
           return (
             <Card
@@ -155,7 +180,7 @@ function AtrasadosPage() {
                   </div>
                   <p className="text-sm font-medium mt-1 truncate">{p.assunto}</p>
                   <p className="text-xs text-muted-foreground">
-                    {(p as any).secretarias?.nome ?? "—"} · Aberto {formatDate(p.data_abertura)} · Venceu {formatDate(p._s.prazoFinal)}
+                    {(p as any).secretarias?.nome ?? "—"} · Aberto {formatDate(p.data_abertura)} · Venceu {formatDate(p._atraso.prazoFinal)}
                   </p>
                 </div>
                 <div className="text-right shrink-0">

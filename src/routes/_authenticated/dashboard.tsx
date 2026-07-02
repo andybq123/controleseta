@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
-import { situacaoProtocolo, CATEGORIAS, type CategoriaProtocolo } from "@/lib/prazo";
+import { situacaoProtocolo, estavaAtrasadoNaData, endOfMonthOrNow, CATEGORIAS, type CategoriaProtocolo } from "@/lib/prazo";
 import {
   AlertTriangle, CheckCircle2, Clock, FileText, Smile,
   Timer, Download, MapPin, TrendingUp, Lightbulb, Building, ShieldCheck, Activity,
@@ -152,6 +152,31 @@ function Dashboard() {
   const concluidos = filtrados.filter(p => p.status === "concluido");
   const vencidos = ativos.filter(p => p._s.situacao === "vencido");
   const noPrazo = ativos.filter(p => p._s.situacao !== "vencido");
+
+  // Atrasados ACUMULADOS até o fim do mês selecionado (ou até hoje se "all"/mês atual).
+  // Considera todo o dataset, não só o filtrado por data_abertura.
+  const refDateAtraso = useMemo(
+    () => (mes === "all" ? new Date() : endOfMonthOrNow(mes)),
+    [mes],
+  );
+  const atrasadosAcum = useMemo(
+    () =>
+      allEnriched
+        .map(p => ({ p, r: estavaAtrasadoNaData(p as any, refDateAtraso) }))
+        .filter(x => x.r.atrasado),
+    [allEnriched, refDateAtraso],
+  );
+  // Total de protocolos abertos até refDate — base do percentual acumulado.
+  const totalAcum = useMemo(
+    () =>
+      allEnriched.filter(p => {
+        const d = new Date(p.data_abertura + "T00:00:00");
+        return d <= refDateAtraso;
+      }).length,
+    [allEnriched, refDateAtraso],
+  );
+  const pctAtrasadosAcum =
+    totalAcum > 0 ? ((atrasadosAcum.length / totalAcum) * 100).toFixed(2) : "0";
 
   // Prazo médio de resposta (dias) — entre data_abertura e data_conclusao
   const prazoMedio = useMemo(() => {
@@ -470,14 +495,18 @@ function Dashboard() {
           icon={AlertTriangle}
           tone="destructive"
           label="Atrasados"
-          value={vencidos.length}
+          value={atrasadosAcum.length}
           hint={mes === "all"
-            ? `${pctAtrasados}% do total geral`
-            : `${pctAtrasados}% em ${formatMonthLabel(mes)}`}
-          onClick={() => openDrill(
-            mes === "all" ? "Protocolos atrasados" : `Protocolos atrasados · ${formatMonthLabel(mes)}`,
-            p => p.status !== "concluido" && p._s.situacao === "vencido",
-          )}
+            ? `${pctAtrasadosAcum}% acumulados até hoje`
+            : `${pctAtrasadosAcum}% acumulados até ${formatMonthLabel(mes)}`}
+          onClick={() => {
+            const ids = new Set(atrasadosAcum.map(x => x.p.id));
+            const items = allEnriched.filter(p => ids.has(p.id));
+            setDrill({
+              title: `${mes === "all" ? "Protocolos atrasados" : `Protocolos atrasados acumulados · ${formatMonthLabel(mes)}`} (${items.length})`,
+              items,
+            });
+          }}
         />
         <KpiCard icon={Timer} tone="violet" label="Prazo Médio de Resposta" value={`${prazoMedio}`} suffix="dias" hint="Meta: 5 dias"
           onClick={() => openDrill("Protocolos concluídos (prazo médio)", p => p.status === "concluido" && !!p.data_conclusao)} />

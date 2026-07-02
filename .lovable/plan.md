@@ -1,69 +1,44 @@
 
-## Objetivo
+## Diagnóstico
 
-Integrar os protocolos antigos (hoje só em `src/data/ouvidorias.json`, exibidos separadamente em `/protocolos-antigos`) na tabela `protocolos`, para que apareçam em Protocolos, Dashboard, Saúde, Relatórios, Mapa etc. exatamente como os atuais — mas identificados como legados (sem link 1Doc).
+Hoje o card e o drill de **Atrasados** no dashboard filtram por `data_abertura` dentro do mês selecionado e usam `situacaoProtocolo()`, que compara o prazo final com **a data de hoje**. Resultado: em Junho/2026 e Julho/2026 aparecem 0, porque quase todos os atrasados foram *abertos* em meses anteriores. Já a aba `/atrasados` mostra tudo que está vencido hoje, sem recorte de mês — daí o descompasso.
 
-Como é um teste, tudo é **reversível com um único DELETE** (marcador `origem = 'antigo:...'`).
+A aba `/atrasados` também não tem filtro de mês nenhum.
 
-## O que será importado
+## Proposta
 
-- Arquivo: `src/data/ouvidorias.json` (3.720 registros — 2.388 Brusque + 1.332 Saúde; anos 2025/2026).
-- Serão **puladas** entradas cujo número/ano já existe em `protocolos` (evita duplicar com os atuais de junho/2026 que já vieram por e-mail).
-- Também aplicaremos os overrides oficiais de `src/data/ouvidorias-atrasadas.json` para marcar situação.
+Adotar a lógica **acumulada até o fim do mês** que você sugeriu:
 
-## Mapeamento por registro
+> "Atrasados de Junho" = todo protocolo cujo **prazo final** já passou até 30/Jun **e** que ainda não estava concluído em 30/Jun.
 
-| Campo destino | Origem |
-|---|---|
-| `numero` | `"1.878/2026"` (mesmo formato dos atuais: sequência com ponto de milhar + `/AAAA` derivado de `data`) |
-| `tipo` | `'ouvidoria'` |
-| `assunto` | `setor` (ex.: "Bem-Estar Animal") |
-| `descricao` | Texto limpo do `comentario` (remove cabeçalhos `======`, `ID#…`, autor/data) |
-| `solicitante` | Autor extraído do cabeçalho do comentário, quando presente |
-| `data_abertura` | `data` |
-| `categoria` | Inferida pelo texto (mesma heurística já usada em `inferCategoria`) |
-| `status` | `concluido` se houver registro em `protocolos_antigos_conclusoes` **ou** situação = "Em dia" antiga com data > 30 dias; senão `aberto` |
-| `secretaria_id` | Match por nome (mesma lógica de `protocolos-antigos-merge.ts`); Saúde → secretaria Saúde |
-| `origem` | `'antigo:Brusque'` ou `'antigo:Saúde'` ← **marcador de reversão** |
-| `url` | `NULL` (sem link 1Doc) |
-| `detalhes` (jsonb) | `{ legacy: true, setor_original, responsavel, situacao_original, numero_original }` |
-| `triagem_pendente` | `false` |
-| `sigilo` | `'nao'` |
-| `hash_consulta` | `NULL` |
+Assim o número só cresce (ou fica estável) mês a mês, refletindo a fila real de atraso naquele momento. Para o mês corrente, o corte é "hoje".
 
-Filtros: pular `2026-06` (já cobertos pelos atuais) e qualquer `numero/ano` que já exista no banco.
+Fórmula por mês `M` (fim do mês = `endM`, ou `hoje` se `M` for o mês atual):
+- `prazoFinal(p) < endM`
+- E (`p.status != 'concluido'` OU `p.data_conclusao > endM`)
 
-## Passos
+## Mudanças
 
-1. **Migration** — cria índice parcial `idx_protocolos_antigo ON protocolos(origem) WHERE origem LIKE 'antigo:%'` para busca/limpeza rápidas. Nada mais de schema.
-2. **Server function `importarProtocolosAntigos`** (`src/lib/protocolos-antigos-import.functions.ts`, com `requireSupabaseAuth` + `has_role admin`):
-   - Lê o JSON embutido, aplica mapeamento acima, faz `insert` em lotes de 500 pulando duplicatas por `numero`.
-   - Retorna `{ inseridos, pulados_duplicados, pulados_junho, erros }`.
-3. **Botão de importação** em `/protocolos-antigos` (topo, área admin): "Importar para protocolos" + botão "Reverter importação" (chama outra server fn que executa `DELETE FROM protocolos WHERE origem LIKE 'antigo:%'`). Confirmação com `AlertDialog`.
-4. **UI de aviso "sem 1Doc"** em `src/components/protocolo-detail-dialog.tsx`:
-   - Quando `protocolo.detalhes?.legacy === true` **ou** `origem` começa com `antigo:`:
-     - Substituir o botão "Abrir no 1Doc" no rodapé por um `Alert` cinza com ícone: **"Protocolo legado — link do 1Doc não disponível."**
-     - Adicionar `Badge` "Legado" ao lado do número no cabeçalho.
-5. **Não** alterar `/protocolos-antigos` além do botão — a página continua funcionando lendo o JSON, então se revertermos nada quebra.
-6. **Não** mexer em `protocolo-ingest.server.ts`, triggers de triagem, coletor, etc.
+1. **`src/lib/prazo.ts`**
+   - Nova helper `situacaoNaData(p, refDate)` idêntica a `situacaoProtocolo`, mas recebendo uma data de referência.
+   - `estavaAtrasadoNaData(p, refDate)` aplicando a regra acima.
 
-## Reversão (caso o teste não fique bom)
+2. **`src/routes/_authenticated/dashboard.tsx`**
+   - Card **Atrasados** e drill: usar `estavaAtrasadoNaData` sobre **todo** o dataset (`allEnriched`), não só `filtrados` (que hoje corta por `data_abertura`).
+   - Legenda do card: "atrasados acumulados até <mês>" (ou "até hoje" quando `mes === 'all'` ou for o mês atual).
+   - Percentual: sobre o total acumulado aberto até o fim do mês.
+   - Novo mini-gráfico opcional (**pequeno**, dentro do card ou logo abaixo do KPI de atrasados) com a evolução dos últimos 6 meses da fila acumulada de atrasados — puramente frontend, mesmo dataset.
 
-- Clicar "Reverter importação" na página, **ou** executar:  
-  `DELETE FROM protocolos WHERE origem LIKE 'antigo:%';`
-- Reverter os 2 arquivos novos (`protocolos-antigos-import.functions.ts` e o pequeno bloco no dialog/página).
-- O índice parcial pode ficar (é inofensivo) ou ser removido com um drop simples.
+3. **`src/routes/_authenticated/atrasados.tsx`**
+   - Adicionar o mesmo `Select` de mês (reaproveitando `monthOptionsFromDates` + `currentMonthValue`) para escolher a data de corte.
+   - Trocar o filtro `_s.situacao === 'vencido'` por `estavaAtrasadoNaData(p, endMes)`.
+   - Buckets ("+30 dias", "+20 dias", …) e o "Xd atrasado" passam a ser calculados relativos ao `endMes` selecionado (não a hoje), para o número ser coerente com o corte.
+   - Padrão do filtro: mês atual (comportamento atual preservado quando o usuário não muda nada, exceto que já não some quem foi aberto antes).
 
-## Riscos e mitigações
+4. Nenhuma mudança de schema, nenhuma edge function, nenhum ajuste em ingest/triagem.
 
-- **Colisão de números**: tratada pelo skip por `numero` já existente.
-- **Volume (~3,7k linhas)**: insert em lotes; sem impacto notável em RLS/consultas (protocolos já lida com milhares).
-- **Categoria/secretaria imprecisas**: usamos a mesma heurística já usada hoje em `/protocolos-antigos`, então o resultado será consistente com o que o usuário já vê lá.
-- **Histórico/gatilhos**: o trigger `log_protocolo_changes` gravará `_criacao` para cada import. É esperado e reversível junto com o DELETE (cascade em `protocolo_historico`).
+## Não fazer
 
-## Arquivos afetados
-
-- **Novo**: `src/lib/protocolos-antigos-import.functions.ts`
-- **Editar**: `src/routes/_authenticated/protocolos-antigos.index.tsx` (botões admin)
-- **Editar**: `src/components/protocolo-detail-dialog.tsx` (badge + aviso "1Doc indisponível")
-- **Migration**: índice parcial para reversão rápida
+- Não mexer em `NotificationBell` nem em `/tarefas` (usam "vencido hoje", que é o comportamento certo lá).
+- Não alterar como legado/antigos são carregados — já estão em `allEnriched`.
+- Não tocar o gráfico de evolução de manifestações (é sobre aberturas, não atrasos).
