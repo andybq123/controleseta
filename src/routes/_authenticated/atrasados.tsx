@@ -14,6 +14,7 @@ import * as XLSX from "xlsx";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/atrasados")({
   component: AtrasadosPage,
@@ -78,6 +79,33 @@ function AtrasadosPage() {
     "Até 10 dias": atrasados.filter(p => p._atraso.diasAtraso <= 10).length,
   };
 
+  const timeline = useMemo(() => {
+    if (protocolos.length === 0) return [] as { mes: string; label: string; total: number }[];
+    const filtrados = protocolos
+      .filter(p => filtroTipo === "todos" || p.tipo === filtroTipo)
+      .filter(p => filtroSec === "todos" || p.secretaria_id === filtroSec);
+    const datas = filtrados.map(p => p.data_abertura).filter(Boolean) as string[];
+    if (datas.length === 0) return [];
+    const minYM = datas.reduce((a, b) => (a < b ? a : b)).slice(0, 7);
+    const maxYM = mes === "all" ? currentMonthValue() : mes;
+    const [minY, minM] = minYM.split("-").map(Number);
+    const [maxY, maxM] = maxYM.split("-").map(Number);
+    const points: { mes: string; label: string; total: number }[] = [];
+    let y = minY, m = minM;
+    while (y < maxY || (y === maxY && m <= maxM)) {
+      const ym = `${y}-${String(m).padStart(2, "0")}`;
+      const ref = endOfMonthOrNow(ym);
+      const total = filtrados.reduce(
+        (acc, p) => acc + (estavaAtrasadoNaData(p as any, ref).atrasado ? 1 : 0),
+        0,
+      );
+      points.push({ mes: ym, label: formatMonthLabel(ym), total });
+      m += 1;
+      if (m > 12) { m = 1; y += 1; }
+    }
+    return points;
+  }, [protocolos, filtroTipo, filtroSec, mes]);
+
   function exportar() {
     const rows = atrasados.map(p => ({
       "Número": p.numero,
@@ -132,6 +160,40 @@ function AtrasadosPage() {
           </CardContent></Card>
         ))}
       </div>
+
+      {timeline.length > 1 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="mb-2">
+              <p className="text-sm font-medium">Evolução do acumulado</p>
+              <p className="text-xs text-muted-foreground">
+                Fila de atrasados no fim de cada mês até {mes === "all" ? "hoje" : formatMonthLabel(mes)}
+              </p>
+            </div>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={timeline} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="atrasadosGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <YAxis fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} width={32} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 500 }}
+                    formatter={(v: number) => [`${v} atrasados`, ""]}
+                  />
+                  <Area type="monotone" dataKey="total" stroke="hsl(var(--destructive))" strokeWidth={2} fill="url(#atrasadosGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Input placeholder="Buscar…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[240px]" />
