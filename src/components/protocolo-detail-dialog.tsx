@@ -308,7 +308,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   );
 
   return (
-    <>
+    <TooltipProvider delayDuration={200}>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
