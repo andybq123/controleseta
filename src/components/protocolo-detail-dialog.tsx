@@ -316,45 +316,58 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         )}
 
         {/* Ações rápidas */}
-        <div className="flex flex-wrap gap-2 border-y py-3">
-          {!isLegacy && protocolo.status === "concluido" && (
-            <Button size="sm" variant="outline" onClick={handleReabrir} disabled={update.isPending || lockBloqueia}>
-              Reabrir
-            </Button>
-          )}
-          {!isLegacy && (!editing ? (
-            <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="ml-auto" disabled={lockBloqueia}>
-              <Pencil className="h-4 w-4 mr-1" /> Editar
-            </Button>
-          ) : (
-            <Button size="sm" variant="ghost" onClick={() => setEditing(false)} className="ml-auto">
-              <X className="h-4 w-4 mr-1" /> Cancelar
-            </Button>
-          ))}
-          {!isLegacy && protocolo.triagem_pendente && editing && (
-            <Button
-              size="sm"
-              variant="default"
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-              onClick={handleConcluirTriagem}
-              disabled={update.isPending || lockBloqueia}
-            >
-              <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
-            </Button>
-          )}
-          {protocolo?.url && (
-            <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
-              <Button size="sm" variant="default" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1Doc
+        <div className="flex flex-wrap items-center gap-2 border-y py-3">
+          {/* Grupo principal (ações positivas / fluxo) */}
+          <div className="flex flex-wrap items-center gap-2">
+            {!isLegacy && protocolo.triagem_pendente && editing && (
+              <Button
+                size="sm"
+                onClick={handleConcluirTriagem}
+                disabled={update.isPending || lockBloqueia}
+                className="bg-amber-600 text-white hover:bg-amber-700"
+              >
+                <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
               </Button>
-            </a>
-          )}
-          {!isLegacy && (
-            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
-              onClick={() => { if (confirm("Excluir este protocolo permanentemente?")) del.mutate(); }}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+            )}
+            {protocolo?.url && (
+              <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+                <Button
+                  size="sm"
+                  className="bg-sky-600 text-white hover:bg-sky-700"
+                >
+                  <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1Doc
+                </Button>
+              </a>
+            )}
+            {!isLegacy && protocolo.status === "concluido" && (
+              <Button size="sm" variant="outline" onClick={handleReabrir} disabled={update.isPending || lockBloqueia}>
+                <RotateCw className="h-4 w-4 mr-1" /> Reabrir
+              </Button>
+            )}
+          </div>
+
+          {/* Grupo secundário (edição / cancelamento / exclusão) */}
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            {!isLegacy && (!editing ? (
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)} disabled={lockBloqueia}>
+                <Pencil className="h-4 w-4 mr-1" /> Editar
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                <X className="h-4 w-4 mr-1" /> Cancelar
+              </Button>
+            ))}
+            {!isLegacy && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                onClick={() => { if (confirm("Excluir este protocolo permanentemente?")) del.mutate(); }}
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> Excluir
+              </Button>
+            )}
+          </div>
         </div>
 
         <Tabs defaultValue="detalhes" className="w-full">
