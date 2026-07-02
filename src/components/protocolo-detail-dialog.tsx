@@ -136,12 +136,33 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     mutationFn: async (patch: any) => {
       const { error } = await supabase.from("protocolos").update(patch).eq("id", protocolo.id);
       if (error) throw error;
+      return patch;
     },
-    onSuccess: () => {
+    onSuccess: (patch: any) => {
       qc.invalidateQueries({ queryKey: ["protocolos"] });
       qc.invalidateQueries({ queryKey: ["protocolo", protocolo.id] });
       qc.invalidateQueries({ queryKey: ["historico", protocolo.id] });
-      toast.success("Protocolo atualizado");
+      // Se a data_conclusao ou status mudou, recalcula relatórios/atrasados/dashboards
+      const mudouConclusao =
+        patch && (Object.prototype.hasOwnProperty.call(patch, "data_conclusao")
+                  || Object.prototype.hasOwnProperty.call(patch, "status"));
+      if (mudouConclusao) {
+        qc.invalidateQueries({
+          predicate: (q) => {
+            const k = q.queryKey?.[0];
+            return typeof k === "string" && (
+              k === "protocolos"
+              || k.startsWith("protocolos-")
+              || k.startsWith("relatorio")
+              || k === "triagem-stats"
+              || k === "atrasados"
+            );
+          },
+        });
+        toast.success("Protocolo atualizado — acumulados e relatórios recalculados");
+      } else {
+        toast.success("Protocolo atualizado");
+      }
     },
     onError: (e: any) => toast.error(e.message ?? "Erro ao salvar"),
   });
