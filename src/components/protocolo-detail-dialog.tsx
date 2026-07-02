@@ -538,6 +538,39 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         })()}
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={concluirOpen} onOpenChange={setConcluirOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Concluir protocolo</AlertDialogTitle>
+          <AlertDialogDescription>
+            Informe a data real da conclusão. Isso garante que os relatórios e a evolução de atrasados considerem o momento correto — mesmo que você registre a conclusão depois.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="space-y-2">
+          <Label className="text-xs">Data de conclusão</Label>
+          <Input
+            type="date"
+            value={concluirData}
+            max={new Date().toISOString().slice(0, 10)}
+            min={protocolo?.data_abertura ?? undefined}
+            onChange={(e) => setConcluirData(e.target.value)}
+          />
+          {protocolo?.data_abertura && (
+            <p className="text-[11px] text-muted-foreground">
+              Abertura: {formatDate(protocolo.data_abertura)}
+            </p>
+          )}
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={update.isPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmarConclusao(); }} disabled={update.isPending}>
+            Confirmar conclusão
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
