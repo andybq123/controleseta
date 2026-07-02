@@ -254,7 +254,13 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     }
     update.mutate(
       { status: "concluido", data_conclusao: concluirData },
-      { onSuccess: () => setConcluirOpen(false) },
+      {
+        onSuccess: () => {
+          setConcluirOpen(false);
+          setEditing(false);
+          onOpenChange(false);
+        },
+      },
     );
   }
   function handleReabrir() {
