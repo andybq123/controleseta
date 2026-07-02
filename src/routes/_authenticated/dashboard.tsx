@@ -203,7 +203,7 @@ function Dashboard() {
       const inicio = startOfMonth(subMonths(new Date(), i));
       const fim = startOfMonth(subMonths(new Date(), i - 1));
       const qtd = allEnriched.filter(p => {
-        const d = new Date(p.data_abertura);
+        const d = new Date(p.data_abertura + "T00:00:00");
         return d >= inicio && d < fim;
       }).length;
       meses.push({ mes: format(inicio, "MMM/yy", { locale: ptBR }), total: qtd });
