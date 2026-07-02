@@ -39,6 +39,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     | { kind: "reservada"; por: string; em: string }
     | { kind: "concluida"; por: string; em: string }
   >({ kind: "idle" });
+  const [tooltipAberto, setTooltipAberto] = useState<string | null>(null);
+  const [tooltipsLiberados, setTooltipsLiberados] = useState(false);
 
   // "Legado in-memory": só marcado quando o protocolo vem do JSON de antigos (sem row no banco).
   // Após a importação, antigos passam a ser rows normais e devem ser plenamente editáveis.
@@ -85,6 +87,14 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   }, [open, protocolo?.id, protocolo?.triagem_pendente]);
 
   const lockBloqueia = lockState.kind === "reservada" || lockState.kind === "concluida";
+
+  useEffect(() => {
+    setTooltipAberto(null);
+    setTooltipsLiberados(false);
+    if (!open) return;
+    const timer = window.setTimeout(() => setTooltipsLiberados(true), 700);
+    return () => window.clearTimeout(timer);
+  }, [open, protocolo?.id]);
 
   // Atalhos de teclado no dialog
   useEffect(() => {
@@ -300,12 +310,25 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     }
   }
 
-  const wrapTooltip = (children: React.ReactNode, text: string) => (
-    <Tooltip>
+  const wrapTooltip = (id: string, children: React.ReactNode, text: string) => (
+    <Tooltip open={tooltipAberto === id}>
       <TooltipTrigger asChild>
-        <span tabIndex={-1} className="inline-flex">{children}</span>
+        <span
+          tabIndex={-1}
+          className="inline-flex"
+          onMouseEnter={() => {
+            if (tooltipsLiberados) setTooltipAberto(id);
+          }}
+          onMouseLeave={() => setTooltipAberto(null)}
+          onMouseDown={() => setTooltipAberto(null)}
+          onFocus={() => setTooltipAberto(null)}
+        >
+          {children}
+        </span>
       </TooltipTrigger>
-      <TooltipContent side="bottom">{text}</TooltipContent>
+      <TooltipContent side="bottom" onPointerDownOutside={() => setTooltipAberto(null)}>
+        {text}
+      </TooltipContent>
     </Tooltip>
   );
 
@@ -350,6 +373,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           <div className="flex flex-wrap items-center gap-2">
             {!isLegacy && protocolo.triagem_pendente && editing && (
               wrapTooltip(
+                "concluir-triagem",
                 <Button
                   size="sm"
                   onClick={handleConcluirTriagem}
@@ -363,6 +387,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             )}
             {protocolo?.url && (
               wrapTooltip(
+                "abrir-1doc",
                 <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
                   <Button
                     size="sm"
@@ -389,6 +414,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               </Button>
             ) : (
               wrapTooltip(
+                "cancelar-edicao",
                 <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
                   <X className="h-4 w-4 mr-1" /> Cancelar
                 </Button>,
@@ -397,6 +423,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             ))}
             {!isLegacy && (
               wrapTooltip(
+                "excluir-protocolo",
                 <Button
                   size="sm"
                   variant="outline"
