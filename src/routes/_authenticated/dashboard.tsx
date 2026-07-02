@@ -38,6 +38,7 @@ import {
 } from "recharts";
 import { format, startOfMonth, subMonths, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useRealtimeSync } from "@/hooks/realtime-sync-context";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
