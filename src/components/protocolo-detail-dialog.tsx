@@ -237,6 +237,49 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     update.mutate({ prorrogado: true, data_prorrogacao: new Date().toISOString().slice(0, 10) });
   }
 
+  async function handleConcluirTriagem() {
+    if (!form.secretaria_id) {
+      toast.error("Defina a secretaria antes de concluir a triagem.");
+      return;
+    }
+    const relato = (form.descricao ?? "").trim();
+    if (relato.length < 5) {
+      toast.error("Informe uma descrição (breve relato) antes de concluir a triagem.");
+      return;
+    }
+    const { error: upErr } = await supabase
+      .from("protocolos")
+      .update({
+        descricao: relato,
+        secretaria_id: form.secretaria_id || null,
+        local_id: form.local_id || null,
+      })
+      .eq("id", protocolo.id);
+    if (upErr) { toast.error(upErr.message); return; }
+    const { data, error } = await supabase.rpc("concluir_triagem", {
+      p_id: protocolo.id,
+      p_secretaria: form.secretaria_id,
+      p_local: (form.local_id || null) as any,
+    });
+    if (error) { toast.error(error.message); return; }
+    const r = data as any;
+    if (r?.ok) {
+      toast.success("Triagem concluída. Protocolo enviado ao módulo correspondente.");
+      qc.invalidateQueries({ queryKey: ["protocolos"] });
+      qc.invalidateQueries({ queryKey: ["protocolos-triagem"] });
+      qc.invalidateQueries({ queryKey: ["triagem-stats"] });
+      onOpenChange(false);
+    } else if (r?.motivo === "concluida") {
+      toast.error(`Já triada por ${r.por} em ${new Date(r.em).toLocaleString("pt-BR")}.`);
+      setLockState({ kind: "concluida", por: r.por, em: r.em });
+    } else if (r?.motivo === "reservada") {
+      toast.error(`Reservada por ${r.por} desde ${new Date(r.em).toLocaleString("pt-BR")}.`);
+      setLockState({ kind: "reservada", por: r.por, em: r.em });
+    } else {
+      toast.error("Não foi possível concluir a triagem.");
+    }
+  }
+
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
