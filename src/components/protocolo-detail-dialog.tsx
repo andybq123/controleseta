@@ -608,7 +608,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-    </>
+    </TooltipProvider>
   );
 }
 
