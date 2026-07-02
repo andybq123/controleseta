@@ -38,6 +38,7 @@ import {
 } from "recharts";
 import { format, startOfMonth, subMonths, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useRealtimeSync } from "@/hooks/realtime-sync-context";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -437,6 +438,7 @@ function Dashboard() {
             Visão geral das manifestações da Ouvidoria — {mes === "all" ? "todos os meses" : formatMonthLabel(mes)}
           </p>
         </div>
+        <SyncBadge />
         <div className="flex items-center gap-2">
           <Select value={mes} onValueChange={setMes}>
             <SelectTrigger className="w-[180px]"><SelectValue placeholder="Mês" /></SelectTrigger>
@@ -1064,5 +1066,20 @@ function DrillDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SyncBadge() {
+  const { recentlySynced } = useRealtimeSync();
+  return (
+    <div
+      className={`flex items-center gap-1.5 text-xs transition-opacity duration-500 ${
+        recentlySynced ? "opacity-100" : "opacity-0"
+      }`}
+      aria-live="polite"
+    >
+      <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+      <span className="text-emerald-700 dark:text-emerald-400 font-medium">Atualizado agora</span>
+    </div>
   );
 }

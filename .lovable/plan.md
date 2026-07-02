@@ -1,44 +1,33 @@
+## Objetivo
+Fazer os KPIs da dashboard atualizarem instantaneamente após qualquer alteração relevante em um protocolo (conclusão, edição, triagem) e, ao mesmo tempo, propagar essas mudanças em tempo real para os outros usuários conectados.
 
-## Diagnóstico
+## Passos
 
-Hoje o card e o drill de **Atrasados** no dashboard filtram por `data_abertura` dentro do mês selecionado e usam `situacaoProtocolo()`, que compara o prazo final com **a data de hoje**. Resultado: em Junho/2026 e Julho/2026 aparecem 0, porque quase todos os atrasados foram *abertos* em meses anteriores. Já a aba `/atrasados` mostra tudo que está vencido hoje, sem recorte de mês — daí o descompasso.
+1. **Habilitar Realtime na tabela `protocolos`**
+   - Migração adicionando `public.protocolos` à publication `supabase_realtime`.
+   - Garantir `REPLICA IDENTITY FULL` para receber os campos antigos nos eventos de UPDATE.
 
-A aba `/atrasados` também não tem filtro de mês nenhum.
+2. **Hook `useProtocolosRealtime`**
+   - Novo arquivo `src/hooks/use-protocolos-realtime.ts`.
+   - Assina o canal `postgres_changes` (`event: '*'`, `schema: 'public'`, `table: 'protocolos'`) dentro de um `useEffect` com cleanup (`supabase.removeChannel`), conforme padrão de Realtime.
+   - Ao receber um evento, faz `queryClient.invalidateQueries` de forma debounced (300 ms) nas chaves relevantes: `protocolos`, `protocolos-*`, `relatorio*`, `triagem-stats`, `atrasados`, `dashboard*`, `protocolo` (detalhe).
 
-## Proposta
+3. **Montar o hook uma única vez**
+   - Chamar `useProtocolosRealtime()` em `src/routes/_authenticated/route.tsx` (dentro do layout autenticado) — evita múltiplas assinaturas por página.
 
-Adotar a lógica **acumulada até o fim do mês** que você sugeriu:
+4. **Reforçar a atualização imediata local**
+   - Revisar `protocolo-detail-dialog.tsx` para garantir invalidação abrangente após `handleSave`, `confirmarConclusao`, `handleReabrir`, `handleIniciar`, `handleProrrogar` e `handleConcluirTriagem` (algumas ações hoje só invalidam `["protocolos"]`).
+   - Consolidar num helper `invalidateProtocoloCaches(qc)` para não repetir o predicate.
 
-> "Atrasados de Junho" = todo protocolo cujo **prazo final** já passou até 30/Jun **e** que ainda não estava concluído em 30/Jun.
+5. **Feedback discreto de sincronização (opcional, leve)**
+   - Um pequeno indicador "Atualizado agora" no cabeçalho da dashboard quando o Realtime dispara uma revalidação (badge que some após 2 s). Sem toasts intrusivos.
 
-Assim o número só cresce (ou fica estável) mês a mês, refletindo a fila real de atraso naquele momento. Para o mês corrente, o corte é "hoje".
+## Detalhes técnicos
+- Sem novas tabelas nem colunas. Apenas: 1 migração de publication + 1 hook novo + 1 chamada de hook + refactor pequeno no dialog.
+- Debounce evita tempestade de re-fetch quando várias linhas mudam em sequência (ex.: triagem em lote).
+- RLS já existente cobre o filtro do Realtime — usuários só recebem eventos das linhas que podem ler.
+- Custo Realtime: baixo (3 usuários, tabela de baixa escrita).
 
-Fórmula por mês `M` (fim do mês = `endM`, ou `hoje` se `M` for o mês atual):
-- `prazoFinal(p) < endM`
-- E (`p.status != 'concluido'` OU `p.data_conclusao > endM`)
-
-## Mudanças
-
-1. **`src/lib/prazo.ts`**
-   - Nova helper `situacaoNaData(p, refDate)` idêntica a `situacaoProtocolo`, mas recebendo uma data de referência.
-   - `estavaAtrasadoNaData(p, refDate)` aplicando a regra acima.
-
-2. **`src/routes/_authenticated/dashboard.tsx`**
-   - Card **Atrasados** e drill: usar `estavaAtrasadoNaData` sobre **todo** o dataset (`allEnriched`), não só `filtrados` (que hoje corta por `data_abertura`).
-   - Legenda do card: "atrasados acumulados até <mês>" (ou "até hoje" quando `mes === 'all'` ou for o mês atual).
-   - Percentual: sobre o total acumulado aberto até o fim do mês.
-   - Novo mini-gráfico opcional (**pequeno**, dentro do card ou logo abaixo do KPI de atrasados) com a evolução dos últimos 6 meses da fila acumulada de atrasados — puramente frontend, mesmo dataset.
-
-3. **`src/routes/_authenticated/atrasados.tsx`**
-   - Adicionar o mesmo `Select` de mês (reaproveitando `monthOptionsFromDates` + `currentMonthValue`) para escolher a data de corte.
-   - Trocar o filtro `_s.situacao === 'vencido'` por `estavaAtrasadoNaData(p, endMes)`.
-   - Buckets ("+30 dias", "+20 dias", …) e o "Xd atrasado" passam a ser calculados relativos ao `endMes` selecionado (não a hoje), para o número ser coerente com o corte.
-   - Padrão do filtro: mês atual (comportamento atual preservado quando o usuário não muda nada, exceto que já não some quem foi aberto antes).
-
-4. Nenhuma mudança de schema, nenhuma edge function, nenhum ajuste em ingest/triagem.
-
-## Não fazer
-
-- Não mexer em `NotificationBell` nem em `/tarefas` (usam "vencido hoje", que é o comportamento certo lá).
-- Não alterar como legado/antigos são carregados — já estão em `allEnriched`.
-- Não tocar o gráfico de evolução de manifestações (é sobre aberturas, não atrasos).
+## Fora do escopo
+- Polling periódico (descartado — o Realtime já cobre).
+- Mudanças visuais na dashboard além do micro-indicador de sync.
