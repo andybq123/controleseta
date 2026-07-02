@@ -317,78 +317,9 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
 
         {/* Ações rápidas */}
         <div className="flex flex-wrap gap-2 border-y py-3">
-          {!isLegacy && protocolo.triagem_pendente && (
-            <Button
-              size="sm"
-              variant="default"
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-              onClick={() => {
-                if (!form.secretaria_id) {
-                  toast.error("Defina a secretaria antes de concluir a triagem.");
-                  return;
-                }
-                const relato = (form.descricao ?? "").trim();
-                if (relato.length < 5) {
-                  toast.error("Informe uma descrição (breve relato) antes de concluir a triagem.");
-                  return;
-                }
-                (async () => {
-                  // Persiste o relato + secretaria/local selecionados na triagem antes de concluir
-                  const { error: upErr } = await supabase
-                    .from("protocolos")
-                    .update({
-                      descricao: relato,
-                      secretaria_id: form.secretaria_id || null,
-                      local_id: form.local_id || null,
-                    })
-                    .eq("id", protocolo.id);
-                  if (upErr) { toast.error(upErr.message); return; }
-                  const { data, error } = await supabase.rpc("concluir_triagem", {
-                    p_id: protocolo.id,
-                    p_secretaria: form.secretaria_id,
-                    p_local: (form.local_id || null) as any,
-                  });
-                  if (error) { toast.error(error.message); return; }
-                  const r = data as any;
-                  if (r?.ok) {
-                    toast.success("Triagem concluída. Protocolo enviado ao módulo correspondente.");
-                    qc.invalidateQueries({ queryKey: ["protocolos"] });
-                    qc.invalidateQueries({ queryKey: ["protocolos-triagem"] });
-                    qc.invalidateQueries({ queryKey: ["triagem-stats"] });
-                    onOpenChange(false);
-                  } else if (r?.motivo === "concluida") {
-                    toast.error(`Já triada por ${r.por} em ${new Date(r.em).toLocaleString("pt-BR")}.`);
-                    setLockState({ kind: "concluida", por: r.por, em: r.em });
-                  } else if (r?.motivo === "reservada") {
-                    toast.error(`Reservada por ${r.por} desde ${new Date(r.em).toLocaleString("pt-BR")}.`);
-                    setLockState({ kind: "reservada", por: r.por, em: r.em });
-                  } else {
-                    toast.error("Não foi possível concluir a triagem.");
-                  }
-                })();
-              }}
-              disabled={update.isPending || lockBloqueia}
-            >
-              <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
-            </Button>
-          )}
-          {!isLegacy && (protocolo.status !== "concluido" ? (
-            <Button size="sm" onClick={handleConcluir} disabled={update.isPending || lockBloqueia}>
-              <CheckCircle2 className="h-4 w-4 mr-1" /> Concluir
-            </Button>
-          ) : (
+          {!isLegacy && protocolo.status === "concluido" && (
             <Button size="sm" variant="outline" onClick={handleReabrir} disabled={update.isPending || lockBloqueia}>
               Reabrir
-            </Button>
-          ))}
-          {!isLegacy && protocolo.status === "aberto" && (
-            <Button size="sm" variant="secondary" onClick={handleIniciar} disabled={update.isPending || lockBloqueia}>
-              Iniciar atendimento
-            </Button>
-          )}
-          {!isLegacy && protocolo.status !== "concluido" && !protocolo.prorrogado && (
-            <Button size="sm" variant="outline" onClick={handleProrrogar} disabled={update.isPending || lockBloqueia}>
-              <RotateCw className="h-4 w-4 mr-1" /> Prorrogar prazo
             </Button>
           )}
           {!isLegacy && (!editing ? (
