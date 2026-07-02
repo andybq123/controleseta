@@ -302,7 +302,9 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
 
   const wrapTooltip = (children: React.ReactNode, text: string) => (
     <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipTrigger asChild>
+        <span tabIndex={-1} className="inline-flex">{children}</span>
+      </TooltipTrigger>
       <TooltipContent side="bottom">{text}</TooltipContent>
     </Tooltip>
   );
