@@ -255,9 +255,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   function handleReabrir() {
     update.mutate({ status: "em_andamento", data_conclusao: null });
   }
-  function handleIniciar() {
-    update.mutate({ status: "em_andamento" });
-  }
   function handleProrrogar() {
     update.mutate({ prorrogado: true, data_prorrogacao: new Date().toISOString().slice(0, 10) });
   }
