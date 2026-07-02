@@ -347,24 +347,30 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           {/* Grupo principal (ações positivas / fluxo) */}
           <div className="flex flex-wrap items-center gap-2">
             {!isLegacy && protocolo.triagem_pendente && editing && (
-              <Button
-                size="sm"
-                onClick={handleConcluirTriagem}
-                disabled={update.isPending || lockBloqueia}
-                className="bg-amber-600 text-white hover:bg-amber-700"
-              >
-                <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
-              </Button>
-            )}
-            {protocolo?.url && (
-              <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+              wrapTooltip(
                 <Button
                   size="sm"
-                  className="bg-sky-600 text-white hover:bg-sky-700"
+                  onClick={handleConcluirTriagem}
+                  disabled={update.isPending || lockBloqueia}
+                  className="bg-amber-600 text-white hover:bg-amber-700"
                 >
-                  <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1Doc
-                </Button>
-              </a>
+                  <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
+                </Button>,
+                "Finaliza a triagem encaminhando o protocolo à secretaria/local definidos (Ctrl + Enter)"
+              )
+            )}
+            {protocolo?.url && (
+              wrapTooltip(
+                <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+                  <Button
+                    size="sm"
+                    className="bg-sky-600 text-white hover:bg-sky-700"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1Doc
+                  </Button>
+                </a>,
+                "Abre o protocolo no sistema 1Doc em uma nova aba"
+              )
             )}
             {!isLegacy && protocolo.status === "concluido" && (
               <Button size="sm" variant="outline" onClick={handleReabrir} disabled={update.isPending || lockBloqueia}>
@@ -380,19 +386,25 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 <Pencil className="h-4 w-4 mr-1" /> Editar
               </Button>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
-                <X className="h-4 w-4 mr-1" /> Cancelar
-              </Button>
+              wrapTooltip(
+                <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                  <X className="h-4 w-4 mr-1" /> Cancelar
+                </Button>,
+                "Descarta as alterações feitas no formulário (Esc)"
+              )
             ))}
             {!isLegacy && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                onClick={() => { if (confirm("Excluir este protocolo permanentemente?")) del.mutate(); }}
-              >
-                <Trash2 className="h-4 w-4 mr-1" /> Excluir
-              </Button>
+              wrapTooltip(
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => { if (confirm("Excluir este protocolo permanentemente?")) del.mutate(); }}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" /> Excluir
+                </Button>,
+                "Remove permanentemente este protocolo e todo o seu histórico"
+              )
             )}
           </div>
         </div>
