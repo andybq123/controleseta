@@ -396,16 +396,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             )}
             {!isLegacy && !protocolo.triagem_pendente && protocolo.status !== "concluido" && (
               <>
-                {protocolo.status === "aberto" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleIniciar}
-                    disabled={update.isPending || lockBloqueia}
-                  >
-                    Iniciar atendimento
-                  </Button>
-                )}
                 <Button
                   size="sm"
                   onClick={handleConcluir}
