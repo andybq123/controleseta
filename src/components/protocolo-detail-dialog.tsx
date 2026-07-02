@@ -30,6 +30,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [concluirOpen, setConcluirOpen] = useState(false);
+  const [concluirData, setConcluirData] = useState<string>("");
   const [lockState, setLockState] = useState<
     | { kind: "idle" }
     | { kind: "mine" }
@@ -182,8 +184,27 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   }
 
   function handleConcluir() {
+    setConcluirData(new Date().toISOString().slice(0, 10));
+    setConcluirOpen(true);
+  }
+  function confirmarConclusao() {
+    if (!concluirData) {
+      toast.error("Informe a data de conclusão.");
+      return;
+    }
+    if (protocolo?.data_abertura && concluirData < protocolo.data_abertura) {
+      toast.error("A data de conclusão não pode ser anterior à abertura.");
+      return;
+    }
     const hoje = new Date().toISOString().slice(0, 10);
-    update.mutate({ status: "concluido", data_conclusao: hoje });
+    if (concluirData > hoje) {
+      toast.error("A data de conclusão não pode ser futura.");
+      return;
+    }
+    update.mutate(
+      { status: "concluido", data_conclusao: concluirData },
+      { onSuccess: () => setConcluirOpen(false) },
+    );
   }
   function handleReabrir() {
     update.mutate({ status: "em_andamento", data_conclusao: null });
@@ -196,6 +217,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -517,6 +539,39 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
         })()}
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={concluirOpen} onOpenChange={setConcluirOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Concluir protocolo</AlertDialogTitle>
+          <AlertDialogDescription>
+            Informe a data real da conclusão. Isso garante que os relatórios e a evolução de atrasados considerem o momento correto — mesmo que você registre a conclusão depois.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="space-y-2">
+          <Label className="text-xs">Data de conclusão</Label>
+          <Input
+            type="date"
+            value={concluirData}
+            max={new Date().toISOString().slice(0, 10)}
+            min={protocolo?.data_abertura ?? undefined}
+            onChange={(e) => setConcluirData(e.target.value)}
+          />
+          {protocolo?.data_abertura && (
+            <p className="text-[11px] text-muted-foreground">
+              Abertura: {formatDate(protocolo.data_abertura)}
+            </p>
+          )}
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={update.isPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmarConclusao(); }} disabled={update.isPending}>
+            Confirmar conclusão
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
