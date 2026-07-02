@@ -30,6 +30,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [concluirOpen, setConcluirOpen] = useState(false);
+  const [concluirData, setConcluirData] = useState<string>("");
   const [lockState, setLockState] = useState<
     | { kind: "idle" }
     | { kind: "mine" }
@@ -182,8 +184,27 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   }
 
   function handleConcluir() {
+    setConcluirData(new Date().toISOString().slice(0, 10));
+    setConcluirOpen(true);
+  }
+  function confirmarConclusao() {
+    if (!concluirData) {
+      toast.error("Informe a data de conclusão.");
+      return;
+    }
+    if (protocolo?.data_abertura && concluirData < protocolo.data_abertura) {
+      toast.error("A data de conclusão não pode ser anterior à abertura.");
+      return;
+    }
     const hoje = new Date().toISOString().slice(0, 10);
-    update.mutate({ status: "concluido", data_conclusao: hoje });
+    if (concluirData > hoje) {
+      toast.error("A data de conclusão não pode ser futura.");
+      return;
+    }
+    update.mutate(
+      { status: "concluido", data_conclusao: concluirData },
+      { onSuccess: () => setConcluirOpen(false) },
+    );
   }
   function handleReabrir() {
     update.mutate({ status: "em_andamento", data_conclusao: null });
