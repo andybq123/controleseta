@@ -20,6 +20,8 @@ import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Inbox } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import { currentMonthValue, monthOptionsFromDates, isInMonth, formatMonthLabel } from "@/lib/month-filter";
 import {
   ResponsiveContainer,
