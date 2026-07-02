@@ -20,6 +20,8 @@ import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Inbox } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import { currentMonthValue, monthOptionsFromDates, isInMonth, formatMonthLabel } from "@/lib/month-filter";
 import {
   ResponsiveContainer,
@@ -1020,8 +1022,26 @@ function DrillDialog({
   onOpenChange: (v: boolean) => void;
   onSelect: (p: any) => void;
 }) {
+  const [q, setQ] = useState("");
+  const items = useMemo(() => {
+    const arr = (data?.items ?? []).slice();
+    // Ordena do mais atrasado (dias mais negativos) para o menos
+    arr.sort((a: any, b: any) => {
+      const ad = a?._s?.dias ?? Number.POSITIVE_INFINITY;
+      const bd = b?._s?.dias ?? Number.POSITIVE_INFINITY;
+      return ad - bd;
+    });
+    const term = q.trim().toLowerCase();
+    if (!term) return arr;
+    return arr.filter((p: any) => {
+      const num = String(p.numero ?? "").toLowerCase();
+      const assunto = String(p.assunto ?? "").toLowerCase();
+      const sol = String(p.solicitante ?? "").toLowerCase();
+      return num.includes(term) || assunto.includes(term) || sol.includes(term);
+    });
+  }, [data, q]);
   return (
-    <Dialog open={!!data} onOpenChange={onOpenChange}>
+    <Dialog open={!!data} onOpenChange={(v) => { if (!v) setQ(""); onOpenChange(v); }}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{data?.title ?? ""}</DialogTitle>
@@ -1029,12 +1049,21 @@ function DrillDialog({
             Clique em um protocolo para abrir os detalhes.
           </DialogDescription>
         </DialogHeader>
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por número, assunto ou solicitante..."
+            className="pl-8"
+          />
+        </div>
         <div className="overflow-y-auto -mx-2 px-2">
-          {!data || data.items.length === 0 ? (
+          {!data || items.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">Nenhum protocolo encontrado.</p>
           ) : (
             <ul className="divide-y">
-              {data.items.map((p) => (
+              {items.map((p) => (
                 <li key={p.id}>
                   <button
                     type="button"
@@ -1045,6 +1074,11 @@ function DrillDialog({
                     <span className="text-sm truncate flex-1" title={p.assunto ?? ""}>
                       {p.assunto ?? "Sem assunto"}
                     </span>
+                    {typeof p?._s?.dias === "number" && p._s.dias < 0 && (
+                      <Badge variant="outline" className="text-[10px] shrink-0 bg-destructive/10 text-destructive border-destructive/30">
+                        {Math.abs(p._s.dias)}d atraso
+                      </Badge>
+                    )}
                     <Badge variant="outline" className="text-[10px] shrink-0">
                       {(p as any).secretarias?.sigla ?? (p as any).secretarias?.nome ?? "—"}
                     </Badge>

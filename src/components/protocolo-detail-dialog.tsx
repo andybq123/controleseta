@@ -255,9 +255,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   function handleReabrir() {
     update.mutate({ status: "em_andamento", data_conclusao: null });
   }
-  function handleIniciar() {
-    update.mutate({ status: "em_andamento" });
-  }
   function handleProrrogar() {
     update.mutate({ prorrogado: true, data_prorrogacao: new Date().toISOString().slice(0, 10) });
   }
@@ -399,16 +396,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             )}
             {!isLegacy && !protocolo.triagem_pendente && protocolo.status !== "concluido" && (
               <>
-                {protocolo.status === "aberto" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleIniciar}
-                    disabled={update.isPending || lockBloqueia}
-                  >
-                    Iniciar atendimento
-                  </Button>
-                )}
                 <Button
                   size="sm"
                   onClick={handleConcluir}
@@ -538,7 +525,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="aberto">Aberto</SelectItem>
                     <SelectItem value="em_andamento">Em andamento</SelectItem>
                     <SelectItem value="concluido">Concluído</SelectItem>
                   </SelectContent>
