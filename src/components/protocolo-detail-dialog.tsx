@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { CheckCircle2, RotateCw, Trash2, Save, Pencil, X, History } from "lucide-react";
 import { Inbox, Lock, ExternalLink } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { invalidateProtocoloCaches } from "@/hooks/use-protocolos-realtime";
 import {
   situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
   PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass,
@@ -169,30 +170,18 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
       return patch;
     },
     onSuccess: (patch: any) => {
-      qc.invalidateQueries({ queryKey: ["protocolos"] });
-      qc.invalidateQueries({ queryKey: ["protocolo", protocolo.id] });
+      // Invalida toda a rede de caches ligados a protocolos (dashboard, listas,
+      // relatórios, triagem, atrasados) para refletir a mudança imediatamente.
+      invalidateProtocoloCaches(qc);
       qc.invalidateQueries({ queryKey: ["historico", protocolo.id] });
-      // Se a data_conclusao ou status mudou, recalcula relatórios/atrasados/dashboards
       const mudouConclusao =
         patch && (Object.prototype.hasOwnProperty.call(patch, "data_conclusao")
                   || Object.prototype.hasOwnProperty.call(patch, "status"));
-      if (mudouConclusao) {
-        qc.invalidateQueries({
-          predicate: (q) => {
-            const k = q.queryKey?.[0];
-            return typeof k === "string" && (
-              k === "protocolos"
-              || k.startsWith("protocolos-")
-              || k.startsWith("relatorio")
-              || k === "triagem-stats"
-              || k === "atrasados"
-            );
-          },
-        });
-        toast.success("Protocolo atualizado — acumulados e relatórios recalculados");
-      } else {
-        toast.success("Protocolo atualizado");
-      }
+      toast.success(
+        mudouConclusao
+          ? "Protocolo atualizado — KPIs recalculados"
+          : "Protocolo atualizado",
+      );
     },
     onError: (e: any) => toast.error(e.message ?? "Erro ao salvar"),
   });
@@ -203,7 +192,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["protocolos"] });
+      invalidateProtocoloCaches(qc);
       toast.success("Protocolo removido");
       onOpenChange(false);
     },
@@ -301,9 +290,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     const r = data as any;
     if (r?.ok) {
       toast.success("Triagem concluída. Protocolo enviado ao módulo correspondente.");
-      qc.invalidateQueries({ queryKey: ["protocolos"] });
-      qc.invalidateQueries({ queryKey: ["protocolos-triagem"] });
-      qc.invalidateQueries({ queryKey: ["triagem-stats"] });
+      invalidateProtocoloCaches(qc);
       onOpenChange(false);
     } else if (r?.motivo === "concluida") {
       toast.error(`Já triada por ${r.por} em ${new Date(r.em).toLocaleString("pt-BR")}.`);
