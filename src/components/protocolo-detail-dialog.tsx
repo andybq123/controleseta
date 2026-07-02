@@ -86,6 +86,25 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
 
   const lockBloqueia = lockState.kind === "reservada" || lockState.kind === "concluida";
 
+  // Atalhos de teclado no dialog
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && editing) {
+        e.stopPropagation();
+        setEditing(false);
+      }
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        if (protocolo?.triagem_pendente && editing && !lockBloqueia) {
+          e.preventDefault();
+          void handleConcluirTriagem();
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, editing, protocolo?.triagem_pendente, lockBloqueia]);
+
   const { data: secretarias = [] } = useQuery({
     queryKey: ["secretarias"],
     queryFn: async () => (await supabase.from("secretarias").select("*").order("nome")).data ?? [],
