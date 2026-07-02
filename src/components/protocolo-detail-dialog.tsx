@@ -300,6 +300,13 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
     }
   }
 
+  const wrapTooltip = (children: React.ReactNode, text: string) => (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="bottom">{text}</TooltipContent>
+    </Tooltip>
+  );
+
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
