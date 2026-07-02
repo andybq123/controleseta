@@ -525,7 +525,6 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="aberto">Aberto</SelectItem>
                     <SelectItem value="em_andamento">Em andamento</SelectItem>
                     <SelectItem value="concluido">Concluído</SelectItem>
                   </SelectContent>
