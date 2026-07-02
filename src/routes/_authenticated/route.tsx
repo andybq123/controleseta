@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import brusqueLogo from "@/assets/brusque-brasao.png";
+import { RealtimeSyncProvider } from "@/hooks/realtime-sync-context";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -86,6 +87,7 @@ function AuthLayout() {
   if (layoutMode === "sidebar") {
     const allNav = [...nav, ...configItems];
     return (
+      <RealtimeSyncProvider>
       <div className="min-h-screen flex bg-slate-50 dark:bg-background">
         <aside className="w-64 shrink-0 bg-slate-900 text-slate-100 flex flex-col sticky top-0 h-screen">
           <div className="px-5 py-5 flex items-center gap-3 border-b border-slate-800">
@@ -138,10 +140,12 @@ function AuthLayout() {
           </main>
         </div>
       </div>
+      </RealtimeSyncProvider>
     );
   }
 
   return (
+    <RealtimeSyncProvider>
     <div className="min-h-screen flex flex-col bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
@@ -203,5 +207,6 @@ function AuthLayout() {
         <Outlet />
       </main>
     </div>
+    </RealtimeSyncProvider>
   );
 }
