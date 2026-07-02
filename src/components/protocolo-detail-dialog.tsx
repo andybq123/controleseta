@@ -410,6 +410,48 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 <RotateCw className="h-4 w-4 mr-1" /> Reabrir
               </Button>
             )}
+            {!isLegacy && !protocolo.triagem_pendente && protocolo.status !== "concluido" && (
+              <>
+                {protocolo.status === "aberto" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleIniciar}
+                    disabled={update.isPending || lockBloqueia}
+                  >
+                    Iniciar atendimento
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={handleConcluir}
+                  disabled={update.isPending || lockBloqueia}
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" /> Concluir
+                </Button>
+                {!protocolo.prorrogado && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleProrrogar}
+                    disabled={update.isPending || lockBloqueia}
+                  >
+                    Prorrogar prazo
+                  </Button>
+                )}
+              </>
+            )}
+            {!isLegacy && !protocolo.triagem_pendente && editing && (
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={update.isPending || lockBloqueia}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Save className="h-4 w-4 mr-1" /> Salvar alterações
+              </Button>
+            )}
           </div>
 
           {/* Grupo secundário (edição / cancelamento / exclusão) */}
