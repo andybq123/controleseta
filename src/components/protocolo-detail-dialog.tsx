@@ -331,6 +331,24 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               <X className="h-4 w-4 mr-1" /> Cancelar
             </Button>
           ))}
+          {!isLegacy && protocolo.triagem_pendente && editing && (
+            <Button
+              size="sm"
+              variant="default"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={handleConcluirTriagem}
+              disabled={update.isPending || lockBloqueia}
+            >
+              <Inbox className="h-4 w-4 mr-1" /> Concluir triagem
+            </Button>
+          )}
+          {protocolo?.url && (
+            <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+              <Button size="sm" variant="default" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1Doc
+              </Button>
+            </a>
+          )}
           {!isLegacy && (
             <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
               onClick={() => { if (confirm("Excluir este protocolo permanentemente?")) del.mutate(); }}>
