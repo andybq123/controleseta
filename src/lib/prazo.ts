@@ -91,10 +91,13 @@ export function estavaAtrasadoNaData(
   const { prazoFinal } = calcularPrazo(p);
   const diasAtraso = differenceInCalendarDays(refDate, prazoFinal);
   const venceuAntes = prazoFinal < refDate;
+  const dataConclusao = p.data_conclusao
+    ? new Date(p.data_conclusao + (p.data_conclusao.length === 10 ? "T00:00:00" : ""))
+    : null;
   const concluidoNaData =
     p.status === "concluido" &&
-    !!p.data_conclusao &&
-    new Date(p.data_conclusao + (p.data_conclusao.length === 10 ? "T23:59:59" : "")) <= refDate;
+    !!dataConclusao &&
+    dataConclusao <= refDate;
   return { atrasado: venceuAntes && !concluidoNaData, diasAtraso, prazoFinal };
 }
 
