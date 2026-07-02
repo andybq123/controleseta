@@ -73,6 +73,41 @@ export function situacaoProtocolo(p: {
   return { situacao: "no_prazo", dias, prazoFinal };
 }
 
+/**
+ * Verifica se o protocolo já estava atrasado numa data de referência:
+ * - prazo final anterior a refDate
+ * - E não estava concluído em refDate (sem data_conclusao ou concluído depois)
+ */
+export function estavaAtrasadoNaData(
+  p: {
+    tipo: TipoProtocolo;
+    data_abertura: string;
+    prorrogado: boolean;
+    status: StatusProtocolo;
+    data_conclusao?: string | null;
+  },
+  refDate: Date,
+): { atrasado: boolean; diasAtraso: number; prazoFinal: Date } {
+  const { prazoFinal } = calcularPrazo(p);
+  const diasAtraso = differenceInCalendarDays(refDate, prazoFinal);
+  const venceuAntes = prazoFinal < refDate;
+  const concluidoNaData =
+    p.status === "concluido" &&
+    !!p.data_conclusao &&
+    new Date(p.data_conclusao + (p.data_conclusao.length === 10 ? "T23:59:59" : "")) <= refDate;
+  return { atrasado: venceuAntes && !concluidoNaData, diasAtraso, prazoFinal };
+}
+
+/** Fim do mês (23:59:59) para YYYY-MM. Se for o mês corrente, retorna "agora". */
+export function endOfMonthOrNow(ym: string): Date {
+  const now = new Date();
+  const [y, m] = ym.split("-").map(Number);
+  const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  if (ym === currentYm) return now;
+  const lastDay = new Date(y, m, 0).getDate();
+  return new Date(y, m - 1, lastDay, 23, 59, 59, 999);
+}
+
 export const situacaoLabel: Record<Situacao, string> = {
   vencido: "Vencido",
   critico: "Crítico",
