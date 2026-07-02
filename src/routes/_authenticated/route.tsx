@@ -149,7 +149,7 @@ function AuthLayout() {
             <img src={brusqueLogo} alt="Ouvidoria de Brusque" className="h-9 w-9 object-contain" />
             <div className="hidden sm:block">
               <div className="text-sm font-semibold leading-tight">Ouvidoria de Brusque</div>
-              <div className="text-xs text-muted-foreground leading-tight">Controle de Protocolos e Prazos</div>
+              <div className="text-xs text-muted-foreground leading-tight">{"\n"}</div>
             </div>
           </div>
           <nav className="flex items-center gap-1">
