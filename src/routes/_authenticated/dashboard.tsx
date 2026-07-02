@@ -438,6 +438,7 @@ function Dashboard() {
             Visão geral das manifestações da Ouvidoria — {mes === "all" ? "todos os meses" : formatMonthLabel(mes)}
           </p>
         </div>
+        <SyncBadge />
         <div className="flex items-center gap-2">
           <Select value={mes} onValueChange={setMes}>
             <SelectTrigger className="w-[180px]"><SelectValue placeholder="Mês" /></SelectTrigger>
