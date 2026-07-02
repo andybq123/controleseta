@@ -483,7 +483,14 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
                 <Input type="date" value={form.data_conclusao ?? ""} onChange={e => setForm({ ...form, data_conclusao: e.target.value })} />
               </Field2>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2">
+              {protocolo?.url && (
+                <Button asChild variant="default" size="sm" className="gap-1 mr-auto">
+                  <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+                    Abrir no 1Doc <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setEditing(false)}>Cancelar</Button>
               <Button onClick={handleSave} disabled={update.isPending}>
                 <Save className="h-4 w-4 mr-1" /> Salvar alterações
