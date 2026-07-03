@@ -65,7 +65,11 @@ function fmtDuracao(horas: number): string {
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [drill, setDrill] = useState<{ title: string; items: any[] } | null>(null);
+  const [drill, setDrill] = useState<{
+    titleBase: string;
+    predicate: (p: any) => boolean;
+    source: "filtrados" | "all";
+  } | null>(null);
   const [detail, setDetail] = useState<any | null>(null);
   const [mes, setMes] = useState<string>(currentMonthValue());
 
@@ -307,9 +311,20 @@ function Dashboard() {
   }, [filtrados]);
 
   const openDrill = (title: string, predicate: (p: any) => boolean) => {
-    const items = filtrados.filter(predicate);
-    setDrill({ title: `${title} (${items.length})`, items });
+    setDrill({ titleBase: title, predicate, source: "filtrados" });
   };
+
+  // Live-derived items for the drill dialog so concluding a protocol
+  // updates the list without closing it.
+  const drillItems = useMemo(() => {
+    if (!drill) return [];
+    const base = drill.source === "all" ? allEnriched : filtrados;
+    return base.filter(drill.predicate);
+  }, [drill, allEnriched, filtrados]);
+  const drillData = useMemo(
+    () => (drill ? { title: `${drill.titleBase} (${drillItems.length})`, items: drillItems } : null),
+    [drill, drillItems],
+  );
 
   const opcoesMes = useMemo(
     () => monthOptionsFromDates(allEnriched.map(p => p.data_abertura)),
@@ -504,11 +519,13 @@ function Dashboard() {
             ? `${pctAtrasadosAcum}% acumulados até hoje`
             : `${pctAtrasadosAcum}% acumulados até ${formatMonthLabel(mes)}`}
           onClick={() => {
-            const ids = new Set(atrasadosAcum.map(x => x.p.id));
-            const items = allEnriched.filter(p => ids.has(p.id));
+            const ref = refDateAtraso;
             setDrill({
-              title: `${mes === "all" ? "Protocolos atrasados" : `Protocolos atrasados acumulados · ${formatMonthLabel(mes)}`} (${items.length})`,
-              items,
+              titleBase: mes === "all"
+                ? "Protocolos atrasados"
+                : `Protocolos atrasados acumulados · ${formatMonthLabel(mes)}`,
+              predicate: (p: any) => estavaAtrasadoNaData(p as any, ref).atrasado,
+              source: "all",
             });
           }}
         />
@@ -876,7 +893,7 @@ function Dashboard() {
       </p>
 
       <DrillDialog
-        data={drill}
+        data={drillData}
         onOpenChange={(v) => !v && setDrill(null)}
         onSelect={(p) => {
           if (p._antigo) {
@@ -888,8 +905,9 @@ function Dashboard() {
             });
             return;
           }
+          // Keep the drill open so the user returns to the KPI list after
+          // acting on a single protocol.
           setDetail(p);
-          setDrill(null);
         }}
       />
       <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
