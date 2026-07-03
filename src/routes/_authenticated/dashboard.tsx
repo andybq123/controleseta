@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,11 @@ function fmtDuracao(horas: number): string {
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [drill, setDrill] = useState<{ title: string; items: any[] } | null>(null);
+  const [drill, setDrill] = useState<{
+    titleBase: string;
+    predicate: (p: any) => boolean;
+    source: "filtrados" | "all";
+  } | null>(null);
   const [detail, setDetail] = useState<any | null>(null);
   const [mes, setMes] = useState<string>(currentMonthValue());
 
@@ -307,9 +311,20 @@ function Dashboard() {
   }, [filtrados]);
 
   const openDrill = (title: string, predicate: (p: any) => boolean) => {
-    const items = filtrados.filter(predicate);
-    setDrill({ title: `${title} (${items.length})`, items });
+    setDrill({ titleBase: title, predicate, source: "filtrados" });
   };
+
+  // Live-derived items for the drill dialog so concluding a protocol
+  // updates the list without closing it.
+  const drillItems = useMemo(() => {
+    if (!drill) return [];
+    const base = drill.source === "all" ? allEnriched : filtrados;
+    return base.filter(drill.predicate);
+  }, [drill, allEnriched, filtrados]);
+  const drillData = useMemo(
+    () => (drill ? { title: `${drill.titleBase} (${drillItems.length})`, items: drillItems } : null),
+    [drill, drillItems],
+  );
 
   const opcoesMes = useMemo(
     () => monthOptionsFromDates(allEnriched.map(p => p.data_abertura)),
