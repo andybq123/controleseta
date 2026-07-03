@@ -8,6 +8,10 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateProtocoloCaches } from "@/hooks/use-protocolos-realtime";
 import { CheckCircle2, XCircle } from "lucide-react";
+import ouvidoriasAntigas from "@/data/ouvidorias.json";
+
+type OuvidoriaAntiga = { source: string; numero: number; data: string };
+const ANTIGAS = ouvidoriasAntigas as OuvidoriaAntiga[];
 
 type ParsedLine = {
   raw: string;
@@ -107,7 +111,50 @@ export function BulkConcluirDialog({
             .limit(5);
           if (findErr) throw findErr;
           if (!encontrados || encontrados.length === 0) {
-            out.push({ raw: l.raw, numero: l.numero, status: "error", message: "Protocolo não encontrado" });
+            // Fallback: procurar em protocolos antigos (ouvidorias.json)
+            const digitsNum = Number(digits);
+            const matches = Number.isFinite(digitsNum)
+              ? ANTIGAS.filter(o => o.numero === digitsNum)
+              : [];
+            if (matches.length === 0) {
+              out.push({ raw: l.raw, numero: l.numero, status: "error", message: "Protocolo não encontrado" });
+            } else if (matches.length > 1) {
+              const fontes = [...new Set(matches.map(m => `${m.source}/${(m.data || "").slice(0, 4)}`))].join(", ");
+              out.push({
+                raw: l.raw,
+                numero: l.numero,
+                status: "error",
+                message: `Ambíguo em protocolos antigos (${fontes})`,
+              });
+            } else {
+              const m = matches[0];
+              const ano = Number((m.data || "").slice(0, 4));
+              const { data: existing } = await supabase
+                .from("protocolos_antigos_conclusoes")
+                .select("url, data_conclusao")
+                .eq("source", m.source)
+                .eq("numero", m.numero)
+                .eq("ano", ano)
+                .maybeSingle();
+              const payload = {
+                source: m.source,
+                numero: m.numero,
+                ano,
+                data_conclusao: l.data,
+                url: existing?.url ?? l.url ?? null,
+              };
+              const { error: upErr } = await supabase
+                .from("protocolos_antigos_conclusoes")
+                .upsert(payload, { onConflict: "source,numero,ano" });
+              if (upErr) throw upErr;
+              const urlMsg = l.url ? (existing?.url ? " · link já existia" : " · link adicionado") : "";
+              out.push({
+                raw: l.raw,
+                numero: String(m.numero),
+                status: "ok",
+                message: `Concluído (antigo · ${m.source}/${ano})${urlMsg}`,
+              });
+            }
           } else {
             const p = encontrados[0];
             const patch: { status: "concluido"; data_conclusao: string; url?: string } = {
