@@ -4,13 +4,13 @@ export const Route = createFileRoute("/api/public/email-sync")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const expected = process.env.INGEST_TOKEN;
-        if (!expected) {
-          return Response.json({ error: "INGEST_TOKEN não configurado" }, { status: 500 });
+        const expected = [process.env.CRON_SECRET, process.env.INGEST_TOKEN].filter(Boolean) as string[];
+        if (expected.length === 0) {
+          return Response.json({ error: "CRON_SECRET não configurado" }, { status: 500 });
         }
         const auth = request.headers.get("authorization") || "";
         const token = auth.replace(/^Bearer\s+/i, "").trim();
-        if (!token || token !== expected) {
+        if (!token || !expected.includes(token)) {
           return Response.json({ error: "Unauthorized" }, { status: 401 });
         }
         const { sincronizarGmailContas, sincronizarImapContas } = await import(
