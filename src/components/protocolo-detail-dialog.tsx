@@ -359,8 +359,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           </div>
         )}
 
-        {/* Ações rápidas */}
-        <div className="flex flex-wrap items-center gap-2 border-y py-3">
+        {/* Ações rápidas — apenas admins */}
+        {isAdmin && <div className="flex flex-wrap items-center gap-2 border-y py-3">
           {/* Grupo principal (ações positivas / fluxo) */}
           <div className="flex flex-wrap items-center gap-2">
             {!isLegacy && protocolo.triagem_pendente && editing && (
@@ -460,7 +460,16 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               )
             )}
           </div>
-        </div>
+        </div>}
+        {!isAdmin && protocolo?.url && (
+          <div className="border-y py-3">
+            <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+              <Button size="sm" className="bg-sky-600 text-white hover:bg-sky-700">
+                <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1Doc
+              </Button>
+            </a>
+          </div>
+        )}
 
         <Tabs defaultValue="detalhes" className="w-full">
           <TabsList className="grid grid-cols-2 w-full">
