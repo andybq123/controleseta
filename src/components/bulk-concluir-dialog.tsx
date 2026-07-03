@@ -96,19 +96,26 @@ export function BulkConcluirDialog({
           // e-SIC, etc.), independente de estar atrasado ou não.
           const numNorm = l.numero.toUpperCase().trim();
           const digits = numNorm.replace(/\D/g, "");
-          const orParts = [
-            `numero.eq.${numNorm}`,
-            `numero.ilike.${numNorm}/%`,
-          ];
-          if (digits && digits !== numNorm) {
-            orParts.push(`numero.eq.${digits}`);
-            orParts.push(`numero.ilike.${digits}/%`);
-          }
+          // No banco os números costumam vir formatados com ponto como separador
+          // de milhar (ex.: "2.141/2025"). Geramos todas as variantes plausíveis.
+          const variants = new Set<string>();
+          const withDot = digits.length > 3
+            ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+            : digits;
+          [numNorm, digits, withDot].forEach((v) => {
+            if (!v) return;
+            variants.add(v);
+          });
+          const orParts: string[] = [];
+          variants.forEach((v) => {
+            orParts.push(`numero.eq.${v}`);
+            orParts.push(`numero.ilike.${v}/%`);
+          });
           const { data: encontrados, error: findErr } = await supabase
             .from("protocolos")
             .select("id, numero, status, url, data_conclusao, secretaria_id")
             .or(orParts.join(","))
-            .limit(5);
+            .limit(10);
           if (findErr) throw findErr;
           if (!encontrados || encontrados.length === 0) {
             // Fallback: procurar em protocolos antigos (ouvidorias.json)
