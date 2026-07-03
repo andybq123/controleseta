@@ -519,12 +519,12 @@ function Dashboard() {
             ? `${pctAtrasadosAcum}% acumulados até hoje`
             : `${pctAtrasadosAcum}% acumulados até ${formatMonthLabel(mes)}`}
           onClick={() => {
-            const ids = new Set(atrasadosAcum.map(x => x.p.id));
+            const ref = refDateAtraso;
             setDrill({
               titleBase: mes === "all"
                 ? "Protocolos atrasados"
                 : `Protocolos atrasados acumulados · ${formatMonthLabel(mes)}`,
-              predicate: (p: any) => ids.has(p.id),
+              predicate: (p: any) => estavaAtrasadoNaData(p as any, ref).atrasado,
               source: "all",
             });
           }}
