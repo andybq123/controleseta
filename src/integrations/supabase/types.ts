@@ -621,6 +621,10 @@ export type Database = {
         Args: { p_id: string; p_local: string; p_secretaria: string }
         Returns: Json
       }
+      concluir_triagem_admin: {
+        Args: { p_id: string; p_local: string; p_secretaria: string }
+        Returns: Json
+      }
       consultar_protocolo_publico: {
         Args: { p_hash: string; p_numero: string }
         Returns: {
@@ -656,7 +660,9 @@ export type Database = {
         Returns: boolean
       }
       liberar_triagem: { Args: { p_id: string }; Returns: undefined }
+      liberar_triagem_admin: { Args: { p_id: string }; Returns: undefined }
       reservar_triagem: { Args: { p_id: string }; Returns: Json }
+      reservar_triagem_admin: { Args: { p_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"

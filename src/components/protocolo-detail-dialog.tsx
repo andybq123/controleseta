@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +31,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   onOpenChange: (v: boolean) => void;
 }) {
   const qc = useQueryClient();
+  const isAdmin = useIsAdmin();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
   const [concluirOpen, setConcluirOpen] = useState(false);
@@ -357,8 +359,8 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
           </div>
         )}
 
-        {/* Ações rápidas */}
-        <div className="flex flex-wrap items-center gap-2 border-y py-3">
+        {/* Ações rápidas — apenas admins */}
+        {isAdmin && <div className="flex flex-wrap items-center gap-2 border-y py-3">
           {/* Grupo principal (ações positivas / fluxo) */}
           <div className="flex flex-wrap items-center gap-2">
             {!isLegacy && protocolo.triagem_pendente && editing && (
@@ -458,7 +460,16 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
               )
             )}
           </div>
-        </div>
+        </div>}
+        {!isAdmin && protocolo?.url && (
+          <div className="border-y py-3">
+            <a href={protocolo.url} target="_blank" rel="noopener noreferrer">
+              <Button size="sm" className="bg-sky-600 text-white hover:bg-sky-700">
+                <ExternalLink className="h-4 w-4 mr-1" /> Abrir no 1Doc
+              </Button>
+            </a>
+          </div>
+        )}
 
         <Tabs defaultValue="detalhes" className="w-full">
           <TabsList className="grid grid-cols-2 w-full">
