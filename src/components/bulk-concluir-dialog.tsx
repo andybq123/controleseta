@@ -57,6 +57,46 @@ function parseLine(raw: string): ParsedLine | null {
   return { raw: line, numero, data, url };
 }
 
+function formatMilhar(value: string) {
+  return value.length > 3 ? value.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : value;
+}
+
+function buildNumeroSearch(numero: string) {
+  const numNorm = numero.toUpperCase().trim();
+  const [baseRaw, ...rest] = numNorm.split("/");
+  const anoRaw = rest.join("/").replace(/\D/g, "");
+  const baseDigits = baseRaw.replace(/\D/g, "");
+  const allDigits = numNorm.replace(/\D/g, "");
+  const baseDot = formatMilhar(baseDigits);
+  const variants = new Set<string>();
+
+  [numNorm, baseDigits, baseDot].forEach((v) => {
+    if (v) variants.add(v);
+  });
+
+  if (baseDigits && anoRaw) {
+    variants.add(`${baseDigits}/${anoRaw}`);
+    variants.add(`${baseDot}/${anoRaw}`);
+  }
+
+  const orParts: string[] = [];
+  variants.forEach((v) => {
+    orParts.push(`numero.eq.${v}`);
+    orParts.push(`numero.ilike.${v}/%`);
+  });
+
+  return { orParts, baseDigits, anoRaw, allDigits };
+}
+
+function scoreNumeroMatch(numeroBanco: string, baseDigits: string, anoRaw: string, allDigits: string) {
+  const bancoDigits = numeroBanco.replace(/\D/g, "");
+  let score = 0;
+  if (allDigits && bancoDigits === allDigits) score += 100;
+  if (baseDigits && bancoDigits.startsWith(baseDigits)) score += 30;
+  if (anoRaw && numeroBanco.includes(anoRaw)) score += 50;
+  return score;
+}
+
 export function BulkConcluirDialog({
   open,
   onOpenChange,
@@ -94,23 +134,7 @@ export function BulkConcluirDialog({
         } else {
           // Busca flexível: procura em TODA a tabela protocolos (saúde, ouvidoria,
           // e-SIC, etc.), independente de estar atrasado ou não.
-          const numNorm = l.numero.toUpperCase().trim();
-          const digits = numNorm.replace(/\D/g, "");
-          // No banco os números costumam vir formatados com ponto como separador
-          // de milhar (ex.: "2.141/2025"). Geramos todas as variantes plausíveis.
-          const variants = new Set<string>();
-          const withDot = digits.length > 3
-            ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-            : digits;
-          [numNorm, digits, withDot].forEach((v) => {
-            if (!v) return;
-            variants.add(v);
-          });
-          const orParts: string[] = [];
-          variants.forEach((v) => {
-            orParts.push(`numero.eq.${v}`);
-            orParts.push(`numero.ilike.${v}/%`);
-          });
+          const { orParts, baseDigits, anoRaw, allDigits } = buildNumeroSearch(l.numero);
           const { data: encontrados, error: findErr } = await supabase
             .from("protocolos")
             .select("id, numero, status, url, data_conclusao, secretaria_id")
@@ -119,7 +143,7 @@ export function BulkConcluirDialog({
           if (findErr) throw findErr;
           if (!encontrados || encontrados.length === 0) {
             // Fallback: procurar em protocolos antigos (ouvidorias.json)
-            const digitsNum = Number(digits);
+            const digitsNum = Number(baseDigits || allDigits);
             const matches = Number.isFinite(digitsNum)
               ? ANTIGAS.filter(o => o.numero === digitsNum)
               : [];
@@ -163,7 +187,9 @@ export function BulkConcluirDialog({
               });
             }
           } else {
-            const p = encontrados[0];
+            const p = [...encontrados].sort(
+              (a, b) => scoreNumeroMatch(b.numero, baseDigits, anoRaw, allDigits) - scoreNumeroMatch(a.numero, baseDigits, anoRaw, allDigits),
+            )[0];
             const patch: { status: "concluido"; data_conclusao: string; url?: string } = {
               status: "concluido",
               data_conclusao: l.data,
