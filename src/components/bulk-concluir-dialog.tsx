@@ -162,8 +162,9 @@ export function BulkConcluirDialog({
         <DialogHeader>
           <DialogTitle>Concluir protocolos em massa</DialogTitle>
           <DialogDescription>
-            Cole uma linha por protocolo contendo: <b>número</b>, <b>data de conclusão</b> e
-            (opcional) <b>link do 1Doc</b>. Ordem livre — separadores como tab, espaço, vírgula ou ponto e vírgula funcionam.
+            Busca em <b>todos os protocolos</b> (saúde, ouvidoria, e-SIC) — não precisam estar atrasados.
+            Cole uma linha por protocolo com: <b>número</b>, <b>data de conclusão</b> e
+            (opcional) <b>link do 1Doc</b>. Ordem livre; tab, espaço, vírgula ou ponto e vírgula funcionam.
             <br />
             Ex.: <code className="text-xs">12345/2025  15/06/2026  https://1doc.com.br/...</code>
           </DialogDescription>
