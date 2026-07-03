@@ -88,13 +88,23 @@ export function BulkConcluirDialog({
         } else if (!l.data) {
           out.push({ raw: l.raw, numero: l.numero, status: "error", message: "Data de conclusão não identificada" });
         } else {
-          // Busca flexível pelo número (com ou sem /ano)
-          const numNorm = l.numero.toUpperCase();
+          // Busca flexível: procura em TODA a tabela protocolos (saúde, ouvidoria,
+          // e-SIC, etc.), independente de estar atrasado ou não.
+          const numNorm = l.numero.toUpperCase().trim();
+          const digits = numNorm.replace(/\D/g, "");
+          const orParts = [
+            `numero.eq.${numNorm}`,
+            `numero.ilike.${numNorm}/%`,
+          ];
+          if (digits && digits !== numNorm) {
+            orParts.push(`numero.eq.${digits}`);
+            orParts.push(`numero.ilike.${digits}/%`);
+          }
           const { data: encontrados, error: findErr } = await supabase
             .from("protocolos")
-            .select("id, numero, status, url, data_conclusao")
-            .or(`numero.eq.${numNorm},numero.ilike.${numNorm}/%`)
-            .limit(2);
+            .select("id, numero, status, url, data_conclusao, secretaria_id")
+            .or(orParts.join(","))
+            .limit(5);
           if (findErr) throw findErr;
           if (!encontrados || encontrados.length === 0) {
             out.push({ raw: l.raw, numero: l.numero, status: "error", message: "Protocolo não encontrado" });
