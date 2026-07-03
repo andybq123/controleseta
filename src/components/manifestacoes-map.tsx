@@ -155,18 +155,30 @@ function UnitProtocolList({
   const stats = useMemo(() => {
     const concluidos = protocolos.filter(p => p.status === "concluido").length;
     const abertos = protocolos.length - concluidos;
-    const cutoff = new Date();
-    cutoff.setMonth(cutoff.getMonth() - 3);
-    const ult3 = protocolos.filter(p => {
-      if (!p.data_abertura) return false;
-      const d = new Date(p.data_abertura + (p.data_abertura.length === 10 ? "T00:00:00" : ""));
-      return d >= cutoff;
-    }).length;
-    const media = (ult3 / 3);
-    return { concluidos, abertos, ult3, media };
+    const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    const now = new Date();
+    // Últimos 3 meses (incluindo o corrente), do mais antigo para o mais recente
+    const buckets = [2, 1, 0].map(offset => {
+      const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      return {
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        label: MESES[d.getMonth()],
+        count: 0,
+      };
+    });
+    protocolos.forEach(p => {
+      if (!p.data_abertura) return;
+      const ym = p.data_abertura.slice(0, 7);
+      const b = buckets.find(x => x.key === ym);
+      if (b) b.count++;
+    });
+    const ult3 = buckets.reduce((a, b) => a + b.count, 0);
+    const media = ult3 / 3;
+    const maxBar = Math.max(1, ...buckets.map(b => b.count));
+    return { concluidos, abertos, ult3, media, buckets, maxBar };
   }, [protocolos]);
   return (
-    <div className="space-y-2 min-w-[260px] max-w-[320px]">
+    <div className="space-y-2 min-w-[280px] max-w-[340px]">
       {onBack && (
         <button
           type="button"
@@ -187,26 +199,62 @@ function UnitProtocolList({
         </div>
         {local.secretaria && <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{local.secretaria}</p>}
         <p className="text-xs mt-1">
-          <strong>{count}</strong> protocolo(s) ·{" "}
+          <strong>{count}</strong> protocolo(s) no total ·{" "}
           <span style={{ color: load.fill }} className="font-semibold">{load.label}</span>
         </p>
       </div>
-      <div className="grid grid-cols-4 gap-1 rounded border border-border bg-muted/40 p-1.5 text-center">
-        <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">Últ. 3m</div>
-          <div className="text-sm font-bold">{stats.ult3}</div>
+      <div className="rounded border border-border bg-muted/40 p-2 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+            Volume — últimos 3 meses
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            média <strong className="text-foreground">{stats.media.toFixed(1)}</strong>/mês
+          </span>
         </div>
-        <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">Média/mês</div>
-          <div className="text-sm font-bold">{stats.media.toFixed(1)}</div>
+        {/* Mini gráfico de barras */}
+        <div className="relative h-16">
+          {/* linha da média */}
+          <div
+            className="absolute left-0 right-0 border-t border-dashed border-primary/60 z-10"
+            style={{ bottom: `${(stats.media / stats.maxBar) * 100}%` }}
+            title={`Média ${stats.media.toFixed(1)}/mês`}
+          />
+          <div className="absolute inset-0 flex items-end justify-around gap-2">
+            {stats.buckets.map(b => {
+              const h = (b.count / stats.maxBar) * 100;
+              return (
+                <div key={b.key} className="flex-1 flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold text-foreground leading-none">{b.count}</span>
+                  <div
+                    className="w-full rounded-t bg-primary/80"
+                    style={{ height: `${Math.max(h, 2)}%`, minHeight: "2px" }}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">Abertos</div>
-          <div className="text-sm font-bold text-amber-600">{stats.abertos}</div>
+        <div className="flex items-end justify-around gap-2">
+          {stats.buckets.map(b => (
+            <span key={b.key} className="flex-1 text-center text-[10px] text-muted-foreground">
+              {b.label}
+            </span>
+          ))}
         </div>
-        <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">Concl.</div>
-          <div className="text-sm font-bold text-green-600">{stats.concluidos}</div>
+        <div className="grid grid-cols-3 gap-1 pt-1 border-t border-border/60 text-center">
+          <div>
+            <div className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Últ. 3m</div>
+            <div className="text-xs font-bold">{stats.ult3}</div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Abertos</div>
+            <div className="text-xs font-bold text-amber-600">{stats.abertos}</div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Concluídos</div>
+            <div className="text-xs font-bold text-green-600">{stats.concluidos}</div>
+          </div>
         </div>
       </div>
       {protocolos.length > 0 && (
