@@ -31,6 +31,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
   onOpenChange: (v: boolean) => void;
 }) {
   const qc = useQueryClient();
+  const isAdmin = useIsAdmin();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
   const [concluirOpen, setConcluirOpen] = useState(false);
