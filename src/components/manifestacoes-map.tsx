@@ -152,6 +152,19 @@ function UnitProtocolList({
 }) {
   const count = protocolos.length;
   const load = loadColor(count);
+  const stats = useMemo(() => {
+    const concluidos = protocolos.filter(p => p.status === "concluido").length;
+    const abertos = protocolos.length - concluidos;
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - 3);
+    const ult3 = protocolos.filter(p => {
+      if (!p.data_abertura) return false;
+      const d = new Date(p.data_abertura + (p.data_abertura.length === 10 ? "T00:00:00" : ""));
+      return d >= cutoff;
+    }).length;
+    const media = (ult3 / 3);
+    return { concluidos, abertos, ult3, media };
+  }, [protocolos]);
   return (
     <div className="space-y-2 min-w-[260px] max-w-[320px]">
       {onBack && (
@@ -177,6 +190,24 @@ function UnitProtocolList({
           <strong>{count}</strong> protocolo(s) ·{" "}
           <span style={{ color: load.fill }} className="font-semibold">{load.label}</span>
         </p>
+      </div>
+      <div className="grid grid-cols-4 gap-1 rounded border border-border bg-muted/40 p-1.5 text-center">
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">Últ. 3m</div>
+          <div className="text-sm font-bold">{stats.ult3}</div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">Média/mês</div>
+          <div className="text-sm font-bold">{stats.media.toFixed(1)}</div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">Abertos</div>
+          <div className="text-sm font-bold text-amber-600">{stats.abertos}</div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">Concl.</div>
+          <div className="text-sm font-bold text-green-600">{stats.concluidos}</div>
+        </div>
       </div>
       {protocolos.length > 0 && (
         <div className="max-h-[240px] overflow-y-auto -mx-1 pr-1 space-y-1">
