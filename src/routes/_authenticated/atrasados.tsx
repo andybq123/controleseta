@@ -14,6 +14,9 @@ import * as XLSX from "xlsx";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
+import { BulkConcluirDialog } from "@/components/bulk-concluir-dialog";
+import { useIsAdmin } from "@/hooks/use-is-admin";
+import { CheckCheck } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/atrasados")({
@@ -26,6 +29,8 @@ function AtrasadosPage() {
   const [busca, setBusca] = useState("");
   const [selected, setSelected] = useState<any | null>(null);
   const [mes, setMes] = useState<string>(currentMonthValue());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const isAdmin = useIsAdmin();
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ["protocolos"],
@@ -146,6 +151,11 @@ function AtrasadosPage() {
               {opcoesMes.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
             </SelectContent>
           </Select>
+          {isAdmin && (
+            <Button onClick={() => setBulkOpen(true)} variant="default">
+              <CheckCheck className="h-4 w-4 mr-1" /> Concluir em massa
+            </Button>
+          )}
           <Button onClick={exportar} variant="outline" disabled={atrasados.length === 0}>
             <Download className="h-4 w-4 mr-1" /> Exportar Excel
           </Button>
@@ -260,6 +270,7 @@ function AtrasadosPage() {
         open={!!selected}
         onOpenChange={(v) => { if (!v) setSelected(null); }}
       />
+      <BulkConcluirDialog open={bulkOpen} onOpenChange={setBulkOpen} />
     </div>
   );
 }
