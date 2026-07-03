@@ -148,7 +148,32 @@ export function BulkConcluirDialog({
               ? ANTIGAS.filter(o => o.numero === digitsNum)
               : [];
             if (matches.length === 0) {
-              out.push({ raw: l.raw, numero: l.numero, status: "error", message: "Protocolo não encontrado" });
+              // Não existe em lugar nenhum → cria um novo protocolo já
+              // concluído e envia para triagem para classificação posterior.
+              const numeroFinal = anoRaw
+                ? `${formatMilhar(baseDigits)}/${anoRaw}`
+                : (baseDigits ? formatMilhar(baseDigits) : l.numero);
+              const insertPayload = {
+                numero: numeroFinal,
+                tipo: "ouvidoria" as const,
+                assunto: "Protocolo importado em massa (pendente de triagem)",
+                status: "concluido" as const,
+                data_abertura: l.data,
+                data_conclusao: l.data,
+                url: l.url ?? null,
+                triagem_pendente: true,
+                origem: "bulk-conclusao",
+              };
+              const { error: insErr } = await supabase
+                .from("protocolos")
+                .insert(insertPayload);
+              if (insErr) throw insErr;
+              out.push({
+                raw: l.raw,
+                numero: numeroFinal,
+                status: "ok",
+                message: `Criado e enviado para triagem${l.url ? " · link adicionado" : ""}`,
+              });
             } else if (matches.length > 1) {
               const fontes = [...new Set(matches.map(m => `${m.source}/${(m.data || "").slice(0, 4)}`))].join(", ");
               out.push({
