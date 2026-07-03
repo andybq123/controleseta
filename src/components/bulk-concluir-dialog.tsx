@@ -100,7 +100,7 @@ export function BulkConcluirDialog({
             out.push({ raw: l.raw, numero: l.numero, status: "error", message: "Protocolo não encontrado" });
           } else {
             const p = encontrados[0];
-            const patch: Record<string, unknown> = {
+            const patch: { status: "concluido"; data_conclusao: string; url?: string } = {
               status: "concluido",
               data_conclusao: l.data,
             };
