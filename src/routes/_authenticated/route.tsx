@@ -55,7 +55,7 @@ function AuthLayout() {
 
   const nav = ([
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/tarefas", label: "Triagem", icon: Inbox },
+    ...(isAdmin ? [{ to: "/tarefas", label: "Triagem", icon: Inbox }] : []),
     { to: "/protocolos", label: "Protocolos", icon: FileText },
     { to: "/saude", label: "Saúde", icon: HeartPulse },
     { to: "/mapa", label: "Mapa", icon: MapIcon },
@@ -63,13 +63,13 @@ function AuthLayout() {
     { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
   ]) as { to: string; label: string; icon: any }[];
 
-  const configItems = ([
+  const configItems = (isAdmin ? [
     { to: "/secretarias", label: "Secretarias", icon: Building2 },
     { to: "/assuntos", label: "Assuntos", icon: Tag },
     { to: "/email-inbox", label: "E-mails", icon: Mail },
-    ...(isAdmin ? [{ to: "/coletor", label: "Coletor 1doc", icon: Download }] : []),
-    ...(isAdmin ? [{ to: "/users", label: "Usuários", icon: Users }] : []),
-  ]) as { to: string; label: string; icon: any }[];
+    { to: "/coletor", label: "Coletor 1doc", icon: Download },
+    { to: "/users", label: "Usuários", icon: Users },
+  ] : []) as { to: string; label: string; icon: any }[];
   const configActive = configItems.some(c => pathname.startsWith(c.to));
 
   const LayoutSwitch = (
@@ -168,7 +168,7 @@ function AuthLayout() {
                 </Link>
               );
             })}
-            <DropdownMenu>
+            {configItems.length > 0 && <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm transition-colors ${configActive ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary"}`}
@@ -191,7 +191,7 @@ function AuthLayout() {
                   );
                 })}
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu>}
           </nav>
           <div className="flex items-center gap-1">
             <NotificationBell />
