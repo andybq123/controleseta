@@ -3,7 +3,16 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/gmail-sync")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const expected = process.env.INGEST_TOKEN;
+        if (!expected) {
+          return Response.json({ ok: false, error: "INGEST_TOKEN não configurado" }, { status: 500 });
+        }
+        const auth = request.headers.get("authorization") || "";
+        const token = auth.replace(/^Bearer\s+/i, "").trim();
+        if (!token || token !== expected) {
+          return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+        }
         const { sincronizarGmailContas } = await import("@/lib/protocolo-ingest.server");
         try {
           const r = await sincronizarGmailContas();
