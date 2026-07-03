@@ -520,10 +520,12 @@ function Dashboard() {
             : `${pctAtrasadosAcum}% acumulados até ${formatMonthLabel(mes)}`}
           onClick={() => {
             const ids = new Set(atrasadosAcum.map(x => x.p.id));
-            const items = allEnriched.filter(p => ids.has(p.id));
             setDrill({
-              title: `${mes === "all" ? "Protocolos atrasados" : `Protocolos atrasados acumulados · ${formatMonthLabel(mes)}`} (${items.length})`,
-              items,
+              titleBase: mes === "all"
+                ? "Protocolos atrasados"
+                : `Protocolos atrasados acumulados · ${formatMonthLabel(mes)}`,
+              predicate: (p: any) => ids.has(p.id),
+              source: "all",
             });
           }}
         />
@@ -891,7 +893,7 @@ function Dashboard() {
       </p>
 
       <DrillDialog
-        data={drill}
+        data={drillData}
         onOpenChange={(v) => !v && setDrill(null)}
         onSelect={(p) => {
           if (p._antigo) {
@@ -903,8 +905,9 @@ function Dashboard() {
             });
             return;
           }
+          // Keep the drill open so the user returns to the KPI list after
+          // acting on a single protocol.
           setDetail(p);
-          setDrill(null);
         }}
       />
       <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
