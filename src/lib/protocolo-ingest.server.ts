@@ -146,6 +146,11 @@ function extrairNumeroDoAssunto(assunto: string, corpo: string): string | null {
   return null;
 }
 
+function stripAssuntoPrefixo(s: string): string {
+  if (!s) return s;
+  return s.replace(/^\s*(Ouvidoria|LAI|E-?SIC|Manifesta(?:ç|c)(?:ã|a)o)\s+[\d.]+\/\d{2,4}\s*[:\-–]\s*/i, "").trim();
+}
+
 function detectarAcao(assunto: string, corpo: string): "conclusao" | "atualizacao" {
   const texto = norm(`${assunto}\n${corpo}`);
   const padroesConclusao = [
@@ -478,7 +483,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
       .from("protocolos")
       .insert({
         numero, tipo: extr.tipo, categoria: extr.categoria,
-        assunto: extr.assunto || assunto || "Sem assunto",
+        assunto: stripAssuntoPrefixo(extr.assunto || assunto || "Sem assunto"),
         descricao: resumo,
         solicitante: extr.solicitante || remetente || null,
         secretaria_id: secretariaId, local_id: localId,
