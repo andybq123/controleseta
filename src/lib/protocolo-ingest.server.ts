@@ -146,6 +146,11 @@ function extrairNumeroDoAssunto(assunto: string, corpo: string): string | null {
   return null;
 }
 
+function stripAssuntoPrefixo(s: string): string {
+  if (!s) return s;
+  return s.replace(/^\s*(Ouvidoria|LAI|E-?SIC|Manifesta(?:ç|c)(?:ã|a)o)\s+[\d.]+\/\d{2,4}\s*[:\-–]\s*/i, "").trim();
+}
+
 function detectarAcao(assunto: string, corpo: string): "conclusao" | "atualizacao" {
   const texto = norm(`${assunto}\n${corpo}`);
   const padroesConclusao = [
