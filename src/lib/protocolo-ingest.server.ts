@@ -338,7 +338,10 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
           .select("nome, secretaria_id, forcar_triagem")
           .eq("ativo", true)
           ;
-        const hit = (matches ?? []).find((a: any) => norm(a.nome) === alvoAssunto);
+        const hit = (matches ?? []).find((a: any) => {
+          const n = norm(a.nome);
+          return n === alvoAssunto || alvoAssunto.includes(n);
+        });
         if (hit?.forcar_triagem) forcarTriagemAssunto = true;
         if (hit?.secretaria_id) secretariaId = hit.secretaria_id;
 
@@ -363,7 +366,10 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
         .select("nome, forcar_triagem")
         .eq("ativo", true)
         .eq("forcar_triagem", true);
-      if ((matchFlag ?? []).some((a: any) => norm(a.nome) === alvoAssunto)) {
+      if ((matchFlag ?? []).some((a: any) => {
+        const n = norm(a.nome);
+        return n === alvoAssunto || alvoAssunto.includes(n);
+      })) {
         forcarTriagemAssunto = true;
       }
     }
