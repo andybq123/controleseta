@@ -451,7 +451,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     //  (a) não conseguimos identificar a secretaria responsável, OU
     //  (b) o assunto é da Saúde e exige decidir qual UBS/CAPS atende.
     // Demais assuntos com secretaria já identificada seguem direto, sem triagem.
-    const ASSUNTOS_SAUDE_TRIAGEM = new Set([
+    const ASSUNTOS_SAUDE_TRIAGEM = [
       "demora em marcar consulta / procedimento",
       "falta de materiais em posto de saude",
       "falta de medicacao",
@@ -459,11 +459,14 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
       "postos de saude",
       "transporte para tratamento",
       "vacinas",
-    ]);
+    ];
+    // Usa "contém" porque o assunto pode vir prefixado (ex.: "Ouvidoria
+    // 2.240/2026: Postos de Saúde") ou com pequenas variações de grafia.
     const assuntoNorm = norm(extr.assunto_categoria || extr.assunto || "");
+    const casaSaude = ASSUNTOS_SAUDE_TRIAGEM.some((a) => assuntoNorm.includes(a));
     const precisaTriagem =
       extr.tipo === "ouvidoria" &&
-      (forcarTriagemAssunto || !secretariaId || ASSUNTOS_SAUDE_TRIAGEM.has(assuntoNorm));
+      (forcarTriagemAssunto || !secretariaId || casaSaude);
 
     const { data: novo, error: errIns } = await supabaseAdmin
       .from("protocolos")
