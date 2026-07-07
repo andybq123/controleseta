@@ -478,7 +478,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
       .from("protocolos")
       .insert({
         numero, tipo: extr.tipo, categoria: extr.categoria,
-        assunto: extr.assunto || assunto || "Sem assunto",
+        assunto: stripAssuntoPrefixo(extr.assunto || assunto || "Sem assunto"),
         descricao: resumo,
         solicitante: extr.solicitante || remetente || null,
         secretaria_id: secretariaId, local_id: localId,
