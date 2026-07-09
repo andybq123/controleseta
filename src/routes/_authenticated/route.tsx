@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import brusqueLogo from "@/assets/brusque-brasao.png";
 import { RealtimeSyncProvider } from "@/hooks/realtime-sync-context";
+import { OnlineUsersProvider, useOnlineUsers } from "@/hooks/use-online-users";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -45,6 +47,12 @@ function AuthLayout() {
       return !!data;
     },
   });
+
+  const displayName =
+    (user.user_metadata as any)?.nome ||
+    (user.user_metadata as any)?.full_name ||
+    user.email?.split("@")[0] ||
+    "Usuário";
 
   async function handleLogout() {
     await queryClient.cancelQueries();
@@ -84,10 +92,13 @@ function AuthLayout() {
     </button>
   );
 
+  const OnlineIndicatorEl = <OnlineIndicator />;
+
   if (layoutMode === "sidebar") {
     const allNav = [...nav, ...configItems];
     return (
       <RealtimeSyncProvider>
+      <OnlineUsersProvider userId={user.id} nome={displayName}>
       <div className="min-h-screen flex bg-slate-50 dark:bg-background">
         <aside className="w-64 shrink-0 bg-slate-900 text-slate-100 flex flex-col sticky top-0 h-screen">
           <div className="px-5 py-5 flex items-center gap-3 border-b border-slate-800">
@@ -126,6 +137,7 @@ function AuthLayout() {
                 <div className="text-xs text-muted-foreground leading-tight truncate">Visão geral das manifestações da Ouvidoria</div>
               </div>
               <div className="flex items-center gap-1">
+                {OnlineIndicatorEl}
                 <NotificationBell />
                 <ThemeToggle />
                 {LayoutSwitch}
@@ -140,12 +152,14 @@ function AuthLayout() {
           </main>
         </div>
       </div>
+      </OnlineUsersProvider>
       </RealtimeSyncProvider>
     );
   }
 
   return (
     <RealtimeSyncProvider>
+    <OnlineUsersProvider userId={user.id} nome={displayName}>
     <div className="min-h-screen flex flex-col bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
@@ -194,6 +208,7 @@ function AuthLayout() {
             </DropdownMenu>}
           </nav>
           <div className="flex items-center gap-1">
+            {OnlineIndicatorEl}
             <NotificationBell />
             <ThemeToggle />
             {LayoutSwitch}
@@ -207,6 +222,47 @@ function AuthLayout() {
         <Outlet />
       </main>
     </div>
+    </OnlineUsersProvider>
     </RealtimeSyncProvider>
+  );
+}
+
+function OnlineIndicator() {
+  const { onlineUsers } = useOnlineUsers();
+  const count = onlineUsers.length;
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`${count} usuário(s) online`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background/80 px-2.5 text-xs font-medium text-foreground shadow-sm backdrop-blur transition-all hover:bg-accent"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            <span>{count}</span>
+            <span className="hidden md:inline text-muted-foreground">online</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent align="end" className="max-w-xs">
+          <div className="text-xs font-semibold mb-1">Usuários online</div>
+          {onlineUsers.length === 0 ? (
+            <div className="text-xs text-muted-foreground">Nenhum</div>
+          ) : (
+            <ul className="text-xs space-y-0.5">
+              {onlineUsers.map(u => (
+                <li key={u.user_id} className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span className="truncate">{u.nome || "Usuário"}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

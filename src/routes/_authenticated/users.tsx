@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import {
   listarUsuarios, criarUsuario, atualizarUsuario, removerUsuario,
 } from "@/lib/users.functions";
+import { useIsUserOnline } from "@/hooks/use-online-users";
 
 export const Route = createFileRoute("/_authenticated/users")({
   component: UsersPage,
@@ -71,11 +72,37 @@ function UsersPage() {
           </CardContent></Card>
         )}
         {users.map((u: any) => (
-          <Card key={u.id}>
-            <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium">{u.nome || u.email}</span>
+          <UserCard
+            key={u.id}
+            u={u}
+            onEdit={async (v) => { await atualizar({ data: { id: u.id, ...v } as any }); toast.success("Usuário atualizado"); refresh(); }}
+            onDelete={() => { if (confirm(`Remover ${u.email}?`)) mDel.mutate(u.id); }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function UserCard({ u, onEdit, onDelete }: { u: any; onEdit: (v: any) => Promise<void>; onDelete: () => void }) {
+  const online = useIsUserOnline(u.id);
+  return (
+    <Card>
+      <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium flex items-center gap-1.5">
+                    <span
+                      className={`h-2 w-2 rounded-full ${online ? "bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]" : "bg-slate-300 dark:bg-slate-600"}`}
+                      title={online ? "Online agora" : "Offline"}
+                    />
+                    {u.nome || u.email}
+                  </span>
+                  {online && (
+                    <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30" variant="outline">
+                      Online
+                    </Badge>
+                  )}
                   {u.role === "admin" ? (
                     <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30" variant="outline">
                       <ShieldCheck className="h-3 w-3 mr-1" /> Admin
@@ -101,22 +128,14 @@ function UsersPage() {
                   title="Editar usuário"
                   initial={u}
                   trigger={<Button size="sm" variant="outline"><Pencil className="h-3 w-3" /></Button>}
-                  onSubmit={async (v) => {
-                    await atualizar({ data: { id: u.id, ...v } as any });
-                    toast.success("Usuário atualizado");
-                    refresh();
-                  }}
+                  onSubmit={onEdit}
                 />
-                <Button size="sm" variant="ghost"
-                  onClick={() => { if (confirm(`Remover ${u.email}?`)) mDel.mutate(u.id); }}>
+                <Button size="sm" variant="ghost" onClick={onDelete}>
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
-    </div>
   );
 }
 
