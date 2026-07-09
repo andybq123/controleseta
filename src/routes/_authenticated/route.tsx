@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import brusqueLogo from "@/assets/brusque-brasao.png";
 import { RealtimeSyncProvider } from "@/hooks/realtime-sync-context";
+import { OnlineUsersProvider, useOnlineUsers } from "@/hooks/use-online-users";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
