@@ -48,6 +48,12 @@ function AuthLayout() {
     },
   });
 
+  const displayName =
+    (user.user_metadata as any)?.nome ||
+    (user.user_metadata as any)?.full_name ||
+    user.email?.split("@")[0] ||
+    "Usuário";
+
   async function handleLogout() {
     await queryClient.cancelQueries();
     queryClient.clear();
