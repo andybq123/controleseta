@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ManifestacoesMap, type MapPoint, type SecretariaPoint, type LocalPoint } from "@/components/manifestacoes-map";
-import { Map as MapIcon, Plus, HeartPulse } from "lucide-react";
+import { Plus, HeartPulse } from "lucide-react";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { toast } from "sonner";
 import { MapPointPicker } from "@/components/map-point-picker";
