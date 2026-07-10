@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetch-all";
@@ -9,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ManifestacoesMap, type MapPoint, type SecretariaPoint, type LocalPoint } from "@/components/manifestacoes-map";
-import { Map as MapIcon, Sparkles, Loader2 } from "lucide-react";
+import { Map as MapIcon, Plus, HeartPulse } from "lucide-react";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
-import { geocodarProtocolosPendentes } from "@/lib/geocode-bulk.functions";
 import { toast } from "sonner";
+import { MapPointPicker } from "@/components/map-point-picker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,9 +29,12 @@ export const Route = createFileRoute("/_authenticated/mapa")({
 
 function MapaPage() {
   const [status, setStatus] = useState<string>("todos");
-  const [secretariaId, setSecretariaId] = useState<string>("todas");
+  const [localFiltroId, setLocalFiltroId] = useState<string>("todos");
   const [detail, setDetail] = useState<any | null>(null);
-  const [loadingGeo, setLoadingGeo] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addLocalId, setAddLocalId] = useState<string>("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [savingNewPoint, setSavingNewPoint] = useState(false);
   const [pendingMove, setPendingMove] = useState<{
     kind: "local" | "secretaria";
     id: string;
@@ -45,48 +47,68 @@ function MapaPage() {
   } | null>(null);
   const [savingMove, setSavingMove] = useState(false);
   const qc = useQueryClient();
-  const geocodar = useServerFn(geocodarProtocolosPendentes);
+
+  const { data: saudeSec } = useQuery({
+    queryKey: ["secretaria-saude-mapa"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("secretarias")
+        .select("id, nome, sigla, endereco, latitude, longitude, icone")
+        .eq("nome", "Saúde")
+        .maybeSingle();
+      return data;
+    },
+  });
+  const saudeId = saudeSec?.id;
 
   const { data: protocolos = [] } = useQuery({
-    queryKey: ["protocolos-mapa"],
+    queryKey: ["protocolos-mapa-saude", saudeId],
+    enabled: !!saudeId,
     queryFn: () =>
       fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
           .select("id, numero, assunto, endereco, latitude, longitude, status, secretaria_id, local_id, categoria, tipo, data_abertura, data_conclusao, locais(nome), secretarias(nome)")
           .eq("triagem_pendente", false)
+          .eq("secretaria_id", saudeId!)
           .not("latitude", "is", null)
           .not("longitude", "is", null)
           .range(from, to),
       ),
   });
 
-  const { data: secretarias = [] } = useQuery({
-    queryKey: ["secretarias"],
-    queryFn: async () => (await supabase.from("secretarias").select("id, nome, sigla, endereco, latitude, longitude, icone").order("nome")).data ?? [],
-  });
-
-  const { data: locaisComCoord = [] } = useQuery({
-    queryKey: ["locais-com-coordenadas"],
+  const { data: locaisSaude = [] } = useQuery({
+    queryKey: ["locais-saude-mapa", saudeId],
+    enabled: !!saudeId,
     queryFn: async () => (
       await supabase
         .from("locais")
         .select("id, nome, latitude, longitude, secretaria_id, secretarias(nome, icone)")
-        .not("latitude", "is", null)
-        .not("longitude", "is", null)
+        .eq("secretaria_id", saudeId!)
         .order("nome")
     ).data ?? [],
   });
 
+  const locaisComCoord = useMemo(
+    () => (locaisSaude as any[]).filter(l => l.latitude != null && l.longitude != null),
+    [locaisSaude],
+  );
+  const locaisSemCoord = useMemo(
+    () => (locaisSaude as any[]).filter(l => l.latitude == null || l.longitude == null),
+    [locaisSaude],
+  );
+
   // Inclui TODOS os protocolos (mesmo sem coordenadas) para listar no popup do local.
   const { data: protocolosTodos = [] } = useQuery({
-    queryKey: ["protocolos-por-local"],
+    queryKey: ["protocolos-por-local-saude", saudeId],
+    enabled: !!saudeId,
     queryFn: () =>
       fetchAllPaginated((from, to) =>
         supabase
           .from("protocolos")
           .select("id, numero, assunto, status, local_id, secretaria_id")
           .eq("triagem_pendente", false)
+          .eq("secretaria_id", saudeId!)
           .not("local_id", "is", null)
           .range(from, to),
       ),
@@ -95,7 +117,7 @@ function MapaPage() {
   const points = useMemo<MapPoint[]>(() => {
     return (protocolos as any[])
       .filter(p => status === "todos" || p.status === status)
-      .filter(p => secretariaId === "todas" || p.secretaria_id === secretariaId)
+      .filter(p => localFiltroId === "todos" || p.local_id === localFiltroId)
       .map(p => ({
         id: p.id,
         lat: p.latitude as number,
@@ -112,13 +134,13 @@ function MapaPage() {
         local: p.locais?.nome,
         local_id: p.local_id,
       }));
-  }, [protocolos, status, secretariaId]);
+  }, [protocolos, status, localFiltroId]);
 
   // Para popups dos locais: lista de protocolos por local_id (independe de coordenadas)
   const pointsParaLocais = useMemo<MapPoint[]>(() => {
     return (protocolosTodos as any[])
       .filter(p => status === "todos" || p.status === status)
-      .filter(p => secretariaId === "todas" || p.secretaria_id === secretariaId)
+      .filter(p => localFiltroId === "todos" || p.local_id === localFiltroId)
       .map(p => ({
         id: p.id,
         lat: NaN,
@@ -128,21 +150,24 @@ function MapaPage() {
         status: p.status,
         local_id: p.local_id,
       }));
-  }, [protocolosTodos, status, secretariaId]);
+  }, [protocolosTodos, status, localFiltroId]);
 
   const secretariaPoints = useMemo<SecretariaPoint[]>(() => {
-    return (secretarias as any[])
-      .filter(s => s.latitude != null && s.longitude != null)
-      .filter(s => secretariaId === "todas" || s.id === secretariaId)
-      .map(s => ({
-        id: s.id, lat: s.latitude, lng: s.longitude, nome: s.nome,
-        sigla: s.sigla, endereco: s.endereco, icone: s.icone,
-      }));
-  }, [secretarias, secretariaId]);
+    if (!saudeSec || saudeSec.latitude == null || saudeSec.longitude == null) return [];
+    return [{
+      id: saudeSec.id,
+      lat: saudeSec.latitude as number,
+      lng: saudeSec.longitude as number,
+      nome: saudeSec.nome,
+      sigla: saudeSec.sigla,
+      endereco: saudeSec.endereco,
+      icone: saudeSec.icone,
+    }];
+  }, [saudeSec]);
 
   const localPoints = useMemo<LocalPoint[]>(() => {
-    return (locaisComCoord as any[])
-      .filter(l => secretariaId === "todas" || l.secretaria_id === secretariaId)
+    return locaisComCoord
+      .filter(l => localFiltroId === "todos" || l.id === localFiltroId)
       .map(l => ({
         id: l.id,
         lat: l.latitude as number,
@@ -151,52 +176,34 @@ function MapaPage() {
         secretaria: l.secretarias?.nome,
         secretariaIcone: l.secretarias?.icone,
       }));
-  }, [locaisComCoord, secretariaId]);
+  }, [locaisComCoord, localFiltroId]);
 
-  const { data: pendentesCount } = useQuery({
-    queryKey: ["protocolos-sem-coords"],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("protocolos")
-        .select("id", { count: "exact", head: true })
-        .is("latitude", null);
-      return count ?? 0;
-    },
-  });
-
-  const handleGeocodar = async () => {
-    setLoadingGeo(true);
-    try {
-      const r = await geocodar({ data: { limit: 15 } });
-      toast.success(
-        `${r.geocodificados} protocolo(s) localizados. ${r.semDados} sem dados suficientes. ${r.restantes} restantes.`,
-      );
-      if (r.erros.length) {
-        console.warn("Erros de geocodificação:", r.erros);
-      }
-      await qc.invalidateQueries({ queryKey: ["protocolos-mapa"] });
-      await qc.invalidateQueries({ queryKey: ["protocolos-sem-coords"] });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao geocodificar protocolos");
-    } finally {
-      setLoadingGeo(false);
-    }
-  };
+  const localSelecionadoParaAdicionar = useMemo(
+    () => locaisSemCoord.find(l => l.id === addLocalId),
+    [locaisSemCoord, addLocalId],
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <MapIcon className="h-6 w-6 text-primary" /> Mapa de Manifestações
+            <HeartPulse className="h-6 w-6 text-emerald-500" /> Mapa da Saúde
           </h1>
           <p className="text-sm text-muted-foreground">
-            Distribuição geográfica dos protocolos com endereço cadastrado em Brusque.
-            {typeof pendentesCount === "number" && pendentesCount > 0 && (
-              <> <strong>{pendentesCount}</strong> protocolo(s) ainda sem coordenadas.</>
+            Unidades e protocolos da Secretaria de Saúde em Brusque.
+            {locaisSemCoord.length > 0 && (
+              <> <strong>{locaisSemCoord.length}</strong> unidade(s) da saúde ainda sem ponto no mapa.</>
             )}
           </p>
         </div>
+        <Button
+          onClick={() => { setAddLocalId(""); setAddOpen(true); }}
+          disabled={locaisSemCoord.length === 0}
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" /> Adicionar unidade no mapa
+        </Button>
       </div>
 
       <Card>
@@ -217,13 +224,13 @@ function MapaPage() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Secretaria</Label>
-            <Select value={secretariaId} onValueChange={setSecretariaId}>
+            <Label>Unidade de saúde</Label>
+            <Select value={localFiltroId} onValueChange={setLocalFiltroId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="todas">Todas</SelectItem>
-                {(secretarias as any[]).map(s => (
-                  <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                <SelectItem value="todos">Todas as unidades</SelectItem>
+                {locaisComCoord.map((l: any) => (
+                  <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -265,15 +272,15 @@ function MapaPage() {
               });
             }}
             onMoveSecretaria={async (id, lat, lng) => {
-              const sec = (secretarias as any[]).find(s => s.id === id);
+              const sec = saudeSec && saudeSec.id === id ? saudeSec : null;
               if (!sec) return false;
               return await new Promise<boolean>((resolve) => {
                 setPendingMove({
                   kind: "secretaria",
                   id,
                   nome: sec.nome,
-                  oldLat: sec.latitude,
-                  oldLng: sec.longitude,
+                  oldLat: sec.latitude as number,
+                  oldLng: sec.longitude as number,
                   newLat: lat,
                   newLng: lng,
                   resolve,
@@ -284,6 +291,75 @@ function MapaPage() {
         </CardContent>
       </Card>
       <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
+
+      {/* Dialog: escolher qual unidade da saúde receber um ponto no mapa */}
+      <AlertDialog open={addOpen} onOpenChange={(v) => { if (!savingNewPoint) setAddOpen(v); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Adicionar unidade da saúde no mapa</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>
+                  Selecione uma unidade da Secretaria de Saúde que ainda não possui ponto no mapa.
+                  Em seguida, clique no mapa para marcar sua localização exata.
+                </p>
+                <div className="space-y-1.5">
+                  <Label>Unidade</Label>
+                  <Select value={addLocalId} onValueChange={setAddLocalId}>
+                    <SelectTrigger><SelectValue placeholder="Selecione uma unidade..." /></SelectTrigger>
+                    <SelectContent>
+                      {locaisSemCoord.length === 0 && (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                          Todas as unidades já possuem coordenadas.
+                        </div>
+                      )}
+                      {locaisSemCoord.map((l: any) => (
+                        <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={savingNewPoint}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!addLocalId || savingNewPoint}
+              onClick={(e) => {
+                e.preventDefault();
+                setAddOpen(false);
+                setPickerOpen(true);
+              }}
+            >
+              Marcar no mapa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <MapPointPicker
+        open={pickerOpen}
+        onOpenChange={(v) => { if (!savingNewPoint) setPickerOpen(v); }}
+        endereco={localSelecionadoParaAdicionar?.nome}
+        onConfirm={async (lat, lng) => {
+          if (!addLocalId) return;
+          setSavingNewPoint(true);
+          const { error } = await supabase
+            .from("locais")
+            .update({ latitude: lat, longitude: lng })
+            .eq("id", addLocalId);
+          setSavingNewPoint(false);
+          if (error) {
+            toast.error(`Falha ao salvar: ${error.message}`);
+            return;
+          }
+          toast.success(`${localSelecionadoParaAdicionar?.nome ?? "Unidade"} adicionada ao mapa.`);
+          setAddLocalId("");
+          await qc.invalidateQueries({ queryKey: ["locais-saude-mapa"] });
+        }}
+      />
+
       <AlertDialog
         open={!!pendingMove}
         onOpenChange={(open) => {
@@ -346,7 +422,7 @@ function MapaPage() {
                 } else {
                   toast.success(`${pendingMove.nome} reposicionado.`);
                   await qc.invalidateQueries({
-                    queryKey: pendingMove.kind === "local" ? ["locais-com-coordenadas"] : ["secretarias"],
+                    queryKey: pendingMove.kind === "local" ? ["locais-saude-mapa"] : ["secretaria-saude-mapa"],
                   });
                   pendingMove.resolve(true);
                 }
