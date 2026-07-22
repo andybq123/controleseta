@@ -101,6 +101,24 @@ function SecretariaRelatorio() {
 
   const topLocalData = useMemo(() => localData.slice(0, 10), [localData]);
   const localTotal = useMemo(() => localData.reduce((s, d) => s + d.value, 0), [localData]);
+  const shortenLocalName = (name: string) => {
+    if (!name) return "—";
+    const clean = name
+      .replace(/^(UBS|ESF|CAPS|UPA|Hospital|Unidade B[aá]sica de Sa[uú]de|Centro de Sa[uú]de|Posto de Sa[uú]de)\s+/i, "")
+      .trim();
+    const base = clean.length ? clean : name;
+    return base.length > 22 ? base.slice(0, 20).trimEnd() + "…" : base;
+  };
+  const localChartData = useMemo(() => {
+    if (localData.length <= 9) return localData.map(d => ({ ...d, short: shortenLocalName(d.name) }));
+    const top = localData.slice(0, 8);
+    const rest = localData.slice(8);
+    const outrosVal = rest.reduce((s, d) => s + d.value, 0);
+    return [
+      ...top.map(d => ({ ...d, short: shortenLocalName(d.name) })),
+      { name: `Outros (${rest.length})`, short: `Outros (${rest.length})`, value: outrosVal },
+    ];
+  }, [localData]);
   const categoriaTotal = useMemo(() => categoriaData.reduce((s, d) => s + d.value, 0), [categoriaData]);
 
   const crossTab = useMemo(() => {
