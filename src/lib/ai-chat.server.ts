@@ -34,6 +34,14 @@ export interface AiChatOptions {
   responseFormat?: "json_object";
 }
 
+export type AiProviderUsed = "gemini" | "lovable";
+
+export interface AiChatResult {
+  content: string;
+  provider: AiProviderUsed;
+  model: string;
+}
+
 /**
  * Unified chat-completion helper. Dispatches to Lovable AI Gateway or Google
  * Gemini (OpenAI-compatible endpoint) based on the row saved in public.ai_config.
@@ -62,7 +70,7 @@ async function callLovable(model: string, messages: ChatMessage[], responseForma
   });
 }
 
-export async function aiChat({ messages, model, responseFormat }: AiChatOptions): Promise<string> {
+export async function aiChatDetailed({ messages, model, responseFormat }: AiChatOptions): Promise<AiChatResult> {
   const cfg = await loadConfig();
 
   if (cfg.provider === "gemini") {
@@ -93,7 +101,7 @@ export async function aiChat({ messages, model, responseFormat }: AiChatOptions)
         const res = await callGemini(apiKey, m, messages, responseFormat);
         if (res.ok) {
           const json = await res.json();
-          return json.choices?.[0]?.message?.content ?? "";
+          return { content: json.choices?.[0]?.message?.content ?? "", provider: "gemini", model: m };
         }
         lastStatus = res.status;
         lastText = await res.text().catch(() => "");
@@ -132,7 +140,7 @@ export async function aiChat({ messages, model, responseFormat }: AiChatOptions)
     const res = await callLovable(chosen, messages, responseFormat);
     if (res.ok) {
       const json = await res.json();
-      return json.choices?.[0]?.message?.content ?? "";
+      return { content: json.choices?.[0]?.message?.content ?? "", provider: "lovable", model: chosen };
     }
     lastStatus = res.status;
     lastText = await res.text().catch(() => "");
@@ -145,4 +153,9 @@ export async function aiChat({ messages, model, responseFormat }: AiChatOptions)
     break;
   }
   throw new Error(`Falha na IA (${lastStatus}): ${lastText.slice(0, 200)}`);
+}
+
+export async function aiChat(opts: AiChatOptions): Promise<string> {
+  const r = await aiChatDetailed(opts);
+  return r.content;
 }
