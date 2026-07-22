@@ -99,6 +99,10 @@ function SecretariaRelatorio() {
       .sort((a, b) => b.value - a.value);
   }, [protocolos, locais]);
 
+  const topLocalData = useMemo(() => localData.slice(0, 10), [localData]);
+  const localTotal = useMemo(() => localData.reduce((s, d) => s + d.value, 0), [localData]);
+  const categoriaTotal = useMemo(() => categoriaData.reduce((s, d) => s + d.value, 0), [categoriaData]);
+
   const crossTab = useMemo(() => {
     const map = new Map(locais.map((l: any) => [l.id, l.nome]));
     const rows = CATEGORIAS.map(c => {
@@ -260,6 +264,7 @@ function SecretariaRelatorio() {
               {categoriaData.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
               ) : (
+                <div className="relative">
                 <ResponsiveContainer width="100%" height={320}>
                   <PieChart>
                     <Pie
@@ -268,20 +273,20 @@ function SecretariaRelatorio() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      innerRadius={55}
-                      outerRadius={120}
+                      innerRadius={70}
+                      outerRadius={125}
                       minAngle={6}
                       paddingAngle={2}
                       stroke="#ffffff"
                       strokeWidth={2}
                       labelLine={false}
-                      label={({ percent, name }: any) => `${(percent * 100).toFixed(0)}%`}
+                      label={({ percent }: any) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ""}
                     >
                       {categoriaData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip content={<ChartTooltipContent unit="protocolos" />} />
+                    <Tooltip content={<ChartTooltipContent unit="protocolos" total={categoriaTotal} />} />
                     <Legend
                       verticalAlign="bottom"
                       iconType="circle"
@@ -289,6 +294,11 @@ function SecretariaRelatorio() {
                     />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center -mt-8">
+                  <span className="text-2xl font-bold tabular-nums">{categoriaTotal}</span>
+                  <span className="text-[11px] text-muted-foreground">protocolos</span>
+                </div>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -299,6 +309,7 @@ function SecretariaRelatorio() {
               {localData.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
               ) : (
+                <div className="relative">
                 <ResponsiveContainer width="100%" height={320}>
                   <PieChart>
                     <Pie
@@ -307,20 +318,20 @@ function SecretariaRelatorio() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      innerRadius={55}
-                      outerRadius={120}
+                      innerRadius={70}
+                      outerRadius={125}
                       minAngle={6}
                       paddingAngle={2}
                       stroke="#ffffff"
                       strokeWidth={2}
                       labelLine={false}
-                      label={({ value }: any) => `${value}`}
+                      label={({ percent }: any) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ""}
                     >
                       {localData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip content={<ChartTooltipContent unit="protocolos" />} />
+                    <Tooltip content={<ChartTooltipContent unit="protocolos" total={localTotal} />} />
                     <Legend
                       verticalAlign="bottom"
                       iconType="circle"
@@ -328,10 +339,46 @@ function SecretariaRelatorio() {
                     />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center -mt-8">
+                  <span className="text-2xl font-bold tabular-nums">{localTotal}</span>
+                  <span className="text-[11px] text-muted-foreground">protocolos</span>
+                </div>
+                </div>
               )}
             </CardContent>
           </Card>
         </div>
+
+        {topLocalData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Ranking de unidades{mes !== "all" ? ` — ${MESES_FULL[parseInt(mes, 10) - 1]}/${ano}` : ` — ${ano}`}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={Math.max(200, topLocalData.length * 36)}>
+                <BarChart data={topLocalData} layout="vertical" margin={{ left: 8, right: 24, top: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} className="text-xs" />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={180}
+                    tick={{ fontSize: 12 }}
+                    interval={0}
+                  />
+                  <Tooltip content={<ChartTooltipContent unit="protocolos" total={localTotal} />} cursor={{ fill: "hsl(var(--muted)/0.4)" }} />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]} label={{ position: "right", fontSize: 11 }}>
+                    {topLocalData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader><CardTitle className="text-base">Manifestações por tipo × unidade</CardTitle></CardHeader>
