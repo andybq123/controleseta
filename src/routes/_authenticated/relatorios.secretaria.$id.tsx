@@ -101,6 +101,24 @@ function SecretariaRelatorio() {
 
   const topLocalData = useMemo(() => localData.slice(0, 10), [localData]);
   const localTotal = useMemo(() => localData.reduce((s, d) => s + d.value, 0), [localData]);
+  const shortenLocalName = (name: string) => {
+    if (!name) return "—";
+    const clean = name
+      .replace(/^(UBS|ESF|CAPS|UPA|Hospital|Unidade B[aá]sica de Sa[uú]de|Centro de Sa[uú]de|Posto de Sa[uú]de)\s+/i, "")
+      .trim();
+    const base = clean.length ? clean : name;
+    return base.length > 22 ? base.slice(0, 20).trimEnd() + "…" : base;
+  };
+  const localChartData = useMemo(() => {
+    if (localData.length <= 9) return localData.map(d => ({ ...d, short: shortenLocalName(d.name) }));
+    const top = localData.slice(0, 8);
+    const rest = localData.slice(8);
+    const outrosVal = rest.reduce((s, d) => s + d.value, 0);
+    return [
+      ...top.map(d => ({ ...d, short: shortenLocalName(d.name) })),
+      { name: `Outros (${rest.length})`, short: `Outros (${rest.length})`, value: outrosVal },
+    ];
+  }, [localData]);
   const categoriaTotal = useMemo(() => categoriaData.reduce((s, d) => s + d.value, 0), [categoriaData]);
 
   const crossTab = useMemo(() => {
@@ -309,40 +327,49 @@ function SecretariaRelatorio() {
               {localData.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
               ) : (
-                <div className="relative">
-                <ResponsiveContainer width="100%" height={320}>
-                  <PieChart>
-                    <Pie
-                      data={localData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={70}
-                      outerRadius={125}
-                      minAngle={6}
-                      paddingAngle={2}
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                      labelLine={false}
-                      label={({ percent }: any) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ""}
-                    >
-                      {localData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltipContent unit="protocolos" total={localTotal} />} />
-                    <Legend
-                      verticalAlign="bottom"
-                      iconType="circle"
-                      formatter={(value: string) => <span className="text-xs">{value}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center -mt-8">
-                  <span className="text-2xl font-bold tabular-nums">{localTotal}</span>
-                  <span className="text-[11px] text-muted-foreground">protocolos</span>
-                </div>
+                <div className="grid grid-cols-[1fr_auto] gap-3 items-center">
+                  <div className="relative">
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                        <Pie
+                          data={localChartData}
+                          dataKey="value"
+                          nameKey="short"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={110}
+                          minAngle={4}
+                          paddingAngle={2}
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                          labelLine={false}
+                          label={({ percent }: any) => percent > 0.07 ? `${(percent * 100).toFixed(0)}%` : ""}
+                        >
+                          {localChartData.map((_, i) => (
+                            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<ChartTooltipContent unit="protocolos" total={localTotal} />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-bold tabular-nums">{localTotal}</span>
+                      <span className="text-[11px] text-muted-foreground">protocolos</span>
+                    </div>
+                  </div>
+                  <ul className="max-h-[280px] overflow-y-auto pr-1 space-y-1.5 text-xs min-w-[140px] max-w-[200px]">
+                    {localChartData.map((d, i) => (
+                      <li key={d.name} className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                        />
+                        <span className="truncate flex-1" title={d.name}>{d.short}</span>
+                        <span className="tabular-nums text-muted-foreground">{d.value}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </CardContent>
