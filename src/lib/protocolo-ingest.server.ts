@@ -192,8 +192,8 @@ function extrairLinkAcompanhar(corpo: string): string | null {
 }
 
 async function extrairComIA(texto: string) {
-  const { aiChat } = await import("./ai-chat.server");
-  const content = await aiChat({
+  const { aiChatDetailed } = await import("./ai-chat.server");
+  const { content, provider } = await aiChatDetailed({
     messages: [
       { role: "system", content: PROTOCOLO_EXTRACT_SYSTEM },
       { role: "user", content: (sanitizarTextoProtocolo(texto) || texto).slice(0, 18000) },
@@ -202,7 +202,7 @@ async function extrairComIA(texto: string) {
   });
   let parsed: any = {};
   try { parsed = JSON.parse(content); } catch {}
-  return normalizarExtracao(parsed);
+  return { extr: normalizarExtracao(parsed), provider };
 }
 
 export type IngestInput = {
@@ -239,7 +239,11 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
 
   try {
     if (textoCompleto.trim().length < 10) throw new Error("Conteúdo vazio");
-    const extr = await extrairComIA(textoCompleto);
+    const { extr, provider: aiProvider } = await extrairComIA(textoCompleto);
+    // Marca imediatamente qual IA processou este e-mail (útil quando o
+    // fluxo falhar mais adiante mas a extração já aconteceu).
+    await supabaseAdmin.from("email_inbox_log")
+      .update({ ai_provider: aiProvider }).eq("id", logRow!.id);
 
     // Número real da Ouvidoria vindo no assunto do e-mail tem prioridade
     // absoluta sobre o que a IA inferiu (evita gerar números sintéticos).
