@@ -70,38 +70,58 @@ export async function aiChat({ messages, model, responseFormat }: AiChatOptions)
     if (!apiKey) throw new Error("Gemini selecionado, mas a API key não está configurada em Configurações > IA.");
     const chosen = model || cfg.model || "gemini-2.5-flash";
 
-    // Retry on 503/overload with exponential backoff.
+    // Cascata de modelos Gemini: começa pelo escolhido e degrada para modelos
+    // mais leves/estáveis quando houver sobrecarga (503) ou instabilidade (5xx).
+    // Isso mantém tudo dentro do Gemini antes de considerar qualquer fallback.
+    const cascade: string[] = [];
+    const push = (m: string) => { if (m && !cascade.includes(m)) cascade.push(m); };
+    push(chosen);
+    push("gemini-2.5-flash");
+    push("gemini-2.5-flash-lite");
+    push("gemini-2.0-flash");
+    push("gemini-2.0-flash-lite");
+    push("gemini-1.5-flash");
+    push("gemini-1.5-flash-8b");
+
     let lastStatus = 0;
     let lastText = "";
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const res = await callGemini(apiKey, chosen, messages, responseFormat);
-      if (res.ok) {
-        const json = await res.json();
-        return json.choices?.[0]?.message?.content ?? "";
-      }
-      lastStatus = res.status;
-      lastText = await res.text().catch(() => "");
-      if (res.status === 401 || res.status === 403) throw new Error("API key do Gemini inválida ou sem permissão.");
-      if (res.status === 429) throw new Error("Limite de requisições do Gemini atingido. Tente novamente em instantes.");
-      // 503/500/502/504 → backoff and retry
-      if ([500, 502, 503, 504].includes(res.status) && attempt < 2) {
-        await sleep(800 * Math.pow(2, attempt));
-        continue;
-      }
-      break;
-    }
+    const transient = (s: number) => [408, 500, 502, 503, 504, 529].includes(s);
 
-    // Fallback to Lovable when Gemini is overloaded/unavailable, if LOVABLE_API_KEY exists.
-    if ([500, 502, 503, 504].includes(lastStatus) && process.env.LOVABLE_API_KEY) {
-      try {
-        const res = await callLovable("google/gemini-2.5-flash", messages, responseFormat);
+    for (const m of cascade) {
+      // até 5 tentativas por modelo com backoff exponencial + jitter (máx ~8s)
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const res = await callGemini(apiKey, m, messages, responseFormat);
         if (res.ok) {
           const json = await res.json();
           return json.choices?.[0]?.message?.content ?? "";
         }
-      } catch {}
+        lastStatus = res.status;
+        lastText = await res.text().catch(() => "");
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("API key do Gemini inválida ou sem permissão.");
+        }
+        if (res.status === 400 || res.status === 404) {
+          // modelo inexistente/parâmetro inválido — tenta o próximo da cascata
+          break;
+        }
+        if (res.status === 429) {
+          // rate limit — espera mais e tenta de novo no mesmo modelo
+          const wait = 1500 * Math.pow(2, attempt) + Math.random() * 400;
+          await sleep(Math.min(wait, 12_000));
+          continue;
+        }
+        if (transient(res.status) && attempt < 4) {
+          const wait = 800 * Math.pow(2, attempt) + Math.random() * 400;
+          await sleep(Math.min(wait, 8_000));
+          continue;
+        }
+        break; // erro não recuperável neste modelo → cascata
+      }
     }
-    throw new Error(`Falha na IA Gemini (${lastStatus}): ${lastText.slice(0, 200)}`);
+
+    throw new Error(
+      `Falha na IA Gemini após tentar ${cascade.length} modelo(s) (último status ${lastStatus}): ${lastText.slice(0, 200)}`,
+    );
   }
 
   // Lovable (default)
