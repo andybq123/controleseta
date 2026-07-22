@@ -1,0 +1,1 @@
+ALTER TABLE public.email_inbox_log ADD COLUMN IF NOT EXISTS ai_provider text;

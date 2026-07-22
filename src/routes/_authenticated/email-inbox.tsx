@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, Clock, RefreshCw, ShieldCheck } from "lucide-react";
+import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, Clock, RefreshCw, ShieldCheck, Sparkles, Bot } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
@@ -173,6 +173,29 @@ function EmailInboxPage() {
     return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
   };
 
+  const aiBadge = (p: string | null | undefined) => {
+    if (!p) return null;
+    if (p === "gemini")
+      return (
+        <Badge
+          variant="outline"
+          className="bg-indigo-500/10 text-indigo-700 border-indigo-500/30 dark:text-indigo-300"
+          title="Processado pela IA Gemini (Google)"
+        >
+          <Sparkles className="h-3 w-3 mr-1" /> Gemini
+        </Badge>
+      );
+    return (
+      <Badge
+        variant="outline"
+        className="bg-fuchsia-500/10 text-fuchsia-700 border-fuchsia-500/30 dark:text-fuchsia-300"
+        title="Processado pela IA da Lovable"
+      >
+        <Bot className="h-3 w-3 mr-1" /> Lovable AI
+      </Badge>
+    );
+  };
+
   const syncAccounts = accounts.filter((a: any) => a.provider === "gmail" && a.ativo);
   const ultimaSync = syncAccounts
     .map((a: any) => a.ultima_sincronizacao ? new Date(a.ultima_sincronizacao).getTime() : 0)
@@ -310,6 +333,7 @@ function EmailInboxPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       {statusBadge(l.status)}
+                      {aiBadge(l.ai_provider)}
                       <span className="text-xs text-muted-foreground">{format(new Date(l.recebido_em), "dd/MM/yyyy HH:mm")}</span>
                       {l.email_inbox_accounts?.email && <span className="text-xs text-muted-foreground">→ {l.email_inbox_accounts.email}</span>}
                     </div>
