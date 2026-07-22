@@ -242,8 +242,11 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
     const { extr, provider: aiProvider } = await extrairComIA(textoCompleto);
     // Marca imediatamente qual IA processou este e-mail (útil quando o
     // fluxo falhar mais adiante mas a extração já aconteceu).
-    await supabaseAdmin.from("email_inbox_log")
-      .update({ ai_provider: aiProvider }).eq("id", logRow!.id);
+    {
+      const { error: errAi } = await supabaseAdmin.from("email_inbox_log")
+        .update({ ai_provider: aiProvider }).eq("id", logRow!.id);
+      if (errAi) console.error("[ingest] falha ao gravar ai_provider:", errAi);
+    }
 
     // Número real da Ouvidoria vindo no assunto do e-mail tem prioridade
     // absoluta sobre o que a IA inferiu (evita gerar números sintéticos).
@@ -309,6 +312,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
           protocolo_id: existente.id,
           processado_em: new Date().toISOString(),
           erro: acao === "conclusao" ? "baixa registrada" : "atualização registrada",
+          ai_provider: aiProvider,
         }).eq("id", logRow!.id);
 
         return { ok: true, protocoloId: existente.id, numero: existente.numero, logId: logRow!.id };
@@ -438,6 +442,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
           protocolo_id: jaExiste.id,
           processado_em: new Date().toISOString(),
           erro: "duplicado (mesmo número já existia)",
+          ai_provider: aiProvider,
         }).eq("id", logRow!.id);
         return { ok: true, protocoloId: jaExiste.id, numero: jaExiste.numero, logId: logRow!.id };
       }
@@ -494,6 +499,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
       protocolo_id: novo!.id,
       processado_em: new Date().toISOString(),
       erro: numeroGerado ? "número gerado (não encontrado no e-mail)" : null,
+      ai_provider: aiProvider,
     }).eq("id", logRow!.id);
 
     return { ok: true, protocoloId: novo!.id, numero: novo!.numero, logId: logRow!.id };
