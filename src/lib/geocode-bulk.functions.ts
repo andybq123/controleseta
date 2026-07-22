@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { aiChat } from "./ai-chat.server";
 
 const NOMINATIM_HEADERS = {
   "User-Agent": "OuvidoriaBrusque/1.0 (controleseta.lovable.app)",
@@ -25,7 +26,7 @@ async function geocodeQuery(q: string): Promise<NominatimHit | null> {
   return arr[0] ?? null;
 }
 
-async function sugerirQuery(apiKey: string, p: {
+async function sugerirQuery(p: {
   assunto?: string | null;
   descricao?: string | null;
   endereco?: string | null;
@@ -48,24 +49,21 @@ Nunca invente endereços fora de Brusque-SC.`;
     `Categoria: ${p.categoria || "—"}`,
   ].join("\n");
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+  let content = "{}";
+  try {
+    content = await aiChat({
       messages: [
         { role: "system", content: system },
         { role: "user", content: userMsg },
       ],
-      response_format: { type: "json_object" },
-    }),
-  });
-  if (res.status === 429 || res.status === 402) {
-    throw new Error(res.status === 429 ? "rate_limit" : "no_credits");
+      responseFormat: "json_object",
+    });
+  } catch (e: any) {
+    const msg = String(e?.message ?? e);
+    if (/Limite de requisi/i.test(msg)) throw new Error("rate_limit");
+    if (/Cr[eé]ditos/i.test(msg)) throw new Error("no_credits");
+    return null;
   }
-  if (!res.ok) return null;
-  const json = await res.json();
-  const content: string = json.choices?.[0]?.message?.content ?? "{}";
   let parsed: { query?: string; confianca?: string } = {};
   try { parsed = JSON.parse(content); } catch {
     const m = content.match(/\{[\s\S]*\}/);
@@ -84,8 +82,6 @@ export const geocodarProtocolosPendentes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
     const { supabase } = context;
 
     const { data: pendentes, error } = await supabase
@@ -104,7 +100,7 @@ export const geocodarProtocolosPendentes = createServerFn({ method: "POST" })
     for (const p of pendentes ?? []) {
       processados++;
       try {
-        const sug = await sugerirQuery(apiKey, {
+        const sug = await sugerirQuery({
           assunto: p.assunto,
           descricao: (p as any).descricao,
           endereco: p.endereco,
