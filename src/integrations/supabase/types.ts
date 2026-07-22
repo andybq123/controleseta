@@ -234,6 +234,7 @@ export type Database = {
       email_inbox_log: {
         Row: {
           account_id: string | null
+          ai_provider: string | null
           assunto: string | null
           corpo: string | null
           destinatario: string | null
@@ -248,6 +249,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          ai_provider?: string | null
           assunto?: string | null
           corpo?: string | null
           destinatario?: string | null
@@ -262,6 +264,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          ai_provider?: string | null
           assunto?: string | null
           corpo?: string | null
           destinatario?: string | null
