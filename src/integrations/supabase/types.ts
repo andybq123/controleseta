@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_config: {
+        Row: {
+          api_key: string | null
+          id: boolean
+          model: string | null
+          provider: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          id?: boolean
+          model?: string | null
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          id?: boolean
+          model?: string | null
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       allowed_emails: {
         Row: {
           created_at: string

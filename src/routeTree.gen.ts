@@ -24,6 +24,7 @@ import { Route as AuthenticatedSaudeRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProtocolosRouteImport } from './routes/_authenticated/protocolos'
 import { Route as AuthenticatedMapaRouteImport } from './routes/_authenticated/mapa'
+import { Route as AuthenticatedIaConfigRouteImport } from './routes/_authenticated/ia-config'
 import { Route as AuthenticatedEmailInboxRouteImport } from './routes/_authenticated/email-inbox'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedColetorRouteImport } from './routes/_authenticated/coletor'
@@ -112,6 +113,11 @@ const AuthenticatedProtocolosRoute = AuthenticatedProtocolosRouteImport.update({
 const AuthenticatedMapaRoute = AuthenticatedMapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIaConfigRoute = AuthenticatedIaConfigRouteImport.update({
+  id: '/ia-config',
+  path: '/ia-config',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedEmailInboxRoute = AuthenticatedEmailInboxRouteImport.update({
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/coletor': typeof AuthenticatedColetorRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
+  '/ia-config': typeof AuthenticatedIaConfigRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/coletor': typeof AuthenticatedColetorRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/email-inbox': typeof AuthenticatedEmailInboxRoute
+  '/ia-config': typeof AuthenticatedIaConfigRoute
   '/mapa': typeof AuthenticatedMapaRoute
   '/protocolos': typeof AuthenticatedProtocolosRoute
   '/saude': typeof AuthenticatedSaudeRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/_authenticated/coletor': typeof AuthenticatedColetorRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/email-inbox': typeof AuthenticatedEmailInboxRoute
+  '/_authenticated/ia-config': typeof AuthenticatedIaConfigRoute
   '/_authenticated/mapa': typeof AuthenticatedMapaRoute
   '/_authenticated/protocolos': typeof AuthenticatedProtocolosRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
@@ -298,6 +307,7 @@ export interface FileRouteTypes {
     | '/coletor'
     | '/dashboard'
     | '/email-inbox'
+    | '/ia-config'
     | '/mapa'
     | '/protocolos'
     | '/relatorios'
@@ -328,6 +338,7 @@ export interface FileRouteTypes {
     | '/coletor'
     | '/dashboard'
     | '/email-inbox'
+    | '/ia-config'
     | '/mapa'
     | '/protocolos'
     | '/saude'
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
     | '/_authenticated/coletor'
     | '/_authenticated/dashboard'
     | '/_authenticated/email-inbox'
+    | '/_authenticated/ia-config'
     | '/_authenticated/mapa'
     | '/_authenticated/protocolos'
     | '/_authenticated/relatorios'
@@ -499,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMapaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia-config': {
+      id: '/_authenticated/ia-config'
+      path: '/ia-config'
+      fullPath: '/ia-config'
+      preLoaderRoute: typeof AuthenticatedIaConfigRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/email-inbox': {
       id: '/_authenticated/email-inbox'
       path: '/email-inbox'
@@ -623,6 +642,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedColetorRoute: typeof AuthenticatedColetorRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmailInboxRoute: typeof AuthenticatedEmailInboxRoute
+  AuthenticatedIaConfigRoute: typeof AuthenticatedIaConfigRoute
   AuthenticatedMapaRoute: typeof AuthenticatedMapaRoute
   AuthenticatedProtocolosRoute: typeof AuthenticatedProtocolosRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
@@ -640,6 +660,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedColetorRoute: AuthenticatedColetorRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmailInboxRoute: AuthenticatedEmailInboxRoute,
+  AuthenticatedIaConfigRoute: AuthenticatedIaConfigRoute,
   AuthenticatedMapaRoute: AuthenticatedMapaRoute,
   AuthenticatedProtocolosRoute: AuthenticatedProtocolosRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
@@ -674,13 +695,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

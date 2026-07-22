@@ -41,9 +41,6 @@ async function geocodeQuery(q: string): Promise<NominatimHit | null> {
 export const sugerirLocalizacaoIA = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
-
     const system = `Você é um assistente que extrai a localização mais provável de uma manifestação de ouvidoria municipal no município de Brusque, Santa Catarina, Brasil.
 
 Analise as informações fornecidas (assunto, descrição, endereço informado, secretaria, local/UBS) e retorne em JSON o melhor palpite de endereço para localizar o ponto no mapa.
@@ -65,26 +62,14 @@ Regras:
       `Categoria: ${data.categoria || "—"}`,
     ].join("\n");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: userMsg },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    const { aiChat } = await import("./ai-chat.server");
+    const content = await aiChat({
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userMsg },
+      ],
+      responseFormat: "json_object",
     });
-    if (res.status === 429) throw new Error("Limite de requisições de IA atingido. Tente em alguns instantes.");
-    if (res.status === 402) throw new Error("Créditos de IA esgotados.");
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(`Falha na IA (${res.status}): ${txt.slice(0, 200)}`);
-    }
-    const json = await res.json();
-    const content: string = json.choices?.[0]?.message?.content ?? "{}";
 
     let parsed: { query?: string; confianca?: string; justificativa?: string } = {};
     try {

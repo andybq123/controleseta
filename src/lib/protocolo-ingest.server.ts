@@ -192,23 +192,14 @@ function extrairLinkAcompanhar(corpo: string): string | null {
 }
 
 async function extrairComIA(texto: string) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: PROTOCOLO_EXTRACT_SYSTEM },
-        { role: "user", content: (sanitizarTextoProtocolo(texto) || texto).slice(0, 18000) },
-      ],
-      response_format: { type: "json_object" },
-    }),
+  const { aiChat } = await import("./ai-chat.server");
+  const content = await aiChat({
+    messages: [
+      { role: "system", content: PROTOCOLO_EXTRACT_SYSTEM },
+      { role: "user", content: (sanitizarTextoProtocolo(texto) || texto).slice(0, 18000) },
+    ],
+    responseFormat: "json_object",
   });
-  if (!res.ok) throw new Error(`IA ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const json = await res.json();
-  const content = json.choices?.[0]?.message?.content ?? "{}";
   let parsed: any = {};
   try { parsed = JSON.parse(content); } catch {}
   return normalizarExtracao(parsed);
