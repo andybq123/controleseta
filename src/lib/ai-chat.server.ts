@@ -1,5 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
-
 // Cache the resolved config for a short period so we don't hit the DB on every call.
 let cached: { at: number; provider: "lovable" | "gemini"; apiKey: string | null; model: string | null } | null = null;
 const TTL_MS = 30_000;
@@ -7,11 +5,10 @@ const TTL_MS = 30_000;
 async function loadConfig() {
   if (cached && Date.now() - cached.at < TTL_MS) return cached;
   try {
-    const url = process.env.SUPABASE_URL!;
-    const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const sb = createClient(url, key, { auth: { persistSession: false } });
-    // Best effort — if RLS blocks (public key), fall back to defaults.
-    const { data } = await sb.from("ai_config").select("provider, api_key, model").eq("id", true).maybeSingle();
+    // Uses service role so it works from any server context (ingest, cron, server fns).
+    // ai_config is a single admin-only row; reading it from the server has no user impact.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin.from("ai_config").select("provider, api_key, model").eq("id", true).maybeSingle();
     cached = {
       at: Date.now(),
       provider: (data?.provider as any) === "gemini" ? "gemini" : "lovable",
