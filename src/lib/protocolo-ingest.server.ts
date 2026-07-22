@@ -312,6 +312,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
           protocolo_id: existente.id,
           processado_em: new Date().toISOString(),
           erro: acao === "conclusao" ? "baixa registrada" : "atualização registrada",
+          ai_provider: aiProvider,
         }).eq("id", logRow!.id);
 
         return { ok: true, protocoloId: existente.id, numero: existente.numero, logId: logRow!.id };
@@ -441,6 +442,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
           protocolo_id: jaExiste.id,
           processado_em: new Date().toISOString(),
           erro: "duplicado (mesmo número já existia)",
+          ai_provider: aiProvider,
         }).eq("id", logRow!.id);
         return { ok: true, protocoloId: jaExiste.id, numero: jaExiste.numero, logId: logRow!.id };
       }
@@ -497,6 +499,7 @@ export async function ingerirEmail(input: IngestInput): Promise<{ ok: boolean; p
       protocolo_id: novo!.id,
       processado_em: new Date().toISOString(),
       erro: numeroGerado ? "número gerado (não encontrado no e-mail)" : null,
+      ai_provider: aiProvider,
     }).eq("id", logRow!.id);
 
     return { ok: true, protocoloId: novo!.id, numero: novo!.numero, logId: logRow!.id };
