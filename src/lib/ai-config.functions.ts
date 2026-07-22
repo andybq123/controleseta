@@ -34,7 +34,13 @@ export const saveAiConfig = createServerFn({ method: "POST" })
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
     if (!isAdmin) throw new Error("Acesso negado");
 
-    const patch: Record<string, unknown> = {
+    const patch: {
+      provider: "lovable" | "gemini";
+      model: string | null;
+      updated_at: string;
+      updated_by: string;
+      api_key?: string | null;
+    } = {
       provider: data.provider,
       model: data.model ? data.model : null,
       updated_at: new Date().toISOString(),
