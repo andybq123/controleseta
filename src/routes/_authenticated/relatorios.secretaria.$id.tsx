@@ -28,6 +28,7 @@ function SecretariaRelatorio() {
   const printRef = useRef<HTMLDivElement>(null);
   const [mes, setMes] = useState<string>("all");
   const [ano, setAno] = useState<string>(String(new Date().getFullYear()));
+  const [localId, setLocalId] = useState<string>("all");
 
   const { data: secretaria } = useQuery({
     queryKey: ["secretaria", id],
@@ -61,8 +62,63 @@ function SecretariaRelatorio() {
   const protocolos = useMemo(() => protocolosAll.filter(p => {
     if (!p.data_abertura.startsWith(ano)) return false;
     if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
+    if (localId !== "all") {
+      if (localId === "__sem__") {
+        if ((p as any).local_id) return false;
+      } else if ((p as any).local_id !== localId) return false;
+    }
     return true;
-  }).sort(sortProtocolosPorNumero), [protocolosAll, ano, mes]);
+  }).sort(sortProtocolosPorNumero), [protocolosAll, ano, mes, localId]);
+
+  const localSelecionado = useMemo(() => {
+    if (localId === "all") return null;
+    if (localId === "__sem__") return { id: "__sem__", nome: "Sem unidade" };
+    return (locais as any[]).find(l => l.id === localId) ?? null;
+  }, [localId, locais]);
+
+  // Estatísticas exclusivas da unidade selecionada
+  const unidadeDetalhe = useMemo(() => {
+    if (!localSelecionado) return null;
+    // Evolução dos últimos 12 meses (independente do filtro de mês/ano)
+    const base = protocolosAll.filter(p => {
+      if (localSelecionado.id === "__sem__") return !(p as any).local_id;
+      return (p as any).local_id === localSelecionado.id;
+    });
+    const evolucao: { mes: string; total: number; concluidos: number }[] = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const naquele = base.filter(p => p.data_abertura.startsWith(key));
+      evolucao.push({
+        mes: `${MESES[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`,
+        total: naquele.length,
+        concluidos: naquele.filter(p => p.status === "concluido").length,
+      });
+    }
+    // Top assuntos no período filtrado
+    const assuntoCounts = new Map<string, number>();
+    protocolos.forEach(p => {
+      const a = (p.assunto ?? "—").trim() || "—";
+      assuntoCounts.set(a, (assuntoCounts.get(a) ?? 0) + 1);
+    });
+    const topAssuntos = Array.from(assuntoCounts.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+    // Tempo médio de conclusão (em dias) no período filtrado
+    const concluidosComData = protocolos.filter(p => p.status === "concluido" && p.data_conclusao);
+    const tempoMedio = concluidosComData.length
+      ? Math.round(
+          concluidosComData.reduce((s, p: any) => {
+            const ini = new Date(p.data_abertura + "T00:00:00").getTime();
+            const fim = new Date(p.data_conclusao + "T00:00:00").getTime();
+            return s + Math.max(0, (fim - ini) / (1000 * 60 * 60 * 24));
+          }, 0) / concluidosComData.length,
+        )
+      : null;
+    return { evolucao, topAssuntos, tempoMedio, totalHistorico: base.length };
+  }, [localSelecionado, protocolosAll, protocolos]);
 
   const stats = useMemo(() => {
     const enriched = protocolos.map(p => ({ ...p, _s: situacaoProtocolo(p as any) }));
@@ -251,6 +307,18 @@ function SecretariaRelatorio() {
               {anosDisponiveis.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
             </SelectContent>
           </Select>
+          {locais.length > 0 && (
+            <Select value={localId} onValueChange={setLocalId}>
+              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Unidade" /></SelectTrigger>
+              <SelectContent className="max-h-[320px]">
+                <SelectItem value="all">Todas as unidades</SelectItem>
+                <SelectItem value="__sem__">Sem unidade</SelectItem>
+                {(locais as any[]).map(l => (
+                  <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button onClick={exportPDF}>
             <FileText className="h-4 w-4 mr-1" /> Exportar PDF
           </Button>
@@ -258,6 +326,79 @@ function SecretariaRelatorio() {
       </div>
 
       <div ref={printRef} className="space-y-4">
+        {localSelecionado && unidadeDetalhe && (
+          <Card className="border-emerald-500/40">
+            <CardHeader className="pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base">
+                    Relatório detalhado — {localSelecionado.nome}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Período filtrado: {mes === "all" ? `Ano ${ano}` : `${MESES_FULL[parseInt(mes, 10) - 1]}/${ano}`} · Histórico total: {unidadeDetalhe.totalHistorico} protocolo(s)
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setLocalId("all")}>Limpar unidade</Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-md border p-3">
+                  <div className="text-xs text-muted-foreground">Total no período</div>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                </div>
+                <div className="rounded-md border p-3">
+                  <div className="text-xs text-muted-foreground">Concluídos</div>
+                  <div className="text-2xl font-bold text-green-600">{stats.concluidos}</div>
+                </div>
+                <div className="rounded-md border p-3">
+                  <div className="text-xs text-muted-foreground">Vencidos</div>
+                  <div className="text-2xl font-bold text-destructive">{stats.vencidos}</div>
+                </div>
+                <div className="rounded-md border p-3">
+                  <div className="text-xs text-muted-foreground">Tempo médio conclusão</div>
+                  <div className="text-2xl font-bold">
+                    {unidadeDetalhe.tempoMedio === null ? "—" : `${unidadeDetalhe.tempoMedio}d`}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium mb-2">Evolução (últimos 12 meses)</div>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={unidadeDetalhe.evolucao}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="mes" className="text-xs" />
+                      <YAxis allowDecimals={false} className="text-xs" />
+                      <Tooltip content={<ChartTooltipContent unit="protocolos" />} cursor={{ fill: "hsl(var(--muted)/0.4)" }} />
+                      <Legend formatter={(v) => <span className="text-xs">{v}</span>} />
+                      <Bar dataKey="total" name="Abertos" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="concluidos" name="Concluídos" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div>
+                  <div className="text-sm font-medium mb-2">Top assuntos no período</div>
+                  {unidadeDetalhe.topAssuntos.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-8 text-center">Sem dados</p>
+                  ) : (
+                    <ul className="space-y-1.5 text-sm max-h-[240px] overflow-y-auto pr-1">
+                      {unidadeDetalhe.topAssuntos.map((a, i) => (
+                        <li key={a.name} className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
+                          <span className="flex-1 truncate" title={a.name}>{a.name}</span>
+                          <Badge variant="outline" className="text-xs">{a.value}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: "Total", value: stats.total, color: "text-foreground" },
