@@ -17,24 +17,42 @@ export type Database = {
       ai_config: {
         Row: {
           api_key: string | null
+          gemini_api_key: string | null
+          gemini_model: string | null
+          grok_api_key: string | null
+          grok_model: string | null
           id: boolean
+          lovable_model: string | null
           model: string | null
+          priority: string[]
           provider: string
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           api_key?: string | null
+          gemini_api_key?: string | null
+          gemini_model?: string | null
+          grok_api_key?: string | null
+          grok_model?: string | null
           id?: boolean
+          lovable_model?: string | null
           model?: string | null
+          priority?: string[]
           provider?: string
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           api_key?: string | null
+          gemini_api_key?: string | null
+          gemini_model?: string | null
+          grok_api_key?: string | null
+          grok_model?: string | null
           id?: boolean
+          lovable_model?: string | null
           model?: string | null
+          priority?: string[]
           provider?: string
           updated_at?: string
           updated_by?: string | null
