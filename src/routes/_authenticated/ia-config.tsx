@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Sparkles, KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -62,6 +63,34 @@ function IAConfigPage() {
   });
 
   const defaultModel = provider === "gemini" ? "gemini-2.5-flash" : "google/gemini-2.5-flash";
+
+  const MODEL_OPTIONS: Record<"lovable" | "gemini", { value: string; label: string; hint?: string }[]> = {
+    lovable: [
+      { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", hint: "Mais capaz, raciocínio complexo" },
+      { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", hint: "Equilíbrio custo/qualidade (padrão)" },
+      { value: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", hint: "Mais rápido e barato" },
+      { value: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro (preview)", hint: "Próxima geração — raciocínio" },
+      { value: "google/gemini-3.6-flash", label: "Gemini 3.6 Flash", hint: "Última geração Flash" },
+      { value: "google/gemini-3.5-flash", label: "Gemini 3.5 Flash", hint: "Rápido e eficiente" },
+      { value: "openai/gpt-5", label: "GPT-5", hint: "OpenAI — all-rounder" },
+      { value: "openai/gpt-5-mini", label: "GPT-5 Mini", hint: "OpenAI — custo menor" },
+      { value: "openai/gpt-5-nano", label: "GPT-5 Nano", hint: "OpenAI — mais rápido" },
+      { value: "openai/gpt-5.4", label: "GPT-5.4", hint: "OpenAI — geração atual" },
+      { value: "openai/gpt-5.4-mini", label: "GPT-5.4 Mini" },
+      { value: "openai/gpt-5.5", label: "GPT-5.5", hint: "OpenAI — frontier" },
+    ],
+    gemini: [
+      { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro", hint: "Mais capaz" },
+      { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash", hint: "Padrão recomendado" },
+      { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", hint: "Mais rápido/barato" },
+      { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+      { value: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite" },
+      { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
+      { value: "gemini-1.5-flash-8b", label: "Gemini 1.5 Flash 8B" },
+    ],
+  };
+  const options = MODEL_OPTIONS[provider];
+  const selectValue = model && options.some((o) => o.value === model) ? model : "__default__";
 
   return (
     <div className="max-w-3xl space-y-4">
@@ -160,14 +189,36 @@ function IAConfigPage() {
             <CardHeader>
               <CardTitle>Modelo</CardTitle>
               <CardDescription>
-                Opcional. Deixe em branco para usar o padrão (<code>{defaultModel}</code>).
-                {provider === "gemini"
-                  ? " Exemplos: gemini-2.5-flash, gemini-2.5-pro."
-                  : " Exemplos: google/gemini-2.5-flash, google/gemini-2.5-pro, openai/gpt-5-mini."}
+                Escolha o modelo usado em todos os fluxos de IA. Selecione "Padrão" para
+                usar automaticamente <code>{defaultModel}</code>.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder={defaultModel} />
+            <CardContent className="space-y-2">
+              <Select
+                value={selectValue}
+                onValueChange={(v) => setModel(v === "__default__" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar modelo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__default__">Padrão ({defaultModel})</SelectItem>
+                  {options.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      <span className="font-medium">{o.label}</span>
+                      {o.hint && <span className="text-muted-foreground"> — {o.hint}</span>}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Ou informe um ID customizado</Label>
+                <Input
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder={defaultModel}
+                />
+              </div>
             </CardContent>
           </Card>
 
