@@ -123,6 +123,8 @@ async function tryGemini(apiKey: string, chosen: string, messages: ChatMessage[]
   const cascade: string[] = [];
   const push = (m: string) => { if (m && !cascade.includes(m)) cascade.push(m); };
   push(chosen);
+  push("gemini-3.5-flash-lite");
+  push("gemini-3.1-flash-lite");
   push("gemini-2.5-flash");
   push("gemini-2.5-flash-lite");
   push("gemini-2.0-flash");
