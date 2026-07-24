@@ -38,3 +38,11 @@ export const backfillUrls1Doc = createServerFn({ method: "POST" })
     const { backfillUrl1DocViaGmail } = await import("@/lib/protocolo-ingest.server");
     return await backfillUrl1DocViaGmail(data.dias);
   });
+
+export const reprocessarEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { logId: string }) => ({ logId: String(d.logId) }))
+  .handler(async ({ data }) => {
+    const { reprocessarEmailLog } = await import("@/lib/protocolo-ingest.server");
+    return await reprocessarEmailLog(data.logId);
+  });
