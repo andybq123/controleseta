@@ -8,22 +8,41 @@ export const getAiConfig = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
     if (!isAdmin) throw new Error("Acesso negado");
-    const { data, error } = await supabase.from("ai_config").select("provider, api_key, model, updated_at").eq("id", true).maybeSingle();
+    const { data, error } = await supabase
+      .from("ai_config")
+      .select("provider, api_key, model, grok_api_key, gemini_api_key, grok_model, gemini_model, lovable_model, priority, updated_at")
+      .eq("id", true)
+      .maybeSingle();
     if (error) throw error;
+    const d: any = data ?? {};
+    const geminiKey: string | null = d.gemini_api_key ?? (d.provider === "gemini" ? d.api_key : null) ?? null;
+    const geminiModel: string | null = d.gemini_model ?? (d.provider === "gemini" ? d.model : null) ?? null;
+    const lovableModel: string | null = d.lovable_model ?? (d.provider === "lovable" ? d.model : null) ?? null;
+    const rawPriority = Array.isArray(d.priority) ? d.priority : ["lovable", "gemini", "grok"];
+    const KNOWN = ["grok", "gemini", "lovable"] as const;
+    const priority = [
+      ...rawPriority.filter((p: string) => (KNOWN as readonly string[]).includes(p)),
+      ...KNOWN.filter((p) => !rawPriority.includes(p)),
+    ] as ("grok" | "gemini" | "lovable")[];
+    const mask = (k: string | null) => (k ? `••••${k.slice(-4)}` : null);
     return {
-      provider: (data?.provider as "lovable" | "gemini") ?? "lovable",
-      apiKeyMasked: data?.api_key ? `••••${data.api_key.slice(-4)}` : null,
-      hasKey: !!data?.api_key,
-      model: data?.model ?? "",
-      updatedAt: data?.updated_at ?? null,
+      priority,
+      grok: { hasKey: !!d.grok_api_key, apiKeyMasked: mask(d.grok_api_key ?? null), model: d.grok_model ?? "" },
+      gemini: { hasKey: !!geminiKey, apiKeyMasked: mask(geminiKey), model: geminiModel ?? "" },
+      lovable: { model: lovableModel ?? "" },
+      updatedAt: d.updated_at ?? null,
     };
   });
 
 const SaveInput = z.object({
-  provider: z.enum(["lovable", "gemini"]),
-  apiKey: z.string().trim().optional(),
-  clearKey: z.boolean().optional(),
-  model: z.string().trim().max(120).optional(),
+  priority: z.array(z.enum(["grok", "gemini", "lovable"])).min(1).max(3),
+  grokApiKey: z.string().trim().optional(),
+  clearGrokKey: z.boolean().optional(),
+  grokModel: z.string().trim().max(120).optional(),
+  geminiApiKey: z.string().trim().optional(),
+  clearGeminiKey: z.boolean().optional(),
+  geminiModel: z.string().trim().max(120).optional(),
+  lovableModel: z.string().trim().max(120).optional(),
 });
 
 export const saveAiConfig = createServerFn({ method: "POST" })
@@ -34,20 +53,24 @@ export const saveAiConfig = createServerFn({ method: "POST" })
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
     if (!isAdmin) throw new Error("Acesso negado");
 
-    const patch: {
-      provider: "lovable" | "gemini";
-      model: string | null;
-      updated_at: string;
-      updated_by: string;
-      api_key?: string | null;
-    } = {
-      provider: data.provider,
-      model: data.model ? data.model : null,
+    // Deduplicate priority preserving order.
+    const seen = new Set<string>();
+    const priority = data.priority.filter((p) => (seen.has(p) ? false : (seen.add(p), true)));
+
+    const patch: Record<string, unknown> = {
+      priority,
+      // Keep legacy fields aligned with the top-priority provider for back-compat.
+      provider: priority[0] === "grok" ? "lovable" : priority[0],
+      grok_model: data.grokModel ? data.grokModel : null,
+      gemini_model: data.geminiModel ? data.geminiModel : null,
+      lovable_model: data.lovableModel ? data.lovableModel : null,
       updated_at: new Date().toISOString(),
       updated_by: userId,
     };
-    if (data.clearKey) patch.api_key = null;
-    else if (data.apiKey && data.apiKey.length > 0) patch.api_key = data.apiKey;
+    if (data.clearGrokKey) patch.grok_api_key = null;
+    else if (data.grokApiKey && data.grokApiKey.length > 0) patch.grok_api_key = data.grokApiKey;
+    if (data.clearGeminiKey) patch.gemini_api_key = null;
+    else if (data.geminiApiKey && data.geminiApiKey.length > 0) patch.gemini_api_key = data.geminiApiKey;
 
     const { error } = await supabase.from("ai_config").update(patch).eq("id", true);
     if (error) throw error;
