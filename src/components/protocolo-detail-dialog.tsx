@@ -275,6 +275,9 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
       .from("protocolos")
       .update({
         descricao: relato,
+        tipo: form.tipo,
+        categoria: form.categoria,
+        assunto: form.assunto,
         secretaria_id: form.secretaria_id || null,
         local_id: form.local_id || null,
       })
