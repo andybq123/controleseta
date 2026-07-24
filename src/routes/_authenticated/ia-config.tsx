@@ -107,6 +107,8 @@ function IAConfigPage() {
       { value: "openai/gpt-5.5", label: "GPT-5.5", hint: "OpenAI — frontier" },
     ],
     gemini: [
+      { value: "gemini-3.5-flash-lite", label: "Gemini 3.5 Flash Lite", hint: "Nova geração rápida/barata" },
+      { value: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite", hint: "Gemini 3.1 leve" },
       { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro", hint: "Mais capaz" },
       { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash", hint: "Padrão recomendado" },
       { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", hint: "Mais rápido/barato" },
