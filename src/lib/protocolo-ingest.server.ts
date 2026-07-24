@@ -743,7 +743,8 @@ export async function reprocessarEmailLog(logId: string): Promise<{ ok: boolean;
   if (!conta) return { ok: false, error: "Conta não encontrada" };
   if (conta.provider !== "gmail") return { ok: false, error: "Reprocessamento suportado apenas para Gmail" };
 
-  const mr = await fetch(`${GMAIL_GATEWAY}/users/me/messages/${log.external_id}?format=full`, { headers: gmailHeaders() });
+  const externalId: string = log.external_id;
+  const mr = await fetch(`${GMAIL_GATEWAY}/users/me/messages/${externalId}?format=full`, { headers: gmailHeaders() });
   if (!mr.ok) return { ok: false, error: `Gmail ${mr.status}: ${(await mr.text()).slice(0, 200)}` };
   const mj = await mr.json();
   const hdrs = mj.payload?.headers ?? [];
@@ -757,7 +758,7 @@ export async function reprocessarEmailLog(logId: string): Promise<{ ok: boolean;
 
   const res = await ingerirEmail({
     account: conta, remetente: from, destinatario: to,
-    assunto: subject, corpo: body, externalId: log.external_id,
+    assunto: subject, corpo: body, externalId,
   });
   return res;
 }
