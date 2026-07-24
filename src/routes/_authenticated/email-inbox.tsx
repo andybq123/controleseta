@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, Clock, RefreshCw, ShieldCheck, Sparkles, Bot } from "lucide-react";
+import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, Clock, RefreshCw, ShieldCheck, Sparkles, Bot, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
@@ -185,6 +185,16 @@ function EmailInboxPage() {
           title="Processado pela IA Gemini (Google)"
         >
           <Sparkles className="h-3 w-3 mr-1" /> Gemini
+        </Badge>
+      );
+    if (p === "grok" || p === "groq")
+      return (
+        <Badge
+          variant="outline"
+          className="bg-orange-500/10 text-orange-700 border-orange-500/30 dark:text-orange-300"
+          title="Processado pela IA Groq (Llama)"
+        >
+          <Zap className="h-3 w-3 mr-1" /> Groq
         </Badge>
       );
     return (
