@@ -727,6 +727,43 @@ async function sincronizarGmailContasComJanela(q: string, pageSize: number, maxP
 
 // ============ IMAP (senha de app) ============
 
+export async function reprocessarEmailLog(logId: string): Promise<{ ok: boolean; protocoloId?: string; numero?: string; error?: string }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: log, error: logErr } = await supabaseAdmin
+    .from("email_inbox_log")
+    .select("id, account_id, external_id, protocolo_id")
+    .eq("id", logId)
+    .maybeSingle();
+  if (logErr || !log) return { ok: false, error: "Log não encontrado" };
+  if (log.protocolo_id) return { ok: false, error: "E-mail já possui protocolo" };
+  if (!log.external_id) return { ok: false, error: "E-mail sem external_id" };
+  if (!log.account_id) return { ok: false, error: "E-mail sem conta associada" };
+
+  const { data: conta } = await supabaseAdmin
+    .from("email_inbox_accounts").select("*").eq("id", log.account_id).maybeSingle();
+  if (!conta) return { ok: false, error: "Conta não encontrada" };
+  if (conta.provider !== "gmail") return { ok: false, error: "Reprocessamento suportado apenas para Gmail" };
+
+  const externalId: string = log.external_id;
+  const mr = await fetch(`${GMAIL_GATEWAY}/users/me/messages/${externalId}?format=full`, { headers: gmailHeaders() });
+  if (!mr.ok) return { ok: false, error: `Gmail ${mr.status}: ${(await mr.text()).slice(0, 200)}` };
+  const mj = await mr.json();
+  const hdrs = mj.payload?.headers ?? [];
+  const from = header(hdrs, "From");
+  const to = header(hdrs, "To");
+  const subject = header(hdrs, "Subject");
+  const body = extractBody(mj.payload) || mj.snippet || "";
+
+  // Remove log antigo para permitir novo fluxo em ingerirEmail
+  await supabaseAdmin.from("email_inbox_log").delete().eq("id", log.id);
+
+  const res = await ingerirEmail({
+    account: conta, remetente: from, destinatario: to,
+    assunto: subject, corpo: body, externalId,
+  });
+  return res;
+}
+
 export async function sincronizarImapContas(): Promise<{ contas: number; novos: number; erros: number; detalhes: any[] }> {
   return _sincronizarImapContas();
 }
