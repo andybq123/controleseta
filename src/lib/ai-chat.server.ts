@@ -1,22 +1,61 @@
-// Cache the resolved config for a short period so we don't hit the DB on every call.
-let cached: { at: number; provider: "lovable" | "gemini"; apiKey: string | null; model: string | null } | null = null;
+export type AiProvider = "grok" | "gemini" | "lovable";
+
+type LoadedConfig = {
+  at: number;
+  priority: AiProvider[];
+  grokApiKey: string | null;
+  geminiApiKey: string | null;
+  grokModel: string | null;
+  geminiModel: string | null;
+  lovableModel: string | null;
+};
+
+let cached: LoadedConfig | null = null;
 const TTL_MS = 30_000;
 
-async function loadConfig() {
+const KNOWN: AiProvider[] = ["grok", "gemini", "lovable"];
+function normalizePriority(input: unknown): AiProvider[] {
+  const arr = Array.isArray(input) ? input : [];
+  const out: AiProvider[] = [];
+  for (const v of arr) {
+    if (KNOWN.includes(v as AiProvider) && !out.includes(v as AiProvider)) out.push(v as AiProvider);
+  }
+  for (const p of KNOWN) if (!out.includes(p)) out.push(p);
+  return out;
+}
+
+async function loadConfig(): Promise<LoadedConfig> {
   if (cached && Date.now() - cached.at < TTL_MS) return cached;
   try {
-    // Uses service role so it works from any server context (ingest, cron, server fns).
-    // ai_config is a single admin-only row; reading it from the server has no user impact.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin.from("ai_config").select("provider, api_key, model").eq("id", true).maybeSingle();
+    const { data } = await supabaseAdmin
+      .from("ai_config")
+      .select("provider, api_key, model, grok_api_key, gemini_api_key, grok_model, gemini_model, lovable_model, priority")
+      .eq("id", true)
+      .maybeSingle();
+    const d: any = data ?? {};
+    const geminiApiKey = d.gemini_api_key ?? (d.provider === "gemini" ? d.api_key : null) ?? null;
+    const geminiModel = d.gemini_model ?? (d.provider === "gemini" ? d.model : null) ?? null;
+    const lovableModel = d.lovable_model ?? (d.provider === "lovable" ? d.model : null) ?? null;
     cached = {
       at: Date.now(),
-      provider: (data?.provider as any) === "gemini" ? "gemini" : "lovable",
-      apiKey: data?.api_key ?? null,
-      model: data?.model ?? null,
+      priority: normalizePriority(d.priority),
+      grokApiKey: d.grok_api_key ?? null,
+      geminiApiKey,
+      grokModel: d.grok_model ?? null,
+      geminiModel,
+      lovableModel,
     };
   } catch {
-    cached = { at: Date.now(), provider: "lovable", apiKey: null, model: null };
+    cached = {
+      at: Date.now(),
+      priority: ["lovable", "gemini", "grok"],
+      grokApiKey: null,
+      geminiApiKey: null,
+      grokModel: null,
+      geminiModel: null,
+      lovableModel: null,
+    };
   }
   return cached;
 }
@@ -34,7 +73,7 @@ export interface AiChatOptions {
   responseFormat?: "json_object";
 }
 
-export type AiProviderUsed = "gemini" | "lovable";
+export type AiProviderUsed = AiProvider;
 
 export interface AiChatResult {
   content: string;
@@ -70,70 +109,85 @@ async function callLovable(model: string, messages: ChatMessage[], responseForma
   });
 }
 
-export async function aiChatDetailed({ messages, model, responseFormat }: AiChatOptions): Promise<AiChatResult> {
-  const cfg = await loadConfig();
+async function callGrok(apiKey: string, model: string, messages: ChatMessage[], responseFormat?: "json_object") {
+  const body: any = { model, messages };
+  if (responseFormat === "json_object") body.response_format = { type: "json_object" };
+  return fetch("https://api.x.ai/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 
-  if (cfg.provider === "gemini") {
-    const apiKey = cfg.apiKey?.trim();
-    if (!apiKey) throw new Error("Gemini selecionado, mas a API key não está configurada em Configurações > IA.");
-    const chosen = model || cfg.model || "gemini-2.5-flash";
-
-    // Cascata de modelos Gemini: começa pelo escolhido e degrada para modelos
-    // mais leves/estáveis quando houver sobrecarga (503) ou instabilidade (5xx).
-    // Isso mantém tudo dentro do Gemini antes de considerar qualquer fallback.
-    const cascade: string[] = [];
-    const push = (m: string) => { if (m && !cascade.includes(m)) cascade.push(m); };
-    push(chosen);
-    push("gemini-2.5-flash");
-    push("gemini-2.5-flash-lite");
-    push("gemini-2.0-flash");
-    push("gemini-2.0-flash-lite");
-    push("gemini-1.5-flash");
-    push("gemini-1.5-flash-8b");
-
-    let lastStatus = 0;
-    let lastText = "";
-    const transient = (s: number) => [408, 500, 502, 503, 504, 529].includes(s);
-
-    for (const m of cascade) {
-      // até 5 tentativas por modelo com backoff exponencial + jitter (máx ~8s)
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const res = await callGemini(apiKey, m, messages, responseFormat);
-        if (res.ok) {
-          const json = await res.json();
-          return { content: json.choices?.[0]?.message?.content ?? "", provider: "gemini", model: m };
-        }
-        lastStatus = res.status;
-        lastText = await res.text().catch(() => "");
-        if (res.status === 401 || res.status === 403) {
-          throw new Error("API key do Gemini inválida ou sem permissão.");
-        }
-        if (res.status === 400 || res.status === 404) {
-          // modelo inexistente/parâmetro inválido — tenta o próximo da cascata
-          break;
-        }
-        if (res.status === 429) {
-          // rate limit — espera mais e tenta de novo no mesmo modelo
-          const wait = 1500 * Math.pow(2, attempt) + Math.random() * 400;
-          await sleep(Math.min(wait, 12_000));
-          continue;
-        }
-        if (transient(res.status) && attempt < 4) {
-          const wait = 800 * Math.pow(2, attempt) + Math.random() * 400;
-          await sleep(Math.min(wait, 8_000));
-          continue;
-        }
-        break; // erro não recuperável neste modelo → cascata
+async function tryGemini(apiKey: string, chosen: string, messages: ChatMessage[], responseFormat?: "json_object"): Promise<AiChatResult> {
+  const cascade: string[] = [];
+  const push = (m: string) => { if (m && !cascade.includes(m)) cascade.push(m); };
+  push(chosen);
+  push("gemini-2.5-flash");
+  push("gemini-2.5-flash-lite");
+  push("gemini-2.0-flash");
+  push("gemini-2.0-flash-lite");
+  push("gemini-1.5-flash");
+  push("gemini-1.5-flash-8b");
+  let lastStatus = 0;
+  let lastText = "";
+  const transient = (s: number) => [408, 500, 502, 503, 504, 529].includes(s);
+  for (const m of cascade) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const res = await callGemini(apiKey, m, messages, responseFormat);
+      if (res.ok) {
+        const json = await res.json();
+        return { content: json.choices?.[0]?.message?.content ?? "", provider: "gemini", model: m };
       }
+      lastStatus = res.status;
+      lastText = await res.text().catch(() => "");
+      if (res.status === 401 || res.status === 403) throw new Error("API key do Gemini inválida ou sem permissão.");
+      if (res.status === 400 || res.status === 404) break;
+      if (res.status === 429) {
+        await sleep(Math.min(1500 * Math.pow(2, attempt) + Math.random() * 400, 12_000));
+        continue;
+      }
+      if (transient(res.status) && attempt < 4) {
+        await sleep(Math.min(800 * Math.pow(2, attempt) + Math.random() * 400, 8_000));
+        continue;
+      }
+      break;
     }
-
-    throw new Error(
-      `Falha na IA Gemini após tentar ${cascade.length} modelo(s) (último status ${lastStatus}): ${lastText.slice(0, 200)}`,
-    );
   }
+  throw new Error(`Gemini falhou após ${cascade.length} modelo(s) (status ${lastStatus}): ${lastText.slice(0, 200)}`);
+}
 
-  // Lovable (default)
-  const chosen = model || cfg.model || "google/gemini-2.5-flash";
+async function tryGrok(apiKey: string, chosen: string, messages: ChatMessage[], responseFormat?: "json_object"): Promise<AiChatResult> {
+  const cascade: string[] = [];
+  const push = (m: string) => { if (m && !cascade.includes(m)) cascade.push(m); };
+  push(chosen);
+  push("grok-4-fast");
+  push("grok-3-mini");
+  push("grok-2-latest");
+  let lastStatus = 0;
+  let lastText = "";
+  for (const m of cascade) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await callGrok(apiKey, m, messages, responseFormat);
+      if (res.ok) {
+        const json = await res.json();
+        return { content: json.choices?.[0]?.message?.content ?? "", provider: "grok", model: m };
+      }
+      lastStatus = res.status;
+      lastText = await res.text().catch(() => "");
+      if (res.status === 401 || res.status === 403) throw new Error("API key do Grok inválida ou sem permissão.");
+      if (res.status === 400 || res.status === 404) break;
+      if (res.status === 429 || [500, 502, 503, 504].includes(res.status)) {
+        await sleep(800 * Math.pow(2, attempt) + Math.random() * 300);
+        continue;
+      }
+      break;
+    }
+  }
+  throw new Error(`Grok falhou (status ${lastStatus}): ${lastText.slice(0, 200)}`);
+}
+
+async function tryLovable(chosen: string, messages: ChatMessage[], responseFormat?: "json_object"): Promise<AiChatResult> {
   let lastStatus = 0;
   let lastText = "";
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -144,15 +198,41 @@ export async function aiChatDetailed({ messages, model, responseFormat }: AiChat
     }
     lastStatus = res.status;
     lastText = await res.text().catch(() => "");
-    if (res.status === 429) throw new Error("Limite de requisições atingido. Tente novamente em instantes.");
-    if (res.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
+    if (res.status === 429) throw new Error("Limite de requisições atingido na Lovable AI.");
+    if (res.status === 402) throw new Error("Créditos de IA esgotados na Lovable.");
     if ([500, 502, 503, 504].includes(res.status) && attempt < 2) {
       await sleep(800 * Math.pow(2, attempt));
       continue;
     }
     break;
   }
-  throw new Error(`Falha na IA (${lastStatus}): ${lastText.slice(0, 200)}`);
+  throw new Error(`Lovable AI falhou (status ${lastStatus}): ${lastText.slice(0, 200)}`);
+}
+
+export async function aiChatDetailed({ messages, model, responseFormat }: AiChatOptions): Promise<AiChatResult> {
+  const cfg = await loadConfig();
+  const errors: string[] = [];
+  for (const p of cfg.priority) {
+    try {
+      if (p === "grok") {
+        const key = cfg.grokApiKey?.trim();
+        if (!key) { errors.push("grok: sem API key"); continue; }
+        return await tryGrok(key, model || cfg.grokModel || "grok-4-fast", messages, responseFormat);
+      }
+      if (p === "gemini") {
+        const key = cfg.geminiApiKey?.trim();
+        if (!key) { errors.push("gemini: sem API key"); continue; }
+        return await tryGemini(key, model || cfg.geminiModel || "gemini-2.5-flash", messages, responseFormat);
+      }
+      if (p === "lovable") {
+        return await tryLovable(model || cfg.lovableModel || "google/gemini-2.5-flash", messages, responseFormat);
+      }
+    } catch (e: any) {
+      errors.push(`${p}: ${e?.message ?? "erro"}`);
+      continue;
+    }
+  }
+  throw new Error(`Todas as IAs falharam. ${errors.join(" | ")}`);
 }
 
 export async function aiChat(opts: AiChatOptions): Promise<string> {
