@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/ia-config")({
 });
 
 type Prov = "grok" | "gemini" | "lovable";
-const LABELS: Record<Prov, string> = { grok: "Grok (xAI)", gemini: "Google Gemini", lovable: "Lovable AI" };
+const LABELS: Record<Prov, string> = { grok: "Groq", gemini: "Google Gemini", lovable: "Lovable AI" };
 
 function IAConfigPage() {
   const qc = useQueryClient();
@@ -83,10 +83,14 @@ function IAConfigPage() {
 
   const MODEL_OPTIONS: Record<Prov, { value: string; label: string; hint?: string }[]> = {
     grok: [
-      { value: "grok-4-fast", label: "Grok 4 Fast", hint: "Rápido, custo/qualidade" },
-      { value: "grok-4", label: "Grok 4" },
-      { value: "grok-3-mini", label: "Grok 3 Mini" },
-      { value: "grok-2-latest", label: "Grok 2 Latest" },
+      { value: "llama-3.3-70b-versatile", label: "Llama 3.3 70B Versatile", hint: "Padrão recomendado" },
+      { value: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant", hint: "Mais rápido e barato" },
+      { value: "llama-3.1-70b-versatile", label: "Llama 3.1 70B Versatile" },
+      { value: "openai/gpt-oss-120b", label: "GPT-OSS 120B" },
+      { value: "openai/gpt-oss-20b", label: "GPT-OSS 20B" },
+      { value: "meta-llama/llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout 17B" },
+      { value: "meta-llama/llama-4-maverick-17b-128e-instruct", label: "Llama 4 Maverick 17B" },
+      { value: "deepseek-r1-distill-llama-70b", label: "DeepSeek R1 Distill Llama 70B" },
     ],
     lovable: [
       { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", hint: "Mais capaz, raciocínio complexo" },
@@ -114,7 +118,7 @@ function IAConfigPage() {
   };
 
   const defaults: Record<Prov, string> = {
-    grok: "grok-4-fast",
+    grok: "llama-3.3-70b-versatile",
     gemini: "gemini-2.5-flash",
     lovable: "google/gemini-2.5-flash",
   };
@@ -203,10 +207,10 @@ function IAConfigPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><KeyRound className="h-4 w-4" /> Grok (xAI)</CardTitle>
+              <CardTitle className="flex items-center gap-2"><KeyRound className="h-4 w-4" /> Groq</CardTitle>
               <CardDescription>
                 API key em{" "}
-                <a className="underline" href="https://console.x.ai/" target="_blank" rel="noreferrer">console.x.ai</a>.
+                <a className="underline" href="https://console.groq.com/keys" target="_blank" rel="noreferrer">console.groq.com/keys</a>.
                 Armazenada apenas no backend.
               </CardDescription>
             </CardHeader>
@@ -223,12 +227,12 @@ function IAConfigPage() {
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Nenhuma chave configurada</AlertTitle>
-                  <AlertDescription>Cadastre uma API key para usar o Grok.</AlertDescription>
+                  <AlertDescription>Cadastre uma API key para usar o Groq.</AlertDescription>
                 </Alert>
               )}
               <div className="space-y-1.5">
                 <Label>Nova API key</Label>
-                <Input type="password" autoComplete="off" value={grokKey} onChange={(e) => setGrokKey(e.target.value)} placeholder="xai-..." />
+                <Input type="password" autoComplete="off" value={grokKey} onChange={(e) => setGrokKey(e.target.value)} placeholder="gsk_..." />
               </div>
               {data?.grok?.hasKey && (
                 <Button variant="outline" size="sm" onClick={() => mSave.mutate({ clearGrokKey: true })} disabled={mSave.isPending}>
@@ -236,7 +240,7 @@ function IAConfigPage() {
                 </Button>
               )}
               <div className="pt-2">
-                <Label className="mb-1 block">Modelo Grok</Label>
+                <Label className="mb-1 block">Modelo Groq</Label>
                 {renderModelSelect("grok", grokModel, setGrokModel)}
               </div>
             </CardContent>
