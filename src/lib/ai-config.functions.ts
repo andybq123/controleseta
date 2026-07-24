@@ -57,9 +57,18 @@ export const saveAiConfig = createServerFn({ method: "POST" })
     const seen = new Set<string>();
     const priority = data.priority.filter((p) => (seen.has(p) ? false : (seen.add(p), true)));
 
-    const patch: Record<string, unknown> = {
+    const patch: {
+      priority: string[];
+      provider: string;
+      grok_model: string | null;
+      gemini_model: string | null;
+      lovable_model: string | null;
+      updated_at: string;
+      updated_by: string;
+      grok_api_key?: string | null;
+      gemini_api_key?: string | null;
+    } = {
       priority,
-      // Keep legacy fields aligned with the top-priority provider for back-compat.
       provider: priority[0] === "grok" ? "lovable" : priority[0],
       grok_model: data.grokModel ? data.grokModel : null,
       gemini_model: data.geminiModel ? data.geminiModel : null,
