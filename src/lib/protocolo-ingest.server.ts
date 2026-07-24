@@ -737,6 +737,7 @@ export async function reprocessarEmailLog(logId: string): Promise<{ ok: boolean;
   if (logErr || !log) return { ok: false, error: "Log não encontrado" };
   if (log.protocolo_id) return { ok: false, error: "E-mail já possui protocolo" };
   if (!log.external_id) return { ok: false, error: "E-mail sem external_id" };
+  if (!log.account_id) return { ok: false, error: "E-mail sem conta associada" };
 
   const { data: conta } = await supabaseAdmin
     .from("email_inbox_accounts").select("*").eq("id", log.account_id).maybeSingle();
