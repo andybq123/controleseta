@@ -15,7 +15,7 @@ import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, Clock, RefreshCw, Shield
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { sincronizarGmail, ressincronizarGmail, reverificarEmails, backfillUrls1Doc } from "@/lib/gmail-sync.functions";
+import { sincronizarGmail, ressincronizarGmail, reverificarEmails, backfillUrls1Doc, reprocessarEmail } from "@/lib/gmail-sync.functions";
 
 const SYNC_INTERVAL_MIN = 3;
 
@@ -46,6 +46,8 @@ function EmailInboxPage() {
   const ressincronizar = useServerFn(ressincronizarGmail);
   const reverificar = useServerFn(reverificarEmails);
   const backfillUrls = useServerFn(backfillUrls1Doc);
+  const reprocessar = useServerFn(reprocessarEmail);
+  const [reprocessandoId, setReprocessandoId] = useState<string | null>(null);
   const [sincronizando, setSincronizando] = useState(false);
   const [ressincronizando, setRessincronizando] = useState(false);
   const [reverificando, setReverificando] = useState(false);
@@ -195,6 +197,24 @@ function EmailInboxPage() {
       </Badge>
     );
   };
+
+  async function rodarReprocessar(logId: string) {
+    setReprocessandoId(logId);
+    try {
+      const r = await reprocessar({ data: { logId } }) as any;
+      if (r?.ok) {
+        toast.success(`Reprocessado: protocolo ${r.numero ?? ""} criado`);
+      } else {
+        toast.error(r?.error ?? "Falha ao reprocessar");
+      }
+      qc.invalidateQueries({ queryKey: ["email-inbox-log"] });
+      qc.invalidateQueries({ queryKey: ["protocolos"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao reprocessar");
+    } finally {
+      setReprocessandoId(null);
+    }
+  }
 
   const syncAccounts = accounts.filter((a: any) => a.provider === "gmail" && a.ativo);
   const ultimaSync = syncAccounts
@@ -346,6 +366,18 @@ function EmailInboxPage() {
                       </p>
                     )}
                   </div>
+                  {l.status === "erro" && !l.protocolo_id && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => rodarReprocessar(l.id)}
+                      disabled={reprocessandoId === l.id}
+                      title="Tentar processar este e-mail novamente"
+                    >
+                      <RefreshCw className={`h-3 w-3 mr-1 ${reprocessandoId === l.id ? "animate-spin" : ""}`} />
+                      Reprocessar
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
