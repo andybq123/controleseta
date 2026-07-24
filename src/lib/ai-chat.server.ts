@@ -112,7 +112,7 @@ async function callLovable(model: string, messages: ChatMessage[], responseForma
 async function callGrok(apiKey: string, model: string, messages: ChatMessage[], responseFormat?: "json_object") {
   const body: any = { model, messages };
   if (responseFormat === "json_object") body.response_format = { type: "json_object" };
-  return fetch("https://api.x.ai/v1/chat/completions", {
+  return fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -161,9 +161,9 @@ async function tryGrok(apiKey: string, chosen: string, messages: ChatMessage[], 
   const cascade: string[] = [];
   const push = (m: string) => { if (m && !cascade.includes(m)) cascade.push(m); };
   push(chosen);
-  push("grok-4-fast");
-  push("grok-3-mini");
-  push("grok-2-latest");
+  push("llama-3.3-70b-versatile");
+  push("llama-3.1-8b-instant");
+  push("openai/gpt-oss-20b");
   let lastStatus = 0;
   let lastText = "";
   for (const m of cascade) {
@@ -175,7 +175,7 @@ async function tryGrok(apiKey: string, chosen: string, messages: ChatMessage[], 
       }
       lastStatus = res.status;
       lastText = await res.text().catch(() => "");
-      if (res.status === 401 || res.status === 403) throw new Error("API key do Grok inválida ou sem permissão.");
+      if (res.status === 401 || res.status === 403) throw new Error("API key do Groq inválida ou sem permissão.");
       if (res.status === 400 || res.status === 404) break;
       if (res.status === 429 || [500, 502, 503, 504].includes(res.status)) {
         await sleep(800 * Math.pow(2, attempt) + Math.random() * 300);
@@ -184,7 +184,7 @@ async function tryGrok(apiKey: string, chosen: string, messages: ChatMessage[], 
       break;
     }
   }
-  throw new Error(`Grok falhou (status ${lastStatus}): ${lastText.slice(0, 200)}`);
+  throw new Error(`Groq falhou (status ${lastStatus}): ${lastText.slice(0, 200)}`);
 }
 
 async function tryLovable(chosen: string, messages: ChatMessage[], responseFormat?: "json_object"): Promise<AiChatResult> {
@@ -216,8 +216,8 @@ export async function aiChatDetailed({ messages, model, responseFormat }: AiChat
     try {
       if (p === "grok") {
         const key = cfg.grokApiKey?.trim();
-        if (!key) { errors.push("grok: sem API key"); continue; }
-        return await tryGrok(key, model || cfg.grokModel || "grok-4-fast", messages, responseFormat);
+        if (!key) { errors.push("groq: sem API key"); continue; }
+        return await tryGrok(key, model || cfg.grokModel || "llama-3.3-70b-versatile", messages, responseFormat);
       }
       if (p === "gemini") {
         const key = cfg.geminiApiKey?.trim();
