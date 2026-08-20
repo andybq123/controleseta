@@ -55,7 +55,7 @@ export const Route = createFileRoute("/_authenticated/protocolos-antigos/$source
 
 function Detail() {
   const loaded = Route.useLoaderData();
-  const base = loaded as OuvidoriaRecord;
+  const base = loaded as unknown as OuvidoriaRecord;
 
   const [override, setOverrideState] = useState<Override | undefined>(undefined);
   useEffect(() => {
