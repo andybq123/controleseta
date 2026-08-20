@@ -1,7 +1,6 @@
 import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +40,9 @@ function AuthPage() {
     const { data: ud } = await supabase.auth.getUser();
     if (ud.user) {
       const { data: roles } = await supabase
-        .from("user_roles").select("role").eq("user_id", ud.user.id);
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", ud.user.id);
       if (!roles || roles.length === 0) {
         await supabase.auth.signOut();
         return toast.error("Seu e-mail não está autorizado a acessar o sistema.");
@@ -52,9 +53,11 @@ function AuthPage() {
   }
 
   async function handleGoogle() {
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (result.error) toast.error("Erro ao entrar com Google");
-    if (!result.redirected && !result.error) navigate({ to: "/dashboard" });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/dashboard` },
+    });
+    if (error) toast.error("Erro ao entrar com Google");
   }
 
   return (
@@ -71,24 +74,24 @@ function AuthPage() {
               />
             </div>
             <CardTitle className="text-2xl font-bold">Acesso ao Sistema</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Entre com suas credenciais para acessar
-            </p>
+            <p className="text-sm text-muted-foreground">Entre com suas credenciais para acessar</p>
           </CardHeader>
 
           <CardContent className="space-y-5">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">E-mail</Label>
+                <Label htmlFor="email" className="text-sm font-medium">
+                  E-mail
+                </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    required 
+                  <Input
+                    id="email"
+                    type="email"
+                    required
                     placeholder="E-mail"
-                    value={email} 
-                    onChange={e => setEmail(e.target.value)} 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 h-11"
                   />
                 </div>
@@ -96,31 +99,35 @@ function AuthPage() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">
+                    Senha
+                  </Label>
                   <Link to="/forgot-password" className="text-xs text-primary hover:underline">
                     Esqueceu a senha?
                   </Link>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    required 
+                  <Input
+                    id="password"
+                    type="password"
+                    required
                     placeholder="••••••••"
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 h-11"
                   />
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full h-11 text-base font-medium group" 
+              <Button
+                type="submit"
+                className="w-full h-11 text-base font-medium group"
                 disabled={loading}
               >
-                {loading ? "Entrando..." : (
+                {loading ? (
+                  "Entrando..."
+                ) : (
                   <>
                     Entrar
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -138,11 +145,7 @@ function AuthPage() {
               </div>
             </div>
 
-            <Button 
-              variant="outline" 
-              className="w-full h-11" 
-              onClick={handleGoogle}
-            >
+            <Button variant="outline" className="w-full h-11" onClick={handleGoogle}>
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
