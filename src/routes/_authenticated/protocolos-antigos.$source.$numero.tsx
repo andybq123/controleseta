@@ -11,7 +11,7 @@ import {
 } from "@/lib/ouvidoriaOverrides";
 
 
-type Record = {
+type OuvidoriaRecord = {
   source: string;
   setor: string | null;
   responsavel: string | null;
@@ -21,7 +21,7 @@ type Record = {
   comentario?: string | null;
 };
 
-const ALL = ouvidorias as Record[];
+const ALL = ouvidorias as OuvidoriaRecord[];
 
 export const Route = createFileRoute("/_authenticated/protocolos-antigos/$source/$numero")({
   head: ({ params }) => ({
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/protocolos-antigos/$source
       { name: "description", content: `Detalhes da ouvidoria ${params.numero} (${params.source}).` },
     ],
   }),
-  loader: ({ params }): Record => {
+  loader: ({ params }): OuvidoriaRecord => {
     const r = ALL.find(
       (x) => x.source === decodeURIComponent(params.source) && x.numero === Number(params.numero)
     );
