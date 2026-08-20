@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/protocolos-antigos/$source
       { name: "description", content: `Detalhes da ouvidoria ${params.numero} (${params.source}).` },
     ],
   }),
-  loader: ({ params }) => {
+  loader: ({ params }): Record => {
     const r = ALL.find(
       (x) => x.source === decodeURIComponent(params.source) && x.numero === Number(params.numero)
     );
