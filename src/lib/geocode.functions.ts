@@ -17,7 +17,10 @@ async function nominatim(params: URLSearchParams): Promise<NominatimResult[]> {
 function stripNumber(q: string, numero: string) {
   const idx = q.lastIndexOf(numero);
   return (q.slice(0, idx) + q.slice(idx + numero.length))
-    .replace(/,\s*,/g, ",").replace(/\s+/g, " ").trim().replace(/^,|,$/g, "");
+    .replace(/,\s*,/g, ",")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^,|,$/g, "");
 }
 
 /**
@@ -25,7 +28,9 @@ function stripNumber(q: string, numero: string) {
  * Nominatim falls back to the street centroid when the house number is not in OSM,
  * so we explicitly prefer results whose address.house_number === requested number.
  */
-async function findBestMatch(q: string): Promise<{ result: NominatimResult; exact: boolean } | null> {
+async function findBestMatch(
+  q: string,
+): Promise<{ result: NominatimResult; exact: boolean } | null> {
   const numero = extractQueryNumber(q);
 
   // 1) Structured search (highest accuracy when OSM has the house number)
@@ -43,7 +48,7 @@ async function findBestMatch(q: string): Promise<{ result: NominatimResult; exac
       dedupe: "0",
     });
     const sArr = await nominatim(structured);
-    const exact = sArr.find(r => r.address?.house_number === numero);
+    const exact = sArr.find((r) => r.address?.house_number === numero);
     if (exact) return { result: exact, exact: true };
 
     // 2) Free-text search including the number — sometimes finds addr:interpolation
@@ -57,7 +62,7 @@ async function findBestMatch(q: string): Promise<{ result: NominatimResult; exac
       dedupe: "0",
     });
     const fArr = await nominatim(freeText);
-    const exact2 = fArr.find(r => r.address?.house_number === numero);
+    const exact2 = fArr.find((r) => r.address?.house_number === numero);
     if (exact2) return { result: exact2, exact: true };
 
     // 3) Fallback: return whatever the structured search gave (street centroid),
@@ -84,7 +89,12 @@ export const geocodeAddress = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const q = data.endereco?.trim();
     if (!q) {
-      return { lat: null as number | null, lng: null as number | null, exact: false, refused: false };
+      return {
+        lat: null as number | null,
+        lng: null as number | null,
+        exact: false,
+        refused: false,
+      };
     }
     const best = await findBestMatch(q);
     if (!best) return { lat: null, lng: null, exact: false, refused: false };
@@ -100,6 +110,25 @@ export const geocodeAddress = createServerFn({ method: "POST" })
       exact: best.exact,
       refused: false,
     };
+  });
+
+export const reverseGeocode = createServerFn({ method: "POST" })
+  .inputValidator((d: { lat: number; lng: number }) => d)
+  .handler(async ({ data }): Promise<{ label: string | null }> => {
+    const params = new URLSearchParams({
+      lat: String(data.lat),
+      lon: String(data.lng),
+      format: "json",
+      addressdetails: "1",
+      zoom: "18",
+    });
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`, {
+      headers: NOMINATIM_HEADERS,
+    });
+    if (!res.ok) return { label: null };
+    const result = (await res.json()) as NominatimResult | { error?: string };
+    if (!("display_name" in result)) return { label: null };
+    return { label: parseSuggestion(result).label };
   });
 
 export type AddressSuggestion = {
@@ -135,9 +164,9 @@ export const searchAddresses = createServerFn({ method: "POST" })
         dedupe: "0",
       });
       const sArr = await nominatim(structured);
-      const exactMatches = sArr.filter(r => r.address?.house_number === numero);
+      const exactMatches = sArr.filter((r) => r.address?.house_number === numero);
       if (exactMatches.length) {
-        return exactMatches.slice(0, 6).map(r => ({
+        return exactMatches.slice(0, 6).map((r) => ({
           ...parseSuggestion(r, numero),
           exact: true,
         }));
@@ -153,9 +182,9 @@ export const searchAddresses = createServerFn({ method: "POST" })
         dedupe: "0",
       });
       const fArr = await nominatim(freeText);
-      const exactFree = fArr.filter(r => r.address?.house_number === numero);
+      const exactFree = fArr.filter((r) => r.address?.house_number === numero);
       if (exactFree.length) {
-        return exactFree.slice(0, 6).map(r => ({
+        return exactFree.slice(0, 6).map((r) => ({
           ...parseSuggestion(r, numero),
           exact: true,
         }));
@@ -174,5 +203,5 @@ export const searchAddresses = createServerFn({ method: "POST" })
       addressdetails: "1",
     });
     const arr = await nominatim(params);
-    return arr.map(r => ({ ...parseSuggestion(r), exact: false }));
+    return arr.map((r) => ({ ...parseSuggestion(r), exact: false }));
   });

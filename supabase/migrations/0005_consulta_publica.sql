@@ -5,17 +5,28 @@
 
 create function public.consultar_protocolo_publico(p_numero text, p_hash text)
 returns table (
+  id uuid,
   numero text,
   tipo public.protocolo_tipo,
   categoria public.protocolo_categoria,
   status public.protocolo_status,
   assunto text,
   descricao text,
-  secretaria text,
-  local text,
+  solicitante text,
+  sigilo text,
+  contato_solicitante text,
+  endereco text,
+  latitude double precision,
+  longitude double precision,
+  origem text,
   data_abertura date,
+  data_prorrogacao date,
   data_conclusao date,
-  origem text
+  prorrogado boolean,
+  created_at timestamptz,
+  updated_at timestamptz,
+  secretaria_nome text,
+  local_nome text
 )
 language plpgsql
 stable
@@ -29,8 +40,10 @@ begin
 
   return query
     select
-      p.numero, p.tipo, p.categoria, p.status, p.assunto, p.descricao,
-      s.nome, l.nome, p.data_abertura, p.data_conclusao, p.origem
+      p.id, p.numero, p.tipo, p.categoria, p.status, p.assunto, p.descricao,
+      p.solicitante, p.sigilo, p.contato_solicitante, p.endereco, p.latitude, p.longitude,
+      p.origem, p.data_abertura, p.data_prorrogacao, p.data_conclusao, p.prorrogado,
+      p.created_at, p.updated_at, s.nome, l.nome
     from public.protocolos p
     left join public.secretarias s on s.id = p.secretaria_id
     left join public.locais l on l.id = p.local_id

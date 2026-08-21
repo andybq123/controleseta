@@ -1,56 +1,40 @@
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Input } from "@/components/ui/input";
-import { MAPBOX_TOKEN } from "@/lib/mapbox";
+import { searchAddresses, type AddressSuggestion } from "@/lib/geocode.functions";
 import { MapPin, Loader2 } from "lucide-react";
 
-type Suggestion = {
-  id: string;
-  place_name: string;
-  text: string;
-  center: [number, number]; // [lng, lat]
-  address?: string;
-  place_type?: string[];
+type AddressResult = {
+  endereco: string;
+  label: string;
+  lat: number;
+  lng: number;
+  houseNumber?: string;
+  exact: boolean;
 };
 
 type Props = {
   value: string;
   onChange: (v: string) => void;
-  onSelect?: (s: {
-    endereco: string;
-    label: string;
-    lat: number;
-    lng: number;
-    houseNumber?: string;
-    exact: boolean;
-  }) => void;
-  onResolve?: (s: {
-    endereco: string;
-    label: string;
-    lat: number;
-    lng: number;
-    houseNumber?: string;
-    exact: boolean;
-  }) => void;
+  onSelect?: (s: AddressResult) => void;
+  onResolve?: (s: AddressResult) => void;
   placeholder?: string;
 };
 
-// Brusque-SC bounding box and center for proximity bias
-const BRUSQUE_BBOX = "-49.10,-27.30,-48.70,-26.90";
-const BRUSQUE_PROX = "-48.9197,-27.0978";
-
-function toAddressResult(s: Suggestion) {
+function toAddressResult(s: AddressSuggestion): AddressResult {
   return {
-    endereco: s.place_name,
-    label: s.place_name,
-    lng: s.center[0],
-    lat: s.center[1],
-    houseNumber: s.address,
-    exact: (s.place_type ?? []).includes("address"),
+    endereco: s.label,
+    label: s.label,
+    lat: s.lat,
+    lng: s.lng,
+    houseNumber: s.houseNumber,
+    exact: !!s.exact,
   };
 }
 
 export function AddressAutocomplete({ value, onChange, onSelect, onResolve, placeholder }: Props) {
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const buscar = useServerFn(searchAddresses);
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<number | null>(null);
@@ -72,20 +56,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, onResolve, plac
     debounceRef.current = window.setTimeout(async () => {
       try {
         setLoading(true);
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          q + ", Brusque, SC"
-        )}.json?access_token=${MAPBOX_TOKEN}&country=br&language=pt&autocomplete=true&limit=6&bbox=${BRUSQUE_BBOX}&proximity=${BRUSQUE_PROX}&types=address,place,locality,neighborhood`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Falha ao buscar endereços");
-        const data = await res.json();
-        const feats: Suggestion[] = (data.features ?? []).map((f: any) => ({
-          id: f.id,
-          place_name: f.place_name,
-          text: f.text,
-          center: f.center,
-          address: f.address,
-          place_type: f.place_type,
-        }));
+        const feats = await buscar({ data: { q } });
         setSuggestions(feats);
         setOpen(feats.length > 0);
         if (feats[0]) onResolve?.(toAddressResult(feats[0]));
@@ -99,6 +70,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, onResolve, plac
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   useEffect(() => {
@@ -109,9 +81,9 @@ export function AddressAutocomplete({ value, onChange, onSelect, onResolve, plac
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  function pick(s: Suggestion) {
+  function pick(s: AddressSuggestion) {
     skipNextFetch.current = true;
-    onChange(s.place_name);
+    onChange(s.label);
     setOpen(false);
     setSuggestions([]);
     onSelect?.(toAddressResult(s));
@@ -133,8 +105,8 @@ export function AddressAutocomplete({ value, onChange, onSelect, onResolve, plac
       </div>
       {open && suggestions.length > 0 && (
         <ul className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-md border bg-popover shadow-lg">
-          {suggestions.map((s) => (
-            <li key={s.id}>
+          {suggestions.map((s, i) => (
+            <li key={`${s.label}-${i}`}>
               <button
                 type="button"
                 onClick={() => pick(s)}
@@ -142,8 +114,12 @@ export function AddressAutocomplete({ value, onChange, onSelect, onResolve, plac
               >
                 <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
                 <span>
-                  <span className="font-medium">{s.text}</span>
-                  <span className="block text-xs text-muted-foreground">{s.place_name}</span>
+                  <span className="font-medium">{s.label}</span>
+                  {!s.exact && (
+                    <span className="block text-[11px] text-muted-foreground">
+                      Localização aproximada
+                    </span>
+                  )}
                 </span>
               </button>
             </li>

@@ -1,22 +1,61 @@
 import { useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
-import { MAPBOX_TOKEN, MAPBOX_STYLE } from "@/lib/mapbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MapPin, Sparkles, Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { sugerirLocalizacaoIA } from "@/lib/location-ia.functions";
+import { reverseGeocode } from "@/lib/geocode.functions";
 import { toast } from "sonner";
 
-// [lng, lat]
-const BRUSQUE: [number, number] = [-48.9114, -27.0978];
+const BRUSQUE: [number, number] = [-27.0978, -48.9114]; // [lat, lng]
 
-const PIN_HTML = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="42" viewBox="0 0 30 42" style="display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.35));">
+const PIN_ICON = L.divIcon({
+  className: "",
+  html: `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="42" viewBox="0 0 30 42" style="display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.35));">
     <path d="M15 1 C7 1 1 7 1 15 C1 25 15 41 15 41 C15 41 29 25 29 15 C29 7 23 1 15 1 Z"
       fill="#dc2626" stroke="#fff" stroke-width="2"/>
     <circle cx="15" cy="15" r="5" fill="#fff" opacity="0.95"/>
-  </svg>`;
+  </svg>`,
+  iconSize: [30, 42],
+  iconAnchor: [15, 41],
+});
+
+function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
+function RecenterOnChange({ pt }: { pt: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (pt) map.flyTo([pt.lat, pt.lng], Math.max(map.getZoom(), 15), { duration: 0.3 });
+  }, [pt, map]);
+  return null;
+}
+
+/** Chama map.invalidateSize() depois que o dialog termina de animar/abrir. */
+function InvalidateSizeOnOpen() {
+  const map = useMap();
+  useEffect(() => {
+    const timeouts = [50, 150, 350].map((ms) => setTimeout(() => map.invalidateSize(), ms));
+    return () => timeouts.forEach(clearTimeout);
+  }, [map]);
+  return null;
+}
 
 export function MapPointPicker({
   open,
@@ -42,16 +81,21 @@ export function MapPointPicker({
   };
 }) {
   const [pt, setPt] = useState<{ lat: number; lng: number } | null>(initial ?? null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markerRef = useRef<mapboxgl.Marker | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiInfo, setAiInfo] = useState<{ label?: string; confianca?: string; justificativa?: string } | null>(null);
+  const [aiInfo, setAiInfo] = useState<{
+    label?: string;
+    confianca?: string;
+    justificativa?: string;
+  } | null>(null);
   const [reverseAddr, setReverseAddr] = useState<string | null>(null);
   const [reverseLoading, setReverseLoading] = useState(false);
   const sugerirIA = useServerFn(sugerirLocalizacaoIA);
+  const reverseGeo = useServerFn(reverseGeocode);
+  const reverseSeq = useRef(0);
 
-  const hasContext = !!protocoloContext && Object.values(protocoloContext).some((v) => (v ?? "").toString().trim().length > 0);
+  const hasContext =
+    !!protocoloContext &&
+    Object.values(protocoloContext).some((v) => (v ?? "").toString().trim().length > 0);
 
   async function handleSugerirIA() {
     if (!protocoloContext) return;
@@ -61,14 +105,21 @@ export function MapPointPicker({
       const r = await sugerirIA({ data: protocoloContext });
       if (r.lat != null && r.lng != null) {
         setPt({ lat: r.lat, lng: r.lng });
-        setAiInfo({ label: r.label ?? r.query, confianca: r.confianca, justificativa: r.justificativa });
+        setAiInfo({
+          label: r.label ?? r.query,
+          confianca: r.confianca,
+          justificativa: r.justificativa,
+        });
         toast.success("Localização aproximada sugerida pela IA. Ajuste se necessário.");
       } else {
-        setAiInfo({ confianca: r.confianca, justificativa: r.justificativa || "Não foi possível sugerir uma localização." });
+        setAiInfo({
+          confianca: r.confianca,
+          justificativa: r.justificativa || "Não foi possível sugerir uma localização.",
+        });
         toast.warning(r.justificativa || "Sem dados suficientes para sugerir uma localização.");
       }
-    } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao consultar a IA.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao consultar a IA.");
     } finally {
       setAiLoading(false);
     }
@@ -80,107 +131,32 @@ export function MapPointPicker({
       setAiInfo(null);
       setReverseAddr(null);
     }
-  }, [open, initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
-  // Reverse-geocode the selected point to get a street name
+  // Reverse-geocode o ponto selecionado para exibir o nome da rua.
   useEffect(() => {
     if (!pt) {
       setReverseAddr(null);
       return;
     }
-    let cancelled = false;
+    const seq = ++reverseSeq.current;
     setReverseLoading(true);
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${pt.lng},${pt.lat}.json?access_token=${MAPBOX_TOKEN}&language=pt&country=br&types=address,place,locality,neighborhood&limit=1`;
-    fetch(url)
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        const feat = data?.features?.[0];
-        setReverseAddr(feat?.place_name ?? null);
+    reverseGeo({ data: { lat: pt.lat, lng: pt.lng } })
+      .then((r) => {
+        if (reverseSeq.current !== seq) return;
+        setReverseAddr(r.label);
       })
       .catch(() => {
-        if (!cancelled) setReverseAddr(null);
+        if (reverseSeq.current === seq) setReverseAddr(null);
       })
       .finally(() => {
-        if (!cancelled) setReverseLoading(false);
+        if (reverseSeq.current === seq) setReverseLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [pt]);
-
-  // init / teardown map with dialog lifecycle
-  useEffect(() => {
-  if (!open) return;
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    let map: mapboxgl.Map | null = null;
-    let cancelled = false;
-    const timeouts: ReturnType<typeof setTimeout>[] = [];
-
-    const init = () => {
-      if (cancelled) return;
-      const el = containerRef.current;
-      if (!el || el.clientWidth === 0 || el.clientHeight === 0) {
-        // dialog still animating / not laid out — retry next frame
-        timeouts.push(setTimeout(init, 30));
-        return;
-      }
-      const center: [number, number] = initial ? [initial.lng, initial.lat] : BRUSQUE;
-      map = new mapboxgl.Map({
-        container: el,
-        style: MAPBOX_STYLE,
-        center,
-        zoom: initial ? 16 : 13,
-      });
-      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
-      map.on("load", () => {
-        map?.getCanvas() && (map.getCanvas().style.cursor = "crosshair");
-        map?.resize();
-      });
-      map.on("click", (e) => {
-        const { lng, lat } = e.lngLat;
-        setPt({ lat, lng });
-      });
-      mapRef.current = map;
-      timeouts.push(setTimeout(() => map?.resize(), 100));
-      timeouts.push(setTimeout(() => map?.resize(), 350));
-    };
-
-    init();
-
-    return () => {
-      cancelled = true;
-      timeouts.forEach(clearTimeout);
-      markerRef.current?.remove();
-      markerRef.current = null;
-      map?.remove();
-      mapRef.current = null;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // sync marker
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    if (!pt) {
-      markerRef.current?.remove();
-      markerRef.current = null;
-      return;
-    }
-    if (markerRef.current) {
-      markerRef.current.setLngLat([pt.lng, pt.lat]);
-    } else {
-      const el = document.createElement("div");
-      el.innerHTML = PIN_HTML;
-      // make sure the marker does NOT swallow clicks meant for the map
-      el.style.pointerEvents = "none";
-      markerRef.current = new mapboxgl.Marker({ element: el, anchor: "bottom" })
-        .setLngLat([pt.lng, pt.lat])
-        .addTo(map);
-    }
-    map.easeTo({ center: [pt.lng, pt.lat], duration: 300 });
   }, [pt]);
+
+  const center: [number, number] = initial ? [initial.lat, initial.lng] : BRUSQUE;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -190,14 +166,40 @@ export function MapPointPicker({
             <MapPin className="h-4 w-4 text-primary" /> Selecionar ponto no mapa
           </DialogTitle>
           <DialogDescription>
-            {endereco ? <>Clique no mapa para marcar a localização exata de <strong>{endereco}</strong>.</> : "Clique no mapa para marcar a localização exata."}
+            {endereco ? (
+              <>
+                Clique no mapa para marcar a localização exata de <strong>{endereco}</strong>.
+              </>
+            ) : (
+              "Clique no mapa para marcar a localização exata."
+            )}
           </DialogDescription>
         </DialogHeader>
-        <div style={{ height: 360, width: "100%", position: "relative" }}>
-          <div
-            ref={containerRef}
-            style={{ position: "absolute", inset: 0, borderRadius: 8, overflow: "hidden", cursor: "crosshair" }}
-          />
+        <div
+          style={{
+            height: 360,
+            width: "100%",
+            position: "relative",
+            borderRadius: 8,
+            overflow: "hidden",
+          }}
+        >
+          {open && (
+            <MapContainer
+              center={center}
+              zoom={initial ? 16 : 13}
+              style={{ height: "100%", width: "100%", cursor: "crosshair" }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <ClickHandler onClick={(lat, lng) => setPt({ lat, lng })} />
+              <RecenterOnChange pt={pt} />
+              <InvalidateSizeOnOpen />
+              {pt && <Marker position={[pt.lat, pt.lng]} icon={PIN_ICON} />}
+            </MapContainer>
+          )}
         </div>
         {hasContext && (
           <div className="flex items-start gap-2 rounded-md border border-dashed p-2 bg-muted/30">
@@ -209,31 +211,50 @@ export function MapPointPicker({
               disabled={aiLoading}
               className="shrink-0"
             >
-              {aiLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+              {aiLoading ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-1" />
+              )}
               Sugerir com IA
             </Button>
             <div className="text-xs text-muted-foreground leading-snug">
               {aiInfo ? (
                 <>
-                  {aiInfo.label && <div><strong>Sugestão:</strong> {aiInfo.label}</div>}
-                  {aiInfo.confianca && <div>Confiança: <strong>{aiInfo.confianca}</strong></div>}
+                  {aiInfo.label && (
+                    <div>
+                      <strong>Sugestão:</strong> {aiInfo.label}
+                    </div>
+                  )}
+                  {aiInfo.confianca && (
+                    <div>
+                      Confiança: <strong>{aiInfo.confianca}</strong>
+                    </div>
+                  )}
                   {aiInfo.justificativa && <div className="italic">{aiInfo.justificativa}</div>}
                 </>
               ) : (
-                <>A IA usará assunto, descrição, endereço e secretaria do protocolo para tentar localizar o ponto aproximado.</>
+                <>
+                  A IA usará assunto, descrição, endereço e secretaria do protocolo para tentar
+                  localizar o ponto aproximado.
+                </>
               )}
             </div>
           </div>
         )}
         {pt && (
           <div className="text-xs text-muted-foreground space-y-1">
-            <div>Coordenadas: {pt.lat.toFixed(6)}, {pt.lng.toFixed(6)}</div>
+            <div>
+              Coordenadas: {pt.lat.toFixed(6)}, {pt.lng.toFixed(6)}
+            </div>
             <div className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
               {reverseLoading ? (
                 <span className="italic">Identificando endereço…</span>
               ) : reverseAddr ? (
-                <span><strong>Endereço:</strong> {reverseAddr}</span>
+                <span>
+                  <strong>Endereço:</strong> {reverseAddr}
+                </span>
               ) : (
                 <span className="italic">Endereço não identificado</span>
               )}
@@ -241,7 +262,9 @@ export function MapPointPicker({
           </div>
         )}
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button
             disabled={!pt}
             onClick={() => {
