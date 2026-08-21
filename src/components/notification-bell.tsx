@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { situacaoProtocolo, formatDate } from "@/lib/prazo";
-import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
+import { ProtocoloDetailDialog } from "@/features/protocolos/components/protocolo-detail-dialog";
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -29,7 +29,10 @@ export function NotificationBell() {
   const alertas = protocolos
     .filter((p: any) => p.status !== "concluido")
     .map((p: any) => ({ ...p, _s: situacaoProtocolo(p) }))
-    .filter((p: any) => p._s.situacao === "vencido" || p._s.situacao === "critico" || p._s.situacao === "atencao")
+    .filter(
+      (p: any) =>
+        p._s.situacao === "vencido" || p._s.situacao === "critico" || p._s.situacao === "atencao",
+    )
     .sort((a: any, b: any) => a._s.dias - b._s.dias);
 
   const total = alertas.length;
@@ -55,7 +58,9 @@ export function NotificationBell() {
         <PopoverContent align="end" className="w-96 p-0">
           <div className="px-4 py-3 border-b flex items-center justify-between">
             <div className="font-semibold text-sm">Notificações</div>
-            <div className="text-xs text-muted-foreground">{total} alerta{total === 1 ? "" : "s"}</div>
+            <div className="text-xs text-muted-foreground">
+              {total} alerta{total === 1 ? "" : "s"}
+            </div>
           </div>
           <div className="max-h-96 overflow-auto">
             {alertas.length === 0 ? (
@@ -71,8 +76,8 @@ export function NotificationBell() {
                   const tone = vencido
                     ? "text-red-600"
                     : critico
-                    ? "text-orange-600"
-                    : "text-yellow-600";
+                      ? "text-orange-600"
+                      : "text-yellow-600";
                   const msg = vencido
                     ? `Vencido há ${Math.abs(p._s.dias)} dia${Math.abs(p._s.dias) === 1 ? "" : "s"}`
                     : `Vence em ${p._s.dias} dia${p._s.dias === 1 ? "" : "s"}`;
@@ -80,21 +85,28 @@ export function NotificationBell() {
                     <li key={p.id}>
                       <button
                         type="button"
-                        onClick={() => { setOpen(false); setDetail(p); }}
+                        onClick={() => {
+                          setOpen(false);
+                          setDetail(p);
+                        }}
                         className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex gap-3 items-start"
                       >
                         <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${tone}`} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs font-semibold">{p.numero}</span>
-                            <Badge variant="outline" className="text-[10px] py-0 h-4">{p.tipo === "esic" ? "e-SIC" : p.tipo === "lai" ? "LAI" : "OUV"}</Badge>
+                            <Badge variant="outline" className="text-[10px] py-0 h-4">
+                              {p.tipo === "esic" ? "e-SIC" : p.tipo === "lai" ? "LAI" : "OUV"}
+                            </Badge>
                           </div>
                           <div className="text-sm truncate">{p.assunto}</div>
                           <div className={`text-xs ${tone} font-medium`}>
                             {msg} · prazo {formatDate(p._s.prazoFinal)}
                           </div>
                           {p.secretarias?.sigla && (
-                            <div className="text-xs text-muted-foreground truncate">{p.secretarias.sigla}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {p.secretarias.sigla}
+                            </div>
                           )}
                         </div>
                       </button>
@@ -106,7 +118,11 @@ export function NotificationBell() {
           </div>
         </PopoverContent>
       </Popover>
-      <ProtocoloDetailDialog protocolo={detail} open={!!detail} onOpenChange={(v) => !v && setDetail(null)} />
+      <ProtocoloDetailDialog
+        protocolo={detail}
+        open={!!detail}
+        onOpenChange={(v) => !v && setDetail(null)}
+      />
     </>
   );
 }

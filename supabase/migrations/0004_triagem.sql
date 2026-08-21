@@ -2,17 +2,29 @@
 -- atendentes triem o mesmo protocolo, e os triggers que mantêm o estado de
 -- triagem consistente.
 
+-- Resultado das RPCs de triagem: em vez de só lançar exceção num conflito de
+-- lock (perdendo quem/quando), devolve essa informação para a UI mostrar
+-- "em triagem por Fulano desde HH:MM".
+create type public.triagem_resultado as (
+  ok boolean,
+  motivo text, -- null | 'reservada' | 'concluida'
+  por_nome text,
+  em timestamptz
+);
+
 -- Reserva um item para o usuário atual. SECURITY DEFINER porque a RLS de
 -- protocolos só permite UPDATE a quem já é admin — a checagem de papel é
 -- feita explicitamente aqui dentro, então o bypass de RLS é seguro.
 create function public.reservar_triagem(p_protocolo_id uuid)
-returns public.protocolos
+returns public.triagem_resultado
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_row public.protocolos;
+  v_updated boolean;
+  v_atual public.protocolos;
+  v_por_nome text;
 begin
   if not public.has_role(auth.uid(), 'admin') then
     raise exception 'Sem permissão para triar protocolos.';
@@ -26,14 +38,25 @@ begin
       triagem_lock_por is null
       or triagem_lock_por = auth.uid()
       or triagem_lock_em < now() - interval '10 minutes'
-    )
-  returning * into v_row;
+    );
+  get diagnostics v_updated = row_count;
+  v_updated := v_updated > 0;
 
-  if v_row.id is null then
-    raise exception 'Este item já está em triagem por outro usuário.';
+  if v_updated then
+    return (true, null, null, null)::public.triagem_resultado;
   end if;
 
-  return v_row;
+  select * into v_atual from public.protocolos where id = p_protocolo_id;
+  if v_atual.id is null then
+    raise exception 'Protocolo não encontrado.';
+  end if;
+  if not v_atual.triagem_pendente then
+    select nome into v_por_nome from public.profiles where id = v_atual.triagem_concluida_por;
+    return (false, 'concluida', v_por_nome, v_atual.triagem_concluida_em)::public.triagem_resultado;
+  end if;
+
+  select nome into v_por_nome from public.profiles where id = v_atual.triagem_lock_por;
+  return (false, 'reservada', v_por_nome, v_atual.triagem_lock_em)::public.triagem_resultado;
 end;
 $$;
 
@@ -59,13 +82,15 @@ create function public.concluir_triagem(
   p_secretaria_id uuid,
   p_local_id uuid default null
 )
-returns public.protocolos
+returns public.triagem_resultado
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_row public.protocolos;
+  v_updated boolean;
+  v_atual public.protocolos;
+  v_por_nome text;
 begin
   if not public.has_role(auth.uid(), 'admin') then
     raise exception 'Sem permissão para triar protocolos.';
@@ -77,14 +102,25 @@ begin
       triagem_pendente = false,
       triagem_lock_por = null,
       triagem_lock_em = null
-  where id = p_protocolo_id and triagem_lock_por = auth.uid()
-  returning * into v_row;
+  where id = p_protocolo_id and triagem_lock_por = auth.uid();
+  get diagnostics v_updated = row_count;
+  v_updated := v_updated > 0;
 
-  if v_row.id is null then
-    raise exception 'Você não está com o lock de triagem deste item (pode ter expirado).';
+  if v_updated then
+    return (true, null, null, null)::public.triagem_resultado;
   end if;
 
-  return v_row;
+  select * into v_atual from public.protocolos where id = p_protocolo_id;
+  if v_atual.id is null then
+    raise exception 'Protocolo não encontrado.';
+  end if;
+  if not v_atual.triagem_pendente then
+    select nome into v_por_nome from public.profiles where id = v_atual.triagem_concluida_por;
+    return (false, 'concluida', v_por_nome, v_atual.triagem_concluida_em)::public.triagem_resultado;
+  end if;
+
+  select nome into v_por_nome from public.profiles where id = v_atual.triagem_lock_por;
+  return (false, 'reservada', v_por_nome, v_atual.triagem_lock_em)::public.triagem_resultado;
 end;
 $$;
 

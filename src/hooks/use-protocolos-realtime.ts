@@ -15,6 +15,7 @@ export function invalidateProtocoloCaches(qc: ReturnType<typeof useQueryClient>)
         k === "protocolos" ||
         k.startsWith("protocolos-") ||
         k.startsWith("relatorio") ||
+        k === "triagem" ||
         k === "triagem-stats" ||
         k === "atrasados" ||
         k.startsWith("dashboard") ||
@@ -48,10 +49,8 @@ export function useProtocolosRealtime() {
 
     const channel = supabase
       .channel("protocolos-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "protocolos" },
-        () => schedule(),
+      .on("postgres_changes", { event: "*", schema: "public", table: "protocolos" }, () =>
+        schedule(),
       )
       .subscribe();
 
