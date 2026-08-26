@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    container_name: ml-automation
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-4000}:4000"
+    environment:
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      DATABASE_PATH: /app/data/app.db
+    volumes:
+      - ml-automation-data:/app/data
+
+volumes:
+  ml-automation-data:
