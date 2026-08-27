@@ -63,23 +63,42 @@ function SaudePage() {
       ),
   });
 
+  const norm = (v: string) =>
+    v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const termos = norm(busca).split(/\s+/).filter(Boolean);
+
   const saude = protocolos.filter(p => {
     if (!saudeSec?.id || (p as any).secretaria_id !== saudeSec.id) return false;
     if (unidade !== "todas" && (p as any).local_id !== unidade) return false;
     if (dataIni || dataFim) {
       if (dataIni && (p.data_abertura ?? "") < dataIni) return false;
       if (dataFim && (p.data_abertura ?? "") > dataFim) return false;
-    } else {
+    } else if (termos.length === 0) {
       if (!p.data_abertura.startsWith(ano)) return false;
       if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
     }
-    if (busca) {
-      const s = busca.toLowerCase();
-      const txt = `${p.numero} ${p.assunto} ${p.solicitante ?? ""}`.toLowerCase();
-      if (!txt.includes(s)) return false;
+    if (termos.length > 0) {
+      const a = p as any;
+      const txt = norm([
+        a.numero,
+        a.assunto,
+        a.descricao,
+        a.resolucao,
+        a.solicitante,
+        a.endereco,
+        a.origem,
+        a.categoria,
+        a.tipo,
+        a.status,
+        a.locais?.nome,
+        a.secretarias?.nome,
+        a.secretarias?.sigla,
+      ].filter(Boolean).join(" "));
+      if (!termos.every(t => txt.includes(t))) return false;
     }
     return true;
   }).sort(sortProtocolosPorNumero);
+
 
   const anosDisponiveis = useMemo(() => {
     const set = new Set<string>([String(new Date().getFullYear())]);
@@ -151,7 +170,11 @@ function SaudePage() {
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
-        <Input placeholder="Buscar nº, assunto, solicitante…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[280px]" />
+        <Input placeholder="Buscar nº, assunto, relato, unidade…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[280px]" />
+        {termos.length > 0 && !dataIni && !dataFim && (
+          <span className="text-xs text-muted-foreground">buscando em todo o período</span>
+        )}
+
         <Select value={unidade} onValueChange={setUnidade}>
           <SelectTrigger className="w-[260px]"><SelectValue placeholder="Unidade de saúde" /></SelectTrigger>
           <SelectContent className="max-h-[300px]">
