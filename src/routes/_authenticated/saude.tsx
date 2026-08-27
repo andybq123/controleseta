@@ -170,7 +170,11 @@ function SaudePage() {
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
-        <Input placeholder="Buscar nº, assunto, solicitante…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[280px]" />
+        <Input placeholder="Buscar nº, assunto, relato, unidade…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[280px]" />
+        {termos.length > 0 && !dataIni && !dataFim && (
+          <span className="text-xs text-muted-foreground">buscando em todo o período</span>
+        )}
+
         <Select value={unidade} onValueChange={setUnidade}>
           <SelectTrigger className="w-[260px]"><SelectValue placeholder="Unidade de saúde" /></SelectTrigger>
           <SelectContent className="max-h-[300px]">
