@@ -137,12 +137,11 @@ function ProtocolosPage() {
   const isAntigo = (p: any) =>
     typeof p?.origem === "string" && p.origem.startsWith("antigo:");
 
-  // remove pontos entre dígitos: "1.991/2026" -> "1991/2026"
-  const stripDots = (s: string) => s.replace(/(\d)\.(?=\d)/g, "$1");
-  const normalize = (s: string) =>
-    stripDots(
-      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-    );
+  // Busca global (motor compartilhado com a Saúde): sem acentos, multi-termo,
+  // cobrindo número, assunto, relato, resolução, endereço, secretaria, unidade,
+  // categoria, tipo, status e solicitante.
+  const termos = termosBusca(busca);
+  const buscando = termos.length > 0;
 
   const filtrados = protocolosComAntigos.filter(p => {
     if (!isAntigo(p) && saudeSecId && p.secretaria_id === saudeSecId) return false;
@@ -151,7 +150,7 @@ function ProtocolosPage() {
     if (p.status === "concluido"
         && mes !== "antigos"
         && filtroStatus !== "concluido"
-        && !(busca.trim() && normalize(String(p.numero ?? "")).includes(normalize(busca.trim())))) {
+        && !(buscando && matchNumero(p, busca))) {
       return false;
     }
     if (filtroStatus !== "todos" && p.status !== filtroStatus) return false;
@@ -161,16 +160,10 @@ function ProtocolosPage() {
     if (dataIni || dataFim) {
       if (dataIni && (p.data_abertura ?? "") < dataIni) return false;
       if (dataFim && (p.data_abertura ?? "") > dataFim) return false;
-    } else if (mes !== "all" && mes !== "antigos" && !busca.trim()) {
+    } else if (mes !== "all" && mes !== "antigos" && !buscando) {
       if (!isInMonth(p.data_abertura, mes)) return false;
     }
-    if (busca) {
-      const s = normalize(busca);
-      const txt = normalize(
-        `${p.numero ?? ""} ${p.assunto ?? ""} ${p.solicitante ?? ""} ${p.descricao ?? ""}`,
-      );
-      if (!txt.includes(s)) return false;
-    }
+    if (!matchProtocolo(p, termos)) return false;
     return true;
   });
 
