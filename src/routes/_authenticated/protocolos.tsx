@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type TipoProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
+import { termosBusca, matchProtocolo, matchNumero } from "@/lib/search-protocolos";
+import { SlaBadge } from "@/components/sla-badge";
 import { Plus, Calendar, RotateCw, CheckCircle2, Trash2, Sparkles, Eye, Download } from "lucide-react";
 import { toast } from "sonner";
 import { fetchAllPaginated } from "@/lib/fetch-all";
