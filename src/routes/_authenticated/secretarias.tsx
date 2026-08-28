@@ -31,6 +31,13 @@ function SecretariasPage() {
     queryFn: async () => (await supabase.from("locais").select("*").order("nome")).data ?? [],
   });
 
+  const { data: responsaveis = [] } = useQuery({
+    queryKey: ["secretaria-responsaveis"],
+    queryFn: async () =>
+      (await supabase.from("secretaria_responsaveis").select("*").order("tipo")).data ?? [],
+  });
+
+
   const { data: assuntos = [] } = useQuery({
     queryKey: ["assuntos-count"],
     queryFn: async () => (await supabase.from("assuntos").select("id,secretaria_id,nome").eq("ativo", true)).data ?? [],
