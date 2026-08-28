@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
-import { situacaoProtocolo, estavaAtrasadoNaData, endOfMonthOrNow, CATEGORIAS, type CategoriaProtocolo } from "@/lib/prazo";
+import { situacaoProtocolo, estavaAtrasadoNaData, endOfMonthOrNow, CATEGORIAS, calcularSla, resumoOperacional, type CategoriaProtocolo } from "@/lib/prazo";
 import {
   AlertTriangle, CheckCircle2, Clock, FileText, Smile,
   Timer, Download, MapPin, TrendingUp, Lightbulb, Building, ShieldCheck, Activity,
@@ -154,6 +154,8 @@ function Dashboard() {
     () => (mes === "all" ? allEnriched : allEnriched.filter(p => isInMonth(p.data_abertura, mes))),
     [allEnriched, mes],
   );
+  // Resumo operacional (motor de SLA único)
+  const op = useMemo(() => resumoOperacional(filtrados as any), [filtrados]);
   const total = filtrados.length;
   const ativos = filtrados.filter(p => p.status !== "concluido");
   const concluidos = filtrados.filter(p => p.status === "concluido");
@@ -502,6 +504,31 @@ function Dashboard() {
           </Link>
         </CardContent>
       </Card>
+
+      {/* Painel operacional do dia — cards clicáveis abrem a lista filtrada */}
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Operação do dia</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <KpiCard icon={AlertTriangle} tone="destructive" label="Vencidos" value={op.vencidos}
+            hint="prazo estourado"
+            onClick={() => openDrill("Protocolos vencidos", p => p.status !== "concluido" && calcularSla(p).dias < 0)} />
+          <KpiCard icon={Clock} tone="warning" label="Vencendo hoje" value={op.venceHoje}
+            hint="último dia do prazo"
+            onClick={() => openDrill("Vencendo hoje", p => p.status !== "concluido" && calcularSla(p).dias === 0)} />
+          <KpiCard icon={Timer} tone="violet" label="Vencendo em 3 dias" value={op.vence3Dias}
+            hint="prazo crítico"
+            onClick={() => openDrill("Vencendo em até 3 dias", p => p.status !== "concluido" && calcularSla(p).venceEm3Dias)} />
+          <KpiCard icon={Inbox} tone="info" label="Aguardando resposta" value={op.aguardando}
+            hint="sem resolução registrada"
+            onClick={() => openDrill("Aguardando resposta", p => p.status !== "concluido" && calcularSla(p).aguardandoResposta)} />
+          <KpiCard icon={Inbox} tone="warning" label="Pendentes de triagem" value={triagemStats?.pendentes ?? 0}
+            hint="fila de triagem"
+            onClick={() => navigate({ to: "/tarefas" })} />
+          <KpiCard icon={CheckCircle2} tone="success" label="Concluídos" value={op.concluidos}
+            hint="no período"
+            onClick={() => openDrill("Protocolos concluídos", p => p.status === "concluido")} />
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard icon={FileText} tone="primary" label="Total de Protocolos" value={total} hint="100% do período"
@@ -918,10 +945,11 @@ function Dashboard() {
 function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone, onClick }: {
   icon: any; label: string; value: number | string; hint?: string; suffix?: string;
   hintTrend?: "up" | "down";
-  tone: "primary" | "info" | "success" | "destructive" | "violet" | "emerald";
+  tone: "primary" | "info" | "success" | "destructive" | "violet" | "emerald" | "warning";
   onClick?: () => void;
 }) {
   const tones: Record<string, { bg: string; fg: string; ring: string; grad: string }> = {
+    warning:     { bg: "bg-orange-500/10",  fg: "text-orange-600",    ring: "ring-orange-500/20",  grad: "from-orange-500/10 via-transparent to-transparent" },
     primary:     { bg: "bg-primary/10",     fg: "text-primary",       ring: "ring-primary/20",     grad: "from-primary/10 via-transparent to-transparent" },
     info:        { bg: "bg-amber-500/10",   fg: "text-amber-600",     ring: "ring-amber-500/20",   grad: "from-amber-500/10 via-transparent to-transparent" },
     success:     { bg: "bg-emerald-500/10", fg: "text-emerald-600",   ring: "ring-emerald-500/20", grad: "from-emerald-500/10 via-transparent to-transparent" },

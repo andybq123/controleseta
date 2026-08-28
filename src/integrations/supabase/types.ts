@@ -444,6 +444,7 @@ export type Database = {
           origem: string | null
           prorrogado: boolean
           resolucao: string | null
+          responsavel_id: string | null
           secretaria_id: string | null
           sigilo: string
           solicitante: string | null
@@ -482,6 +483,7 @@ export type Database = {
           origem?: string | null
           prorrogado?: boolean
           resolucao?: string | null
+          responsavel_id?: string | null
           secretaria_id?: string | null
           sigilo?: string
           solicitante?: string | null
@@ -520,6 +522,7 @@ export type Database = {
           origem?: string | null
           prorrogado?: boolean
           resolucao?: string | null
+          responsavel_id?: string | null
           secretaria_id?: string | null
           sigilo?: string
           solicitante?: string | null
@@ -539,6 +542,13 @@ export type Database = {
             columns: ["local_id"]
             isOneToOne: false
             referencedRelation: "locais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "secretaria_responsaveis"
             referencedColumns: ["id"]
           },
           {
@@ -599,6 +609,53 @@ export type Database = {
           url?: string | null
         }
         Relationships: []
+      }
+      secretaria_responsaveis: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          nome: string
+          secretaria_id: string
+          telefone: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          secretaria_id: string
+          telefone?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          secretaria_id?: string
+          telefone?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secretaria_responsaveis_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       secretarias: {
         Row: {
@@ -711,6 +768,8 @@ export type Database = {
       liberar_triagem_admin: { Args: { p_id: string }; Returns: undefined }
       reservar_triagem: { Args: { p_id: string }; Returns: Json }
       reservar_triagem_admin: { Args: { p_id: string }; Returns: Json }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "user"

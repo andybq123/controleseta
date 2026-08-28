@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { calcularPrazo, situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, gerarNumeroProtocolo, PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass, type TipoProtocolo, type CategoriaProtocolo } from "@/lib/prazo";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
+import { termosBusca, matchProtocolo, matchNumero } from "@/lib/search-protocolos";
+import { SlaBadge } from "@/components/sla-badge";
 import { Plus, Calendar, RotateCw, CheckCircle2, Trash2, Sparkles, Eye, Download } from "lucide-react";
 import { toast } from "sonner";
 import { fetchAllPaginated } from "@/lib/fetch-all";
@@ -137,12 +139,11 @@ function ProtocolosPage() {
   const isAntigo = (p: any) =>
     typeof p?.origem === "string" && p.origem.startsWith("antigo:");
 
-  // remove pontos entre dígitos: "1.991/2026" -> "1991/2026"
-  const stripDots = (s: string) => s.replace(/(\d)\.(?=\d)/g, "$1");
-  const normalize = (s: string) =>
-    stripDots(
-      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-    );
+  // Busca global (motor compartilhado com a Saúde): sem acentos, multi-termo,
+  // cobrindo número, assunto, relato, resolução, endereço, secretaria, unidade,
+  // categoria, tipo, status e solicitante.
+  const termos = termosBusca(busca);
+  const buscando = termos.length > 0;
 
   const filtrados = protocolosComAntigos.filter(p => {
     if (!isAntigo(p) && saudeSecId && p.secretaria_id === saudeSecId) return false;
@@ -151,7 +152,7 @@ function ProtocolosPage() {
     if (p.status === "concluido"
         && mes !== "antigos"
         && filtroStatus !== "concluido"
-        && !(busca.trim() && normalize(String(p.numero ?? "")).includes(normalize(busca.trim())))) {
+        && !(buscando && matchNumero(p, busca))) {
       return false;
     }
     if (filtroStatus !== "todos" && p.status !== filtroStatus) return false;
@@ -161,16 +162,10 @@ function ProtocolosPage() {
     if (dataIni || dataFim) {
       if (dataIni && (p.data_abertura ?? "") < dataIni) return false;
       if (dataFim && (p.data_abertura ?? "") > dataFim) return false;
-    } else if (mes !== "all" && mes !== "antigos" && !busca.trim()) {
+    } else if (mes !== "all" && mes !== "antigos" && !buscando) {
       if (!isInMonth(p.data_abertura, mes)) return false;
     }
-    if (busca) {
-      const s = normalize(busca);
-      const txt = normalize(
-        `${p.numero ?? ""} ${p.assunto ?? ""} ${p.solicitante ?? ""} ${p.descricao ?? ""}`,
-      );
-      if (!txt.includes(s)) return false;
-    }
+    if (!matchProtocolo(p, termos)) return false;
     return true;
   });
 
@@ -195,7 +190,10 @@ function ProtocolosPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Input placeholder="Buscar nº, assunto, solicitante…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[240px]" />
+        <Input placeholder="Buscar nº, assunto, relato, secretaria, unidade…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[280px]" />
+        {buscando && (
+          <span className="self-center text-[11px] text-muted-foreground">buscando em todo o período</span>
+        )}
         <Select value={filtroTipo} onValueChange={setFiltroTipo}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -275,9 +273,7 @@ function ProtocolosPage() {
                       </Badge>
                       <Badge variant="secondary" className="text-[10px]">{p.status.replace("_", " ")}</Badge>
                       {p.prorrogado && <Badge variant="outline" className="text-[10px]">prorrogado</Badge>}
-                      <Badge variant="outline" className={`text-[10px] border ${situacaoClasses[s.situacao]}`}>
-                        {situacaoLabel[s.situacao]} · {s.dias < 0 ? `${Math.abs(s.dias)}d atrasado` : `${s.dias}d`}
-                      </Badge>
+                      <SlaBadge protocolo={p as any} />
                       {(p as any).origem && (
                         <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/30 text-primary">
                           {(p as any).origem}

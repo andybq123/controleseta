@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, AlertTriangle, Clock } from "lucide-react";
+import { Bell, AlertTriangle, Clock, Inbox } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -26,14 +27,28 @@ export function NotificationBell() {
     refetchInterval: 60_000,
   });
 
+  // Fila de triagem (dados reais do banco)
+  const { data: triagemPendentes = 0 } = useQuery({
+    queryKey: ["triagem-pendentes-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("protocolos")
+        .select("id", { count: "exact", head: true })
+        .eq("triagem_pendente", true);
+      return count ?? 0;
+    },
+    refetchInterval: 60_000,
+  });
+
   const alertas = protocolos
-    .filter((p: any) => p.status !== "concluido")
+    .filter((p: any) => p.status !== "concluido" && !p.triagem_pendente)
     .map((p: any) => ({ ...p, _s: situacaoProtocolo(p) }))
     .filter((p: any) => p._s.situacao === "vencido" || p._s.situacao === "critico" || p._s.situacao === "atencao")
     .sort((a: any, b: any) => a._s.dias - b._s.dias);
 
-  const total = alertas.length;
+  const total = alertas.length + (triagemPendentes > 0 ? 1 : 0);
   const vencidos = alertas.filter((p: any) => p._s.situacao === "vencido").length;
+  const venceHoje = alertas.filter((p: any) => p._s.dias === 0).length;
 
   return (
     <>
@@ -56,6 +71,17 @@ export function NotificationBell() {
           <div className="px-4 py-3 border-b flex items-center justify-between">
             <div className="font-semibold text-sm">Notificações</div>
             <div className="text-xs text-muted-foreground">{total} alerta{total === 1 ? "" : "s"}</div>
+          </div>
+          <div className="px-4 py-2 border-b flex flex-wrap gap-2 text-[11px]">
+            <Badge variant="outline" className="border-red-300 text-red-600">{vencidos} vencido(s)</Badge>
+            <Badge variant="outline" className="border-orange-300 text-orange-600">{venceHoje} vence(m) hoje</Badge>
+            {triagemPendentes > 0 && (
+              <Link to="/tarefas" onClick={() => setOpen(false)}>
+                <Badge variant="outline" className="border-amber-300 text-amber-700 cursor-pointer">
+                  <Inbox className="h-3 w-3 mr-1" />{triagemPendentes} na triagem
+                </Badge>
+              </Link>
+            )}
           </div>
           <div className="max-h-96 overflow-auto">
             {alertas.length === 0 ? (

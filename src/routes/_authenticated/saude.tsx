@@ -9,6 +9,7 @@ import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, 
 import { HeartPulse } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
+import { termosBusca, matchProtocolo } from "@/lib/search-protocolos";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { currentMonthValue } from "@/lib/month-filter";
@@ -63,9 +64,7 @@ function SaudePage() {
       ),
   });
 
-  const norm = (v: string) =>
-    v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  const termos = norm(busca).split(/\s+/).filter(Boolean);
+  const termos = termosBusca(busca);
 
   const saude = protocolos.filter(p => {
     if (!saudeSec?.id || (p as any).secretaria_id !== saudeSec.id) return false;
@@ -77,25 +76,7 @@ function SaudePage() {
       if (!p.data_abertura.startsWith(ano)) return false;
       if (mes !== "all" && p.data_abertura.slice(5, 7) !== mes) return false;
     }
-    if (termos.length > 0) {
-      const a = p as any;
-      const txt = norm([
-        a.numero,
-        a.assunto,
-        a.descricao,
-        a.resolucao,
-        a.solicitante,
-        a.endereco,
-        a.origem,
-        a.categoria,
-        a.tipo,
-        a.status,
-        a.locais?.nome,
-        a.secretarias?.nome,
-        a.secretarias?.sigla,
-      ].filter(Boolean).join(" "));
-      if (!termos.every(t => txt.includes(t))) return false;
-    }
+    if (!matchProtocolo(p, termos)) return false;
     return true;
   }).sort(sortProtocolosPorNumero);
 

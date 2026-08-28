@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { SlaBadge } from "@/components/sla-badge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -20,7 +21,7 @@ import { Inbox, Lock, ExternalLink } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { invalidateProtocoloCaches } from "@/hooks/use-protocolos-realtime";
 import {
-  situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
+  situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, calcularSla,
   PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass,
   type TipoProtocolo, type CategoriaProtocolo,
 } from "@/lib/prazo";
@@ -203,6 +204,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
 
   if (!protocolo) return null;
   const s = situacaoProtocolo(protocolo);
+  const sla = calcularSla(protocolo as any);
 
   const locaisFiltrados = locais.filter((l: any) => !form.secretaria_id || l.secretaria_id === form.secretaria_id);
 
@@ -341,12 +343,30 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
             >
               {categoriaLabel(protocolo.categoria as CategoriaProtocolo)}
             </Badge>
-            <Badge variant="outline" className={`text-[10px] border ${situacaoClasses[s.situacao]}`}>
-              {situacaoLabel[s.situacao]} · {s.dias < 0 ? `${Math.abs(s.dias)}d atrasado` : `${s.dias}d`}
-            </Badge>
+            <SlaBadge protocolo={protocolo as any} />
             {protocolo.prorrogado && <Badge variant="outline" className="text-[10px]">prorrogado</Badge>}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Faixa de prazo/SLA em destaque */}
+        <div className="rounded-lg border bg-muted/40 px-3 py-2 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div>
+            <div className="text-muted-foreground">Abertura</div>
+            <div className="font-medium">{formatDate(protocolo.data_abertura)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Prazo final</div>
+            <div className="font-medium">{formatDate(sla.prazoFinal)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Situação</div>
+            <div className="font-medium">{sla.label} · {sla.labelDias}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Conclusão</div>
+            <div className="font-medium">{protocolo.data_conclusao ? formatDate(protocolo.data_conclusao) : "—"}</div>
+          </div>
+        </div>
 
         {lockState.kind === "reservada" && (
           <div className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-900 dark:text-blue-200 flex items-center gap-2">
