@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
+import { SlaBadge } from "@/components/sla-badge";
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -20,7 +21,7 @@ import { Inbox, Lock, ExternalLink } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { invalidateProtocoloCaches } from "@/hooks/use-protocolos-realtime";
 import {
-  situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate,
+  situacaoProtocolo, situacaoClasses, situacaoLabel, formatDate, calcularSla,
   PRAZOS, CATEGORIAS, categoriaLabel, categoriaSigla, categoriaBadgeClass,
   type TipoProtocolo, type CategoriaProtocolo,
 } from "@/lib/prazo";
@@ -203,6 +204,7 @@ export function ProtocoloDetailDialog({ protocolo: protocoloProp, open, onOpenCh
 
   if (!protocolo) return null;
   const s = situacaoProtocolo(protocolo);
+  const sla = calcularSla(protocolo as any);
 
   const locaisFiltrados = locais.filter((l: any) => !form.secretaria_id || l.secretaria_id === form.secretaria_id);
 
