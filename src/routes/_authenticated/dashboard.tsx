@@ -943,10 +943,11 @@ function Dashboard() {
 function KpiCard({ icon: Icon, label, value, hint, hintTrend, suffix, tone, onClick }: {
   icon: any; label: string; value: number | string; hint?: string; suffix?: string;
   hintTrend?: "up" | "down";
-  tone: "primary" | "info" | "success" | "destructive" | "violet" | "emerald";
+  tone: "primary" | "info" | "success" | "destructive" | "violet" | "emerald" | "warning";
   onClick?: () => void;
 }) {
   const tones: Record<string, { bg: string; fg: string; ring: string; grad: string }> = {
+    warning:     { bg: "bg-orange-500/10",  fg: "text-orange-600",    ring: "ring-orange-500/20",  grad: "from-orange-500/10 via-transparent to-transparent" },
     primary:     { bg: "bg-primary/10",     fg: "text-primary",       ring: "ring-primary/20",     grad: "from-primary/10 via-transparent to-transparent" },
     info:        { bg: "bg-amber-500/10",   fg: "text-amber-600",     ring: "ring-amber-500/20",   grad: "from-amber-500/10 via-transparent to-transparent" },
     success:     { bg: "bg-emerald-500/10", fg: "text-emerald-600",   ring: "ring-emerald-500/20", grad: "from-emerald-500/10 via-transparent to-transparent" },
