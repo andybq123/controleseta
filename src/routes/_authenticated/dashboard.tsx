@@ -154,6 +154,8 @@ function Dashboard() {
     () => (mes === "all" ? allEnriched : allEnriched.filter(p => isInMonth(p.data_abertura, mes))),
     [allEnriched, mes],
   );
+  // Resumo operacional (motor de SLA único)
+  const op = useMemo(() => resumoOperacional(filtrados as any), [filtrados]);
   const total = filtrados.length;
   const ativos = filtrados.filter(p => p.status !== "concluido");
   const concluidos = filtrados.filter(p => p.status === "concluido");
