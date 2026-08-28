@@ -26,14 +26,28 @@ export function NotificationBell() {
     refetchInterval: 60_000,
   });
 
+  // Fila de triagem (dados reais do banco)
+  const { data: triagemPendentes = 0 } = useQuery({
+    queryKey: ["triagem-pendentes-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("protocolos")
+        .select("id", { count: "exact", head: true })
+        .eq("triagem_pendente", true);
+      return count ?? 0;
+    },
+    refetchInterval: 60_000,
+  });
+
   const alertas = protocolos
-    .filter((p: any) => p.status !== "concluido")
+    .filter((p: any) => p.status !== "concluido" && !p.triagem_pendente)
     .map((p: any) => ({ ...p, _s: situacaoProtocolo(p) }))
     .filter((p: any) => p._s.situacao === "vencido" || p._s.situacao === "critico" || p._s.situacao === "atencao")
     .sort((a: any, b: any) => a._s.dias - b._s.dias);
 
-  const total = alertas.length;
+  const total = alertas.length + (triagemPendentes > 0 ? 1 : 0);
   const vencidos = alertas.filter((p: any) => p._s.situacao === "vencido").length;
+  const venceHoje = alertas.filter((p: any) => p._s.dias === 0).length;
 
   return (
     <>
