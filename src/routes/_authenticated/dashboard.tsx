@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
-import { situacaoProtocolo, estavaAtrasadoNaData, endOfMonthOrNow, CATEGORIAS, type CategoriaProtocolo } from "@/lib/prazo";
+import { situacaoProtocolo, estavaAtrasadoNaData, endOfMonthOrNow, CATEGORIAS, calcularSla, resumoOperacional, type CategoriaProtocolo } from "@/lib/prazo";
 import {
   AlertTriangle, CheckCircle2, Clock, FileText, Smile,
   Timer, Download, MapPin, TrendingUp, Lightbulb, Building, ShieldCheck, Activity,
