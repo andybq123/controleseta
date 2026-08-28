@@ -270,9 +270,7 @@ function ProtocolosPage() {
                       </Badge>
                       <Badge variant="secondary" className="text-[10px]">{p.status.replace("_", " ")}</Badge>
                       {p.prorrogado && <Badge variant="outline" className="text-[10px]">prorrogado</Badge>}
-                      <Badge variant="outline" className={`text-[10px] border ${situacaoClasses[s.situacao]}`}>
-                        {situacaoLabel[s.situacao]} · {s.dias < 0 ? `${Math.abs(s.dias)}d atrasado` : `${s.dias}d`}
-                      </Badge>
+                      <SlaBadge protocolo={p as any} />
                       {(p as any).origem && (
                         <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/30 text-primary">
                           {(p as any).origem}
