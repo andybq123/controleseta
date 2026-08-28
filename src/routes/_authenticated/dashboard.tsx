@@ -503,6 +503,31 @@ function Dashboard() {
         </CardContent>
       </Card>
 
+      {/* Painel operacional do dia — cards clicáveis abrem a lista filtrada */}
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Operação do dia</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <KpiCard icon={AlertTriangle} tone="destructive" label="Vencidos" value={op.vencidos}
+            hint="prazo estourado"
+            onClick={() => openDrill("Protocolos vencidos", p => p.status !== "concluido" && calcularSla(p).dias < 0)} />
+          <KpiCard icon={Clock} tone="warning" label="Vencendo hoje" value={op.venceHoje}
+            hint="último dia do prazo"
+            onClick={() => openDrill("Vencendo hoje", p => p.status !== "concluido" && calcularSla(p).dias === 0)} />
+          <KpiCard icon={Timer} tone="violet" label="Vencendo em 3 dias" value={op.vence3Dias}
+            hint="prazo crítico"
+            onClick={() => openDrill("Vencendo em até 3 dias", p => p.status !== "concluido" && calcularSla(p).venceEm3Dias)} />
+          <KpiCard icon={Inbox} tone="info" label="Aguardando resposta" value={op.aguardando}
+            hint="sem resolução registrada"
+            onClick={() => openDrill("Aguardando resposta", p => p.status !== "concluido" && calcularSla(p).aguardandoResposta)} />
+          <KpiCard icon={Inbox} tone="warning" label="Pendentes de triagem" value={triagemStats?.pendentes ?? 0}
+            hint="fila de triagem"
+            onClick={() => navigate({ to: "/tarefas" })} />
+          <KpiCard icon={CheckCircle2} tone="success" label="Concluídos" value={op.concluidos}
+            hint="no período"
+            onClick={() => openDrill("Protocolos concluídos", p => p.status === "concluido")} />
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard icon={FileText} tone="primary" label="Total de Protocolos" value={total} hint="100% do período"
           onClick={() => openDrill("Todos os protocolos", () => true)} />
