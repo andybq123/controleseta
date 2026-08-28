@@ -71,6 +71,17 @@ export function NotificationBell() {
             <div className="font-semibold text-sm">Notificações</div>
             <div className="text-xs text-muted-foreground">{total} alerta{total === 1 ? "" : "s"}</div>
           </div>
+          <div className="px-4 py-2 border-b flex flex-wrap gap-2 text-[11px]">
+            <Badge variant="outline" className="border-red-300 text-red-600">{vencidos} vencido(s)</Badge>
+            <Badge variant="outline" className="border-orange-300 text-orange-600">{venceHoje} vence(m) hoje</Badge>
+            {triagemPendentes > 0 && (
+              <Link to="/tarefas" onClick={() => setOpen(false)}>
+                <Badge variant="outline" className="border-amber-300 text-amber-700 cursor-pointer">
+                  <Inbox className="h-3 w-3 mr-1" />{triagemPendentes} na triagem
+                </Badge>
+              </Link>
+            )}
+          </div>
           <div className="max-h-96 overflow-auto">
             {alertas.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">
