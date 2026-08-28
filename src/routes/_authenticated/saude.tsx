@@ -9,6 +9,7 @@ import { situacaoProtocolo, formatDate, PRAZOS, categoriaLabel, categoriaSigla, 
 import { HeartPulse } from "lucide-react";
 import { fetchAllPaginated } from "@/lib/fetch-all";
 import { sortProtocolosPorNumero } from "@/lib/sort-protocolos";
+import { termosBusca, matchProtocolo } from "@/lib/search-protocolos";
 import { ProtocoloDetailDialog } from "@/components/protocolo-detail-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { currentMonthValue } from "@/lib/month-filter";
