@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Building2, Trash2, MapPin, Pencil, Tag } from "lucide-react";
+import { Plus, Building2, Trash2, MapPin, Pencil, Tag, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { SECRETARIA_ICONES } from "@/components/manifestacoes-map";
@@ -375,5 +375,88 @@ function EditLocalDialog({ local, onClose }: { local: any | null; onClose: () =>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+function ResponsaveisSecretaria({ secretariaId, lista }: { secretariaId: string; lista: any[] }) {
+  const qc = useQueryClient();
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [tipo, setTipo] = useState<"principal" | "substituto">("principal");
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["secretaria-responsaveis"] });
+
+  const add = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("secretaria_responsaveis").insert({
+        secretaria_id: secretariaId,
+        nome,
+        email: email || null,
+        tipo,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidate(); toast.success("Responsável adicionado"); setNome(""); setEmail(""); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const toggleAtivo = useMutation({
+    mutationFn: async (r: any) => {
+      const { error } = await supabase.from("secretaria_responsaveis").update({ ativo: !r.ativo }).eq("id", r.id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const remover = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("secretaria_responsaveis").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidate(); toast.success("Responsável removido"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <div className="space-y-1">
+      <div className="text-xs font-medium text-muted-foreground">Responsáveis</div>
+      {lista.length === 0 && <p className="text-[11px] text-muted-foreground">Sem responsáveis cadastrados.</p>}
+      {lista.map((r: any) => (
+        <div key={r.id} className="flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-sm">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <UserRound className="h-3 w-3 text-muted-foreground shrink-0" />
+              <span className="truncate">{r.nome}</span>
+              <Badge variant={r.tipo === "principal" ? "default" : "secondary"} className="text-[10px]">
+                {r.tipo === "principal" ? "Principal" : "Substituto"}
+              </Badge>
+              {!r.ativo && <Badge variant="outline" className="text-[10px]">inativo</Badge>}
+            </div>
+            {r.email && <p className="text-[11px] text-muted-foreground truncate pl-4">{r.email}</p>}
+          </div>
+          <div className="flex gap-1 shrink-0">
+            <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => toggleAtivo.mutate(r)}>
+              {r.ativo ? "Desativar" : "Ativar"}
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7" onClick={() => remover.mutate(r.id)}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      ))}
+      <div className="flex flex-wrap gap-1.5 pt-1">
+        <Input placeholder="Nome" value={nome} onChange={e => setNome(e.target.value)} className="h-8 text-xs flex-1 min-w-[110px]" />
+        <Input placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} className="h-8 text-xs flex-1 min-w-[130px]" />
+        <Select value={tipo} onValueChange={(v: any) => setTipo(v)}>
+          <SelectTrigger className="h-8 w-[120px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="principal">Principal</SelectItem>
+            <SelectItem value="substituto">Substituto</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button size="sm" variant="outline" className="h-8" disabled={!nome || add.isPending} onClick={() => add.mutate()}>
+          <Plus className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
   );
 }
