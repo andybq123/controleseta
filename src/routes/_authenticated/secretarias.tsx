@@ -143,6 +143,10 @@ function SecretariasPage() {
                     {s.latitude == null && <span className="ml-1 text-amber-600">(sem coordenadas)</span>}
                   </p>
                 )}
+                <ResponsaveisSecretaria
+                  secretariaId={s.id}
+                  lista={responsaveis.filter((r: any) => r.secretaria_id === s.id)}
+                />
                 <div className="space-y-1">
                   <div className="text-xs font-medium text-muted-foreground">Locais / Unidades</div>
                   {locs.length === 0 && <p className="text-[11px] text-muted-foreground">Sem locais cadastrados.</p>}
