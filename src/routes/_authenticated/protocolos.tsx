@@ -190,7 +190,10 @@ function ProtocolosPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Input placeholder="Buscar nº, assunto, solicitante…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[240px]" />
+        <Input placeholder="Buscar nº, assunto, relato, secretaria, unidade…" value={busca} onChange={e => setBusca(e.target.value)} className="w-[280px]" />
+        {buscando && (
+          <span className="self-center text-[11px] text-muted-foreground">buscando em todo o período</span>
+        )}
         <Select value={filtroTipo} onValueChange={setFiltroTipo}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
