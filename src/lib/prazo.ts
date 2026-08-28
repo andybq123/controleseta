@@ -140,3 +140,82 @@ export function gerarNumeroProtocolo(tipo: TipoProtocolo): string {
   const formatted = seq.toLocaleString("pt-BR");
   return `${formatted}/${y}`;
 }
+/* ------------------------------------------------------------------ *
+ * MOTOR DE PRAZOS / SLA (camada única)
+ * Toda a UI deve consumir `calcularSla` / <SlaBadge> em vez de
+ * recalcular prazos localmente.
+ * ------------------------------------------------------------------ */
+
+export type ProtocoloSlaInput = {
+  tipo: TipoProtocolo;
+  data_abertura: string;
+  prorrogado: boolean;
+  status: StatusProtocolo;
+  data_conclusao?: string | null;
+  data_prorrogacao?: string | null;
+  resolucao?: string | null;
+  triagem_pendente?: boolean | null;
+};
+
+export type Sla = {
+  situacao: Situacao;
+  /** dias restantes (negativo = atrasado) */
+  dias: number;
+  prazoFinal: Date;
+  diasTotais: number;
+  podeProrrogar: boolean;
+  diasProrrogacao: number;
+  vencidoHoje: boolean;
+  venceHoje: boolean;
+  venceEm3Dias: boolean;
+  aguardandoResposta: boolean;
+  label: string;
+  labelDias: string;
+  classes: string;
+};
+
+/** Cálculo único e canônico do SLA de um protocolo. */
+export function calcularSla(p: ProtocoloSlaInput): Sla {
+  const { prazoFinal, diasTotais } = calcularPrazo(p);
+  const dias = diasRestantes(prazoFinal);
+  const { situacao } = situacaoProtocolo(p);
+  const concluido = p.status === "concluido";
+  const { prorrogacao } = PRAZOS[p.tipo];
+  return {
+    situacao,
+    dias,
+    prazoFinal,
+    diasTotais,
+    podeProrrogar: !p.prorrogado && !concluido,
+    diasProrrogacao: prorrogacao,
+    vencidoHoje: !concluido && dias === 0,
+    venceHoje: !concluido && dias === 0,
+    venceEm3Dias: !concluido && dias > 0 && dias <= 3,
+    aguardandoResposta: !concluido && !p.triagem_pendente && !p.resolucao,
+    label: situacaoLabel[situacao],
+    labelDias:
+      concluido
+        ? "Concluído"
+        : dias < 0
+          ? `${Math.abs(dias)}d atrasado`
+          : dias === 0
+            ? "vence hoje"
+            : `${dias}d`,
+    classes: situacaoClasses[situacao],
+  };
+}
+
+/** Agrupamentos operacionais usados pelo Dashboard e pelas notificações. */
+export function resumoOperacional(protocolos: ProtocoloSlaInput[]) {
+  let vencidos = 0, venceHoje = 0, vence3Dias = 0, aguardando = 0, concluidos = 0, emAndamento = 0;
+  for (const p of protocolos) {
+    const s = calcularSla(p);
+    if (p.status === "concluido") { concluidos++; continue; }
+    emAndamento++;
+    if (s.dias < 0) vencidos++;
+    else if (s.dias === 0) venceHoje++;
+    else if (s.dias <= 3) vence3Dias++;
+    if (s.aguardandoResposta) aguardando++;
+  }
+  return { vencidos, venceHoje, vence3Dias, aguardando, concluidos, emAndamento, total: protocolos.length };
+}
