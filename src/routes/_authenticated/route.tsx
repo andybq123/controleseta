@@ -78,6 +78,7 @@ function AuthLayout() {
     { to: "/coletor", label: "Coletor 1doc", icon: Download },
     { to: "/users", label: "Usuários", icon: Users },
     { to: "/ia-config", label: "IA", icon: Sparkles },
+    { to: "/backup", label: "Backup", icon: Download },
   ] : []) as { to: string; label: string; icon: any }[];
   const configActive = configItems.some(c => pathname.startsWith(c.to));
 
