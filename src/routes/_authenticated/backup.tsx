@@ -37,7 +37,9 @@ const GRUPOS: Grupo[] = [
 
 function toCsv(rows: any[]): string {
   if (!rows.length) return "";
-  const cols = Array.from(rows.reduce((s, r) => { Object.keys(r).forEach(k => s.add(k)); return s; }, new Set<string>()));
+  const set = new Set<string>();
+  rows.forEach(r => Object.keys(r).forEach(k => set.add(k)));
+  const cols = Array.from(set);
   const esc = (v: any) => {
     if (v === null || v === undefined) return "";
     const s = typeof v === "object" ? JSON.stringify(v) : String(v);
